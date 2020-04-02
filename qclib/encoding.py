@@ -3,7 +3,7 @@
 """
 from itertools import product
 import numpy as np
-from qiskit import QuantumCircuit, QuantumRegister
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 
 
 def _recursive_compute_angles(input_vector, angles_tree):
@@ -102,12 +102,13 @@ def _check_angles_list(angles):
 
 def _cascading_ry(angles, with_barriers=False):
     """
-    This procedure creates the quantum circuit for the Mottonen method for phase encoding.
-    Building a coherent superposition from the ground state with the features encoded in the phase.
+    This procedure creates the quantum circuit for the Mottonen method for phase
+    encoding. Building a coherent superposition from the ground state with the
+    features encoded in the phase.
 
     :param angles: list of values to be coded in the phases
-    :param with_barriers: Boolean, add the barriers in the quantum circuit for better visualisation
-                        when printing the circuit
+    :param with_barriers: Boolean, add the barriers in the quantum circuit for
+           better visualisation when printing the circuit
     :return: The quantum circuit with the gates
     """
 
@@ -179,8 +180,7 @@ def mottonen_quantum_circuit(features, with_barriers=False):
     return _cascading_ry(angles, with_barriers=with_barriers)
 
 
-def _initialize_state(quantum_circuit, quantum_data, ancila, n_feature_qubits, n_dset_size_qubits,
-                      initialize_ancila=True):
+def _initialize_state(quantum_circuit, initialize_index=True):
     """
         Auxiliary procedure for the method of Park, et al, for initializing
         the states.
@@ -188,8 +188,6 @@ def _initialize_state(quantum_circuit, quantum_data, ancila, n_feature_qubits, n
         apply data initialization to the ancila
     :param quantum_circuit: Quantum circuit object where Park's method will
                             be applied
-    :param quantum_data: Quantum Register object for the qubits dedicated to the data
-    :param ancila: Quantum Register object for the ancila
     :param n_feature_qubits: Number of qubits needed for encoding the features in to the
                              quantum state
     :param n_dset_size_qubits: Number of qubits needed for encoding the index qubit
@@ -197,12 +195,15 @@ def _initialize_state(quantum_circuit, quantum_data, ancila, n_feature_qubits, n
     :return: Quantum Circuit with state initialization implemented
     """
 
-    for qb_idx in range(n_feature_qubits):
+    quantum_data = quantum_circuit.qregs[0]
+    quantum_index = quantum_circuit.qregs[2]
+
+    for qb_idx in range(quantum_data.size):
         quantum_circuit.h(quantum_data[qb_idx])
 
-    if initialize_ancila:
-        for qb_idx in range(n_dset_size_qubits):
-            quantum_circuit.h(ancila[qb_idx])
+    if initialize_index:
+        for qb_idx in range(quantum_index.size):
+            quantum_circuit.h(quantum_index[qb_idx])
 
     return quantum_circuit
 
@@ -220,9 +221,11 @@ def _qubitwise_not(binary_pattern, quantum_circuit, quantum_data):
     return quantum_circuit
 
 
-def _apply_multi_controlled_ry(angle, quantum_circuit, control_register, target_register, n_controls, target_index):
+def _apply_apply_multi_controlled_rotation(angle, quantum_circuit, control_register,
+                                           target_register, target_index,
+                                           rotation_type='rz'):
     """
-        Apply multicontrolled Ry rotation to the quantum circuit using all quibits
+        Apply multicontrolled rotation to the quantum circuit using all quibits
         in the control_register parameter as control, and the target_register as target qubit,
         according to the target index.
     :param angle: Angle to be used in the rotation
@@ -231,39 +234,27 @@ def _apply_multi_controlled_ry(angle, quantum_circuit, control_register, target_
     :param target_register: Quantum Register object which contains the target qubit
     :param n_controls: Size of the control register
     :param target_index: Index of the target qubit of the rotation
-    :return: Quantum circuit updated with the Ry(angle) rotation applied
+    :param rotation_type: rotation type, allowing to chose among the
+                          multicontrolled rotaions Ry, Rz and Rx
+    :return: Quantum circuit updated with the R_*(angle) rotation applied
     """
 
     ctrl_qubits_list = []
 
-    for i in range(n_controls):
+    for i in range(control_register.size):
         ctrl_qubits_list.append(control_register[i])
 
-    quantum_circuit.mcry(angle, ctrl_qubits_list, target_register[target_index])
+    if rotation_type == 'ry':
+        quantum_circuit.mcry(angle, ctrl_qubits_list, target_register[target_index])
 
-    return quantum_circuit
+    elif rotation_type == 'rz':
+        quantum_circuit.mcrz(angle, ctrl_qubits_list, target_register[target_index])
 
+    elif rotation_type == 'rx':
+        quantum_circuit.mcrx(angle, ctrl_qubits_list, target_register[target_index])
 
-def _apply_multi_controlled_rz(angle, quantum_circuit, control_register, target_register, n_controls, target_index):
-    """
-        Apply multicontrolled Rz rotation to the quantum circuit using all quibits
-        in the control_register parameter as control, and the target_register as target qubit,
-        according to the target index.
-    :param angle: Angle to be used in the rotation
-    :param quantum_circuit: quantum circuit in which the rotation is going to be applied
-    :param control_register: Quantum Register object in which all its qubits will be used as control
-    :param target_register: Quantum Register object which contains the target qubit
-    :param n_controls: Size of the control register
-    :param target_index: Index of the target qubit of the rotation
-    :return: Quantum circuit updated with the Rz(angle) rotation applied
-    """
-
-    ctrl_qubits_list = []
-
-    for i in range(n_controls):
-        ctrl_qubits_list.append(control_register[i])
-
-    quantum_circuit.mcrz(angle, ctrl_qubits_list, target_register[target_index])
+    else:
+        raise Exception("Unavailable rotation type")
 
     return quantum_circuit
 
@@ -283,15 +274,21 @@ def _register_step(feature, quantum_circuit, quantum_data, ancila, n_dset_size_q
     gamma = 0
     beta = 0
 
-    if type(feature) == complex:
+    if isinstance(feature, complex):
         phase = np.sqrt(np.power(np.absolute(feature), 2))
         gamma = 2 * np.arcsin(phase)
         beta = 2 * np.arcsin(feature.imag / phase)
     else:
         gamma = 2 * np.arcsin(feature)
 
-    quantum_circuit = _apply_multi_controlled_ry(gamma, quantum_circuit, quantum_data, ancila, n_dset_size_qubits, 0)
-    quantum_circuit = _apply_multi_controlled_rz(beta, quantum_circuit, quantum_data, ancila, n_dset_size_qubits, 0)
+    quantum_circuit = _apply_apply_multi_controlled_rotation(gamma, quantum_circuit,
+                                                             quantum_data, ancila,
+                                                             n_dset_size_qubits, 0,
+                                                             rotation_type='ry')
+    quantum_circuit = _apply_apply_multi_controlled_rotation(beta, quantum_circuit,
+                                                             quantum_data, ancila,
+                                                             n_dset_size_qubits, 0,
+                                                             rotation_type='rz')
 
     return quantum_circuit
 
@@ -313,23 +310,41 @@ def park_quantum_circuit(features, n_feature_qubits, n_dset_size_qubits, with_ba
     :return: Quantum Circuit object generated to perform the method of Park's, et al.
     """
 
+    # Quantum registers dedicated to the encoding procedure
     quantum_data = QuantumRegister(n_feature_qubits)
     ancila = QuantumRegister(1)
-    dset_index = QuantumRegister(n_dset_size_qubits)
+    quantum_index = QuantumRegister(n_dset_size_qubits)
 
-    circuit = QuantumCircuit(quantum_data, ancila)
+    # Classical Register dedicated to post selection
+    post_selection_reg = ClassicalRegister(1)
 
-    circuit = _initialize_state(circuit, quantum_data, dset_index, n_feature_qubits, n_dset_size_qubits)
+    circuit = QuantumCircuit(quantum_data, ancila, quantum_index, post_selection_reg)
+
+    initialize_index = False
+
+    if len(features) > 2:
+        initialize_index = True
+
+    circuit = _initialize_state(circuit, initialize_index=initialize_index)
 
     for feature, pattern in features:
 
         # FLIP
         circuit = _qubitwise_not(pattern, circuit, quantum_data)
 
+        if with_barriers:
+            circuit.barriers()# pylint: disable=maybe-no-member
+
         # REGISTER
         circuit = _register_step(feature, circuit, quantum_data, ancila, n_dset_size_qubits)
 
+        if with_barriers:
+            circuit.barriers()# pylint: disable=maybe-no-member
+
         # FLOP
         circuit = _qubitwise_not(pattern, circuit, quantum_data)
+
+    # MEASURING ANCILA FOR POST SELECTION OF THE STATE
+    circuit.measure(ancila[0], post_selection_reg[0])
 
     return circuit
