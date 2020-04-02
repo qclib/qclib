@@ -3,7 +3,7 @@
 """
 from itertools import product
 import numpy as np
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, QuantumRegister
 
 
 def _recursive_compute_angles(input_vector, angles_tree):
@@ -177,3 +177,159 @@ def mottonen_quantum_circuit(features, with_barriers=False):
     _recursive_compute_angles(features, angles)
 
     return _cascading_ry(angles, with_barriers=with_barriers)
+
+
+def _initialize_state(quantum_circuit, quantum_data, ancila, n_feature_qubits, n_dset_size_qubits,
+                      initialize_ancila=True):
+    """
+        Auxiliary procedure for the method of Park, et al, for initializing
+        the states.
+        If the dataset only has one feature vector then it is not necessary to
+        apply data initialization to the ancila
+    :param quantum_circuit: Quantum circuit object where Park's method will
+                            be applied
+    :param quantum_data: Quantum Register object for the qubits dedicated to the data
+    :param ancila: Quantum Register object for the ancila
+    :param n_feature_qubits: Number of qubits needed for encoding the features in to the
+                             quantum state
+    :param n_dset_size_qubits: Number of qubits needed for encoding the index qubit
+                               for each feature in the dataset
+    :return: Quantum Circuit with state initialization implemented
+    """
+
+    for qb_idx in range(n_feature_qubits):
+        quantum_circuit.h(quantum_data[qb_idx])
+
+    if initialize_ancila:
+        for qb_idx in range(n_dset_size_qubits):
+            quantum_circuit.h(ancila[qb_idx])
+
+    return quantum_circuit
+
+
+def _qubitwise_not(binary_pattern, quantum_circuit, quantum_data):
+    """
+        Auxiliary Procedure that applies the flip/flop step in Park's method.
+    :param binary_pattern: Binary pattern associated to the continuous value
+    :param quantum_circuit: quantum circuit in which the flip step is going to be applied
+    :param quantum_data: Quantum Register object for the qubits dedicated to the data
+    :return: Quantum circuit updated with the flip step
+    """
+    for bit_index, _ in enumerate(binary_pattern):
+        quantum_circuit.x(quantum_data[bit_index])
+    return quantum_circuit
+
+
+def _apply_multi_controlled_ry(angle, quantum_circuit, control_register, target_register, n_controls, target_index):
+    """
+        Apply multicontrolled Ry rotation to the quantum circuit using all quibits
+        in the control_register parameter as control, and the target_register as target qubit,
+        according to the target index.
+    :param angle: Angle to be used in the rotation
+    :param quantum_circuit: quantum circuit in which the rotation is going to be applied
+    :param control_register: Quantum Register object in which all its qubits will be used as control
+    :param target_register: Quantum Register object which contains the target qubit
+    :param n_controls: Size of the control register
+    :param target_index: Index of the target qubit of the rotation
+    :return: Quantum circuit updated with the Ry(angle) rotation applied
+    """
+
+    ctrl_qubits_list = []
+
+    for i in range(n_controls):
+        ctrl_qubits_list.append(control_register[i])
+
+    quantum_circuit.mcry(angle, ctrl_qubits_list, target_register[target_index])
+
+    return quantum_circuit
+
+
+def _apply_multi_controlled_rz(angle, quantum_circuit, control_register, target_register, n_controls, target_index):
+    """
+        Apply multicontrolled Rz rotation to the quantum circuit using all quibits
+        in the control_register parameter as control, and the target_register as target qubit,
+        according to the target index.
+    :param angle: Angle to be used in the rotation
+    :param quantum_circuit: quantum circuit in which the rotation is going to be applied
+    :param control_register: Quantum Register object in which all its qubits will be used as control
+    :param target_register: Quantum Register object which contains the target qubit
+    :param n_controls: Size of the control register
+    :param target_index: Index of the target qubit of the rotation
+    :return: Quantum circuit updated with the Rz(angle) rotation applied
+    """
+
+    ctrl_qubits_list = []
+
+    for i in range(n_controls):
+        ctrl_qubits_list.append(control_register[i])
+
+    quantum_circuit.mcrz(angle, ctrl_qubits_list, target_register[target_index])
+
+    return quantum_circuit
+
+
+def _register_step(feature, quantum_circuit, quantum_data, ancila, n_dset_size_qubits):
+    """
+        Auxiliary procedure that applies the multicontrolled rotations step
+        in Park's method
+    :param feature: Continuous value to be encoded in the phase;
+    :param quantum_circuit: Quantum Circuit Object where the rotations are to be encoded
+    :param quantum_data: Quantum Register object for the qubits dedicated to the data
+    :param ancila: Quantum Register object for the ancila
+    :param n_dset_size_qubits: Number of qubits necessary to encode the data in to the states
+    :return:Quantum circuit updated with the register step
+    """
+
+    gamma = 0
+    beta = 0
+
+    if type(feature) == complex:
+        phase = np.sqrt(np.power(np.absolute(feature), 2))
+        gamma = 2 * np.arcsin(phase)
+        beta = 2 * np.arcsin(feature.imag / phase)
+    else:
+        gamma = 2 * np.arcsin(feature)
+
+    quantum_circuit = _apply_multi_controlled_ry(gamma, quantum_circuit, quantum_data, ancila, n_dset_size_qubits, 0)
+    quantum_circuit = _apply_multi_controlled_rz(beta, quantum_circuit, quantum_data, ancila, n_dset_size_qubits, 0)
+
+    return quantum_circuit
+
+
+def park_quantum_circuit(features, n_feature_qubits, n_dset_size_qubits, with_barriers=False):
+    """
+        Generates the quantum circuit for the method of Park, et al.
+        To encode complex feature vectors in to a quantum state
+    :param features: List of tuples vector to be encoded in the quantum state,
+                    Tuples need to be in the format (v, b).
+                    Where v is the value to be encoded in the phase,
+                    And b the binary string associated to it
+    :param n_feature_qubits: Number of qubits needed for encoding the features in to the
+                             quantum state
+    :param n_dset_size_qubits: Number of qubits needed for encoding the index qubit
+                               for each feature in the dataset
+    :param with_barriers:Boolean, add the barriers in the quantum circuit for better visualisation
+                        when printing the circuit
+    :return: Quantum Circuit object generated to perform the method of Park's, et al.
+    """
+
+    quantum_data = QuantumRegister(n_feature_qubits)
+    ancila = QuantumRegister(1)
+    dset_index = QuantumRegister(n_dset_size_qubits)
+
+    circuit = QuantumCircuit(quantum_data, ancila)
+
+    circuit = _initialize_state(circuit, quantum_data, dset_index, n_feature_qubits, n_dset_size_qubits)
+
+    for feature, pattern in features:
+
+        # FLIP
+        circuit = _qubitwise_not(pattern, circuit, quantum_data)
+
+        # REGISTER
+        circuit = _register_step(feature, circuit, quantum_data, ancila, n_dset_size_qubits)
+
+        # FLOP
+        circuit = _qubitwise_not(pattern, circuit, quantum_data)
+
+    return circuit

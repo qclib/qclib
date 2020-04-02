@@ -10,7 +10,7 @@ from qiskit import execute, Aer
 from qclib.encoding import mottonen_quantum_circuit, _resize_feature_vectors
 
 
-class TestCircuitCreation(TestCase):
+class TestMottonen(TestCase):
     """
     Class dedicated to the implementation of the unittests for the creation of the quantum circuit.
     """
@@ -93,6 +93,7 @@ class TestCircuitCreation(TestCase):
         out_state = result.get_statevector()
         for exp_amplitude, out_amplitude in zip(input_vector_resized, out_state):
             self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+
     
 if __name__ == "__main__":
     unittest.main()
