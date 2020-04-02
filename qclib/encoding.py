@@ -102,13 +102,12 @@ def _check_angles_list(angles):
 
 def _cascading_ry(angles, with_barriers=False):
     """
-    This procedure creates the quantum circuit for the Mottonen method for phase
-    encoding. Building a coherent superposition from the ground state with the
-    features encoded in the phase.
+    This procedure creates the quantum circuit for the Mottonen method for phase encoding.
+    Building a coherent superposition from the ground state with the features encoded in the phase.
 
     :param angles: list of values to be coded in the phases
-    :param with_barriers: Boolean, add the barriers in the quantum circuit for
-           better visualisation when printing the circuit
+    :param with_barriers: Boolean, add the barriers in the quantum circuit for better visualisation
+                        when printing the circuit
     :return: The quantum circuit with the gates
     """
 
@@ -178,6 +177,7 @@ def mottonen_quantum_circuit(features, with_barriers=False):
     _recursive_compute_angles(features, angles)
 
     return _cascading_ry(angles, with_barriers=with_barriers)
+
 
 
 def _initialize_state(quantum_circuit, initialize_index=True):
