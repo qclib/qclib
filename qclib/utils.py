@@ -51,6 +51,6 @@ def transform_dataset(dataset):
 
             if feature != 0:
                 binary_state = format(ft_index, 'b').zfill(n_qbits)
-                transfomed_dataset[fv_index] += (feature, binary_state)
+                transfomed_dataset[fv_index].append((feature, binary_state))
 
     return transfomed_dataset
