@@ -93,6 +93,7 @@ class TestCircuitCreation(TestCase):
         out_state = result.get_statevector()
         for exp_amplitude, out_amplitude in zip(input_vector_resized, out_state):
             self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
-    
+
+
 if __name__ == "__main__":
     unittest.main()

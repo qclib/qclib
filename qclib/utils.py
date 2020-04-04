@@ -22,7 +22,8 @@ def transform_dataset(dataset):
         y-th value.
         This facilitates the storage of sparse vectors into the state
     :param dataset: Array or list of values to be transformed
-    :return: List of tuples
+    :return: List of tuples and the number of qubits necessary to
+            encode the features into the state
     """
 
     if not isinstance(dataset, (list, np.ndarray)):
@@ -53,7 +54,7 @@ def transform_dataset(dataset):
                 binary_state = format(ft_index, 'b').zfill(n_qbits)
                 transfomed_dataset[fv_index].append((feature, binary_state))
 
-    return transfomed_dataset
+    return transfomed_dataset, n_qbits
 
 
 def build_list_of_quibit_objects(quantum_register):

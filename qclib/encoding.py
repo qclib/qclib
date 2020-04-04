@@ -3,8 +3,9 @@
 """
 from itertools import product
 import numpy as np
+import qiskit
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from utils import build_list_of_quibit_objects
+from utils import build_list_of_quibit_objects, transform_dataset
 
 
 def _recursive_compute_angles(input_vector, angles_tree):
@@ -194,8 +195,8 @@ def _initialize_state(quantum_circuit, initialize_index=True):
     :return: Quantum Circuit with state initialization implemented
     """
 
-    quantum_data = quantum_circuit.qregs[0]
-    quantum_index = quantum_circuit.qregs[2]
+    quantum_data = quantum_circuit.qregs[2]
+    quantum_index = quantum_circuit.qregs[0]
 
     for qb_idx in range(quantum_data.size):
         quantum_circuit.h(quantum_data[qb_idx])
@@ -241,8 +242,8 @@ def _apply_apply_multi_controlled_rotation(angle, quantum_circuit, ctrl_qubits_l
     """
 
     if rotation_type == 'ry':
-        quantum_circuit.mcry(angle, ctrl_qubits_list, target_register[target_index])
-
+        quantum_circuit.mcry(angle, ctrl_qubits_list, target_register[target_index],
+                             None, mode='noancilla')
     elif rotation_type == 'rz':
         quantum_circuit.mcrz(angle, ctrl_qubits_list, target_register[target_index])
 
@@ -278,9 +279,9 @@ def _register_step(feature, quantum_circuit, quantum_data, ancila, quantum_index
     else:
         gamma = 2 * np.arcsin(feature)
 
-    ctrl_qubits_list = build_list_of_quibit_objects(quantum_data)
+    ctrl_qubits_list = build_list_of_quibit_objects(quantum_index)
 
-    ctrl_qubits_list += build_list_of_quibit_objects(quantum_index)
+    ctrl_qubits_list += build_list_of_quibit_objects(quantum_data)
 
     quantum_circuit = _apply_apply_multi_controlled_rotation(gamma, quantum_circuit,
                                                              ctrl_qubits_list, ancila,
@@ -307,18 +308,23 @@ def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
     :return: Quantum Circuit object generated to perform the method of Park's, et al.
     """
 
-    n_dset_size_qubits = int(np.ceil(np.log2(len(dataset))))
-
+    # Iitializing quantum registers
     # Quantum registers dedicated to the encoding procedure
-    quantum_data = QuantumRegister(n_feature_qubits)
+    quantum_data = QuantumRegister(n_feature_qubits, name="quantum_data")
 
-    ancila = QuantumRegister(1)
-    quantum_index = QuantumRegister(n_dset_size_qubits)
+    n_dset_size_qubits = 1
+
+    ancila = QuantumRegister(1,name="ancilla")
+
+    if len(dataset) > 1:
+        n_dset_size_qubits = int(np.ceil(np.log2(len(dataset))))
+
+    quantum_index = QuantumRegister(n_dset_size_qubits, name="quantum_index")
 
     # Classical Register dedicated to post selection
     post_selection_reg = ClassicalRegister(1)
 
-    circuit = QuantumCircuit(quantum_data, ancila, quantum_index, post_selection_reg)
+    circuit = QuantumCircuit(quantum_index, ancila, quantum_data, post_selection_reg)
 
     initialize_index = False
 
@@ -349,7 +355,6 @@ def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
             # FLOP
             circuit = _qubitwise_not(pattern, circuit, quantum_data)
 
-        index_bpattern = format(fv_index, 'b').zfill(n_dset_size_qubits)
         circuit = _qubitwise_not(index_bpattern, circuit, quantum_index)
 
     # MEASURING ANCILA FOR POST SELECTION OF THE STATE
