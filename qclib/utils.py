@@ -54,3 +54,18 @@ def transform_dataset(dataset):
                 transfomed_dataset[fv_index].append((feature, binary_state))
 
     return transfomed_dataset
+
+
+def build_list_of_quibit_objects(quantum_register):
+    """
+        Buid a list of Qubit objects to be used as
+        input to some procedure of the qiskit framework
+    :param quantum_register: Quantum register with the qubits
+    :return: Qubits list
+    """
+    qubits_list = []
+
+    for i in range(quantum_register.size):
+        qubits_list.append(quantum_register[i])
+
+    return qubits_list

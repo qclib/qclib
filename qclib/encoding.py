@@ -4,6 +4,7 @@
 from itertools import product
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from utils import build_list_of_quibit_objects
 
 
 def _recursive_compute_angles(input_vector, angles_tree):
@@ -187,6 +188,9 @@ def _initialize_state(quantum_circuit, initialize_index=True):
         apply data initialization to the ancila
     :param quantum_circuit: Quantum circuit object where Park's method will
                             be applied
+    :param initialize_index: Boolean, indicating if the index qubits in
+                            the quantum circuit should be initialized with
+                            a hadamard or with a not gate
     :return: Quantum Circuit with state initialization implemented
     """
 
@@ -199,6 +203,9 @@ def _initialize_state(quantum_circuit, initialize_index=True):
     if initialize_index:
         for qb_idx in range(quantum_index.size):
             quantum_circuit.h(quantum_index[qb_idx])
+    else:
+        for qb_idx in range(quantum_index.size):
+            quantum_circuit.x(quantum_index[qb_idx])
 
     return quantum_circuit
 
@@ -216,7 +223,7 @@ def _qubitwise_not(binary_pattern, quantum_circuit, quantum_data):
     return quantum_circuit
 
 
-def _apply_apply_multi_controlled_rotation(angle, quantum_circuit, control_register,
+def _apply_apply_multi_controlled_rotation(angle, quantum_circuit, ctrl_qubits_list,
                                            target_register, target_index,
                                            rotation_type='rz'):
     """
@@ -225,19 +232,13 @@ def _apply_apply_multi_controlled_rotation(angle, quantum_circuit, control_regis
         according to the target index.
     :param angle: Angle to be used in the rotation
     :param quantum_circuit: quantum circuit in which the rotation is going to be applied
-    :param control_register: Quantum Register object in which all its qubits will be used as control
+    :param ctrl_qubits_list: List of Qubit objects corresponding to the control qubits
     :param target_register: Quantum Register object which contains the target qubit
-    :param n_controls: Size of the control register
     :param target_index: Index of the target qubit of the rotation
     :param rotation_type: rotation type, allowing to chose among the
                           multicontrolled rotaions Ry, Rz and Rx
     :return: Quantum circuit updated with the R_*(angle) rotation applied
     """
-
-    ctrl_qubits_list = []
-
-    for i in range(control_register.size):
-        ctrl_qubits_list.append(control_register[i])
 
     if rotation_type == 'ry':
         quantum_circuit.mcry(angle, ctrl_qubits_list, target_register[target_index])
@@ -254,7 +255,7 @@ def _apply_apply_multi_controlled_rotation(angle, quantum_circuit, control_regis
     return quantum_circuit
 
 
-def _register_step(feature, quantum_circuit, quantum_data, ancila):
+def _register_step(feature, quantum_circuit, quantum_data, ancila, quantum_index):
     """
         Auxiliary procedure that applies the multicontrolled rotations step
         in Park's method
@@ -262,6 +263,8 @@ def _register_step(feature, quantum_circuit, quantum_data, ancila):
     :param quantum_circuit: Quantum Circuit Object where the rotations are to be encoded
     :param quantum_data: Quantum Register object for the qubits dedicated to the data
     :param ancila: Quantum Register object for the ancila
+    :param quantum_index: Quantum Register object for the qubits dedicated to the indexing
+                         of each feature in the feature vector
     :return:Quantum circuit updated with the register step
     """
 
@@ -275,35 +278,40 @@ def _register_step(feature, quantum_circuit, quantum_data, ancila):
     else:
         gamma = 2 * np.arcsin(feature)
 
+    ctrl_qubits_list = build_list_of_quibit_objects(quantum_data)
+
+    ctrl_qubits_list += build_list_of_quibit_objects(quantum_index)
+
     quantum_circuit = _apply_apply_multi_controlled_rotation(gamma, quantum_circuit,
-                                                             quantum_data, ancila, 0,
-                                                             rotation_type='ry')
+                                                             ctrl_qubits_list, ancila,
+                                                             0, rotation_type='ry')
     quantum_circuit = _apply_apply_multi_controlled_rotation(beta, quantum_circuit,
-                                                             quantum_data, ancila, 0,
-                                                             rotation_type='rz')
+                                                             ctrl_qubits_list, ancila,
+                                                             0, rotation_type='rz')
 
     return quantum_circuit
 
 
-def park_quantum_circuit(features, n_feature_qubits, n_dset_size_qubits, with_barriers=False):
+def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
     """
         Generates the quantum circuit for the method of Park, et al.
         To encode complex feature vectors in to a quantum state
-    :param features: List of tuples vector to be encoded in the quantum state,
+    :param dataset: List of tuples vector to be encoded in the quantum state,
                     Tuples need to be in the format (v, b).
                     Where v is the value to be encoded in the phase,
                     And b the binary string associated to it
     :param n_feature_qubits: Number of qubits needed for encoding the features in to the
                              quantum state
-    :param n_dset_size_qubits: Number of qubits needed for encoding the index qubit
-                               for each feature in the dataset
     :param with_barriers:Boolean, add the barriers in the quantum circuit for better visualisation
                         when printing the circuit
     :return: Quantum Circuit object generated to perform the method of Park's, et al.
     """
 
+    n_dset_size_qubits = int(np.ceil(np.log2(len(dataset))))
+
     # Quantum registers dedicated to the encoding procedure
     quantum_data = QuantumRegister(n_feature_qubits)
+
     ancila = QuantumRegister(1)
     quantum_index = QuantumRegister(n_dset_size_qubits)
 
@@ -314,27 +322,35 @@ def park_quantum_circuit(features, n_feature_qubits, n_dset_size_qubits, with_ba
 
     initialize_index = False
 
-    if len(features) > 2:
+    if len(dataset) > 2:
         initialize_index = True
 
     circuit = _initialize_state(circuit, initialize_index=initialize_index)
 
-    for feature, pattern in features:
+    for fv_index, feature_vector in enumerate(dataset):
 
-        # FLIP
-        circuit = _qubitwise_not(pattern, circuit, quantum_data)
+        index_bpattern = format(fv_index, 'b').zfill(n_dset_size_qubits)
+        circuit = _qubitwise_not(index_bpattern, circuit, quantum_index)
 
-        if with_barriers:
-            circuit.barriers()# pylint: disable=maybe-no-member
+        for feature, pattern in feature_vector:
 
-        # REGISTER
-        circuit = _register_step(feature, circuit, quantum_data, ancila)
+            # FLIP
+            circuit = _qubitwise_not(pattern, circuit, quantum_data)
 
-        if with_barriers:
-            circuit.barriers()# pylint: disable=maybe-no-member
+            if with_barriers:
+                circuit.barriers()# pylint: disable=maybe-no-member
 
-        # FLOP
-        circuit = _qubitwise_not(pattern, circuit, quantum_data)
+            # REGISTER
+            circuit = _register_step(feature, circuit, quantum_data, ancila, quantum_index)
+
+            if with_barriers:
+                circuit.barriers()# pylint: disable=maybe-no-member
+
+            # FLOP
+            circuit = _qubitwise_not(pattern, circuit, quantum_data)
+
+        index_bpattern = format(fv_index, 'b').zfill(n_dset_size_qubits)
+        circuit = _qubitwise_not(index_bpattern, circuit, quantum_index)
 
     # MEASURING ANCILA FOR POST SELECTION OF THE STATE
     circuit.measure(ancila[0], post_selection_reg[0])
