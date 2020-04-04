@@ -187,10 +187,6 @@ def _initialize_state(quantum_circuit, initialize_index=True):
         apply data initialization to the ancila
     :param quantum_circuit: Quantum circuit object where Park's method will
                             be applied
-    :param n_feature_qubits: Number of qubits needed for encoding the features in to the
-                             quantum state
-    :param n_dset_size_qubits: Number of qubits needed for encoding the index qubit
-                               for each feature in the dataset
     :return: Quantum Circuit with state initialization implemented
     """
 
@@ -258,7 +254,7 @@ def _apply_apply_multi_controlled_rotation(angle, quantum_circuit, control_regis
     return quantum_circuit
 
 
-def _register_step(feature, quantum_circuit, quantum_data, ancila, n_dset_size_qubits):
+def _register_step(feature, quantum_circuit, quantum_data, ancila):
     """
         Auxiliary procedure that applies the multicontrolled rotations step
         in Park's method
@@ -266,7 +262,6 @@ def _register_step(feature, quantum_circuit, quantum_data, ancila, n_dset_size_q
     :param quantum_circuit: Quantum Circuit Object where the rotations are to be encoded
     :param quantum_data: Quantum Register object for the qubits dedicated to the data
     :param ancila: Quantum Register object for the ancila
-    :param n_dset_size_qubits: Number of qubits necessary to encode the data in to the states
     :return:Quantum circuit updated with the register step
     """
 
@@ -333,7 +328,7 @@ def park_quantum_circuit(features, n_feature_qubits, n_dset_size_qubits, with_ba
             circuit.barriers()# pylint: disable=maybe-no-member
 
         # REGISTER
-        circuit = _register_step(feature, circuit, quantum_data, ancila, n_dset_size_qubits)
+        circuit = _register_step(feature, circuit, quantum_data, ancila)
 
         if with_barriers:
             circuit.barriers()# pylint: disable=maybe-no-member
