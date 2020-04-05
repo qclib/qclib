@@ -326,7 +326,7 @@ def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
 
     initialize_index = False
 
-    if len(dataset) > 2:
+    if len(dataset) > 1:
         initialize_index = True
 
     circuit = _initialize_state(circuit, quantum_data,
@@ -369,7 +369,7 @@ def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
     return circuit
 
 
-def parks_state_vector_post_selection(quantum_circuit, max_runs=10):
+def parks_state_vector_post_selection(quantum_circuit, max_runs=100):
     """
         Performs the post selection in the park's method for
         storing data. The qubits are encoded in such a way
@@ -399,5 +399,9 @@ def parks_state_vector_post_selection(quantum_circuit, max_runs=10):
 
         if state_vector[0] == 0:
             break
+
+    if state_vector[0] != 0:
+        raise Exception("Wrong state has been returned," +
+                        " even when running at the maximun number of executions")
 
     return state_vector
