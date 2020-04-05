@@ -67,6 +67,6 @@ def build_list_of_quibit_objects(quantum_register):
     qubits_list = []
 
     for i in range(quantum_register.size):
-        qubits_list.append(quantum_register[i])
+        qubits_list.append(quantum_register[quantum_register.size - i - 1])
 
     return qubits_list
