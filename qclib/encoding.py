@@ -363,7 +363,41 @@ def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
                                                         circuit,
                                                         quantum_index)
 
-    # MEASURING ANCILA FOR POST SELECTION OF THE STATE
+    # MEASURING ANCILLA FOR POST SELECTION OF THE STATE
     circuit.measure(ancilla[0], post_selection_reg[0])
 
     return circuit
+
+
+def parks_state_vector_post_selection(quantum_circuit, max_runs=10):
+    """
+        Performs the post selection in the park's method for
+        storing data. The qubits are encoded in such a way
+        that if after the measuremet the ancilla assumes the
+        state |0> the first 2^k states of the state vectors
+        will contain values. Where k is the number of qubits
+        of the quantum data.
+    :param quantum_circuit: QuantumCircuit object to be executed
+    :return: The state vector when the ancilla assumes the state |1>,
+             The number of times the circuit had to be executed so that
+             the desired state vector would have to be returned
+    """
+    n_runs = 0
+
+    state_vector = None
+
+    backend = qiskit.Aer.backends('statevector_simulator')[0]
+
+    while n_runs < max_runs:
+        jobs = qiskit.execute(quantum_circuit, backend)
+
+        results = jobs.result()
+
+        state_vector = results.get_statevector()
+
+        n_runs += 1
+
+        if state_vector[0] == 0:
+            break
+
+    return state_vector
