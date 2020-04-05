@@ -193,13 +193,18 @@ class TestParksCircuit(TestCase):
 
         returned_state_vector = encoding.parks_state_vector_post_selection(circuit)
 
-        expected_state_vector = -np.array([0, 0, 0, 0,
-                                         0, 0, 0, 0,
-                                         np.sqrt(0.03), np.sqrt(0.02), np.sqrt(0.02), np.sqrt(0.03),
-                                         np.sqrt(0.1), np.sqrt(0.4), np.sqrt(0.3), np.sqrt(0.1)])
+        expected_state_vector = -np.array([0, 0,
+                                           0, 0,
+                                           0, 0,
+                                           0, 0,
+                                           np.sqrt(0.03), np.sqrt(0.02),
+                                           np.sqrt(0.02), np.sqrt(0.03),
+                                           np.sqrt(0.1), np.sqrt(0.4),
+                                           np.sqrt(0.3), np.sqrt(0.1)])
 
         for returned, target in zip(returned_state_vector, expected_state_vector):
             self.assertTrue((returned - target) < 10 ** -5)
+
 
 if __name__ == "__main__":
     unittest.main()

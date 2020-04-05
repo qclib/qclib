@@ -5,7 +5,7 @@ from itertools import product
 import numpy as np
 import qiskit
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
-from utils import build_list_of_quibit_objects, transform_dataset
+from utils import build_list_of_quibit_objects
 
 
 def _recursive_compute_angles(input_vector, angles_tree):
@@ -330,7 +330,7 @@ def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
         initialize_index = True
 
     circuit = _initialize_state(circuit, quantum_data,
-                                quantum_index,initialize_index=initialize_index)
+                                quantum_index, initialize_index=initialize_index)
 
     for fv_index, feature_vector in enumerate(dataset):
 
