@@ -143,10 +143,14 @@ class TestParksCircuit(TestCase):
 
         returned_state_vector = encoding.parks_state_vector_post_selection(circuit)
 
-        expected_state_vector = [0, 0, 0, 0,
-                                 0, 0, 0, 0,
-                                 -np.sqrt(0.03), -np.sqrt(0.47), -np.sqrt(0.18), -np.sqrt(0.32),
-                                 0, 0, 0, 0]
+        expected_state_vector = np.array([0, 0,
+                                          0, 0,
+                                          0, 0,
+                                          0, 0,
+                                          np.sqrt(0.03), np.sqrt(0.47),
+                                          np.sqrt(0.18), np.sqrt(0.32),
+                                          0, 0,
+                                          0, 0])
 
         for returned, target in zip(returned_state_vector, expected_state_vector):
             self.assertTrue((returned - target) < 10**-5)
@@ -154,7 +158,7 @@ class TestParksCircuit(TestCase):
     def test_parks_method_with_a_dataset_two_feature_vectors(self):
         """
             Test the output of the quantum circuit with a dataset with
-            two feature vector.
+            two feature vectors.
         :return: None
         """
         input_vector = np.array([[np.sqrt(0.03), np.sqrt(0.02), np.sqrt(0.02), np.sqrt(0.03)],
@@ -170,6 +174,29 @@ class TestParksCircuit(TestCase):
                                  0, 0, 0, 0,
                                  np.sqrt(0.03), np.sqrt(0.02), np.sqrt(0.02), np.sqrt(0.03),
                                  np.sqrt(0.1), np.sqrt(0.4), np.sqrt(0.3), np.sqrt(0.1)]
+
+        for returned, target in zip(returned_state_vector, expected_state_vector):
+            self.assertTrue((returned - target) < 10 ** -5)
+
+    def test_parks_method_with_a_dataset_two_negative_valued_feature_vectors(self):
+        """
+            Test the output of the quantum circuit with a dataset with
+            two negative valued feature vectors.
+        :return: None
+        """
+        input_vector = -np.array([[np.sqrt(0.03), np.sqrt(0.02), np.sqrt(0.02), np.sqrt(0.03)],
+                                  [np.sqrt(0.1), np.sqrt(0.4), np.sqrt(0.3), np.sqrt(0.1)]])
+
+        transformed_data, n_data_qbits = transform_dataset(input_vector)
+
+        circuit = encoding.park_quantum_circuit(transformed_data, n_data_qbits)
+
+        returned_state_vector = encoding.parks_state_vector_post_selection(circuit)
+
+        expected_state_vector = -np.array([0, 0, 0, 0,
+                                         0, 0, 0, 0,
+                                         np.sqrt(0.03), np.sqrt(0.02), np.sqrt(0.02), np.sqrt(0.03),
+                                         np.sqrt(0.1), np.sqrt(0.4), np.sqrt(0.3), np.sqrt(0.1)])
 
         for returned, target in zip(returned_state_vector, expected_state_vector):
             self.assertTrue((returned - target) < 10 ** -5)
