@@ -195,32 +195,34 @@ def _initialize_state(quantum_circuit, initialize_index=True):
     :return: Quantum Circuit with state initialization implemented
     """
 
-    quantum_data = quantum_circuit.qregs[2]
-    quantum_index = quantum_circuit.qregs[0]
+    quantum_data = quantum_circuit.qregs[1]
 
     for qb_idx in range(quantum_data.size):
         quantum_circuit.h(quantum_data[qb_idx])
 
     if initialize_index:
+
+        quantum_index = quantum_circuit.qregs[0]
+
         for qb_idx in range(quantum_index.size):
             quantum_circuit.h(quantum_index[qb_idx])
-    else:
-        for qb_idx in range(quantum_index.size):
-            quantum_circuit.x(quantum_index[qb_idx])
 
     return quantum_circuit
 
 
-def _qubitwise_not(binary_pattern, quantum_circuit, quantum_data):
+def _qubitwise_classically_controlled_not(binary_pattern, quantum_circuit, quantum_register):
     """
         Auxiliary Procedure that applies the flip/flop step in Park's method.
     :param binary_pattern: Binary pattern associated to the continuous value
     :param quantum_circuit: quantum circuit in which the flip step is going to be applied
-    :param quantum_data: Quantum Register object for the qubits dedicated to the data
+    :param quantum_register: Quantum Register object for the qubits
+                             Where the classically controlled operations are
+                             going to be applied
     :return: Quantum circuit updated with the flip step
     """
-    for bit_index, _ in enumerate(binary_pattern):
-        quantum_circuit.x(quantum_data[bit_index])
+    for bit_index, bin_state in enumerate(binary_pattern):
+        if bin_state == '0':
+            quantum_circuit.x(quantum_register[bit_index])
     return quantum_circuit
 
 
@@ -324,7 +326,7 @@ def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
     # Classical Register dedicated to post selection
     post_selection_reg = ClassicalRegister(1)
 
-    circuit = QuantumCircuit(quantum_index, ancila, quantum_data, post_selection_reg)
+    circuit = QuantumCircuit(quantum_index, quantum_data, ancila, post_selection_reg)
 
     initialize_index = False
 
@@ -336,12 +338,15 @@ def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
     for fv_index, feature_vector in enumerate(dataset):
 
         index_bpattern = format(fv_index, 'b').zfill(n_dset_size_qubits)
-        circuit = _qubitwise_not(index_bpattern, circuit, quantum_index)
+        circuit = _qubitwise_classically_controlled_not(index_bpattern,
+                                                        circuit, quantum_index)
 
         for feature, pattern in feature_vector:
 
             # FLIP
-            circuit = _qubitwise_not(pattern, circuit, quantum_data)
+            circuit = _qubitwise_classically_controlled_not(pattern,
+                                                            circuit,
+                                                            quantum_data)
 
             if with_barriers:
                 circuit.barriers()# pylint: disable=maybe-no-member
@@ -353,9 +358,13 @@ def park_quantum_circuit(dataset, n_feature_qubits, with_barriers=False):
                 circuit.barriers()# pylint: disable=maybe-no-member
 
             # FLOP
-            circuit = _qubitwise_not(pattern, circuit, quantum_data)
+            circuit = _qubitwise_classically_controlled_not(pattern,
+                                                            circuit,
+                                                            quantum_data)
 
-        circuit = _qubitwise_not(index_bpattern, circuit, quantum_index)
+        circuit = _qubitwise_classically_controlled_not(index_bpattern,
+                                                        circuit,
+                                                        quantum_index)
 
     # MEASURING ANCILA FOR POST SELECTION OF THE STATE
     circuit.measure(ancila[0], post_selection_reg[0])
