@@ -271,9 +271,12 @@ def _register_step(feature, quantum_circuit, quantum_data, ancilla, quantum_inde
     beta = 0
 
     if isinstance(feature, complex):
-        phase = np.sqrt(np.power(np.absolute(feature), 2))
-        gamma = 2 * np.arcsin(phase)
-        beta = 2 * np.arcsin(feature.imag / phase)
+        complex_norm = np.sqrt(np.power(np.absolute(feature), 2))
+
+        gamma = 2 * np.arcsin(complex_norm)
+
+        beta = np.log(feature / complex_norm).imag
+
     else:
         gamma = 2 * np.arcsin(feature)
 
