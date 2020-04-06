@@ -146,3 +146,185 @@ class TestParksCircuit(TestCase):
 
         for returned, target in zip(returned_state_vector, expected_state_vector):
             self.assertTrue((returned - target) < 10 ** -5)
+
+    def test_dataset_with_two_complex_valued_feature_vector(self):
+        """
+            Test the output of the quantum circuit
+            for a dataset with two complex valued feature vector
+        :return: None
+        """
+        input_vector = np.array([[complex(np.sqrt(0.02), np.sqrt(0.01)),
+                                  complex(np.sqrt(0.01), np.sqrt(0.01)),
+                                  complex(np.sqrt(0.01), np.sqrt(0.01)),
+                                  complex(np.sqrt(0.02), np.sqrt(0.01))],
+                                 [complex(np.sqrt(0.05), np.sqrt(0.05)),
+                                  complex(np.sqrt(0.2), np.sqrt(0.2)),
+                                  complex(np.sqrt(0.2), np.sqrt(0.1)),
+                                  complex(np.sqrt(0.05), np.sqrt(0.05))]])
+
+        transformed_data, n_data_qbits = transform_dataset(input_vector)
+
+        circuit = encoding.park_quantum_circuit(transformed_data, n_data_qbits)
+
+        returned_state_vector = encoding.parks_state_vector_post_selection(circuit)
+
+        expected_state_vector = [0, 0,
+                                 0, 0,
+                                 0, 0,
+                                 0, 0,
+                                 complex(np.sqrt(0.02), np.sqrt(0.01)), complex(np.sqrt(0.01), np.sqrt(0.01)),
+                                 complex(np.sqrt(0.01), np.sqrt(0.01)), complex(np.sqrt(0.02), np.sqrt(0.01)),
+                                 complex(np.sqrt(0.05), np.sqrt(0.05)), complex(np.sqrt(0.2), np.sqrt(0.2)),
+                                 complex(np.sqrt(0.2), np.sqrt(0.1)),   complex(np.sqrt(0.05), np.sqrt(0.05))]
+
+        for returned, target in zip(returned_state_vector, expected_state_vector):
+            self.assertTrue((returned - target) < 10 ** -5)
+
+    def test_dataset_with_two_negative_valued_complex_valued_feature_vector(self):
+        """
+            Test the output of the quantum circuit
+            for a dataset with two complex valued feature vector
+            with negative features
+        :return: None
+        """
+        input_vector = -np.array([[complex(np.sqrt(0.02), np.sqrt(0.01)),
+                                   complex(np.sqrt(0.01), np.sqrt(0.01)),
+                                   complex(np.sqrt(0.01), np.sqrt(0.01)),
+                                   complex(np.sqrt(0.02), np.sqrt(0.01))],
+                                  [complex(np.sqrt(0.05), np.sqrt(0.05)),
+                                   complex(np.sqrt(0.2), np.sqrt(0.2)),
+                                   complex(np.sqrt(0.2), np.sqrt(0.1)),
+                                   complex(np.sqrt(0.05), np.sqrt(0.05))]])
+
+        transformed_data, n_data_qbits = transform_dataset(input_vector)
+
+        circuit = encoding.park_quantum_circuit(transformed_data, n_data_qbits)
+
+        returned_state_vector = encoding.parks_state_vector_post_selection(circuit)
+
+        expected_state_vector = -np.array([0, 0,
+                                           0, 0,
+                                           0, 0,
+                                           0, 0,
+                                           complex(np.sqrt(0.02), np.sqrt(0.01)),
+                                           complex(np.sqrt(0.01), np.sqrt(0.01)),
+                                           complex(np.sqrt(0.01), np.sqrt(0.01)),
+                                           complex(np.sqrt(0.02), np.sqrt(0.01)),
+                                           complex(np.sqrt(0.05), np.sqrt(0.05)),
+                                           complex(np.sqrt(0.2), np.sqrt(0.2)),
+                                           complex(np.sqrt(0.2), np.sqrt(0.1)),
+                                           complex(np.sqrt(0.05), np.sqrt(0.05))])
+
+        for returned, target in zip(returned_state_vector, expected_state_vector):
+            self.assertTrue((returned - target) < 10 ** -5)
+
+    def test_dataset_with_two_feature_vector_with_negative_complex_parts(self):
+        """
+            Test the output of the quantum circuit for a dataset with
+            two feature vectors with features with negative complex values
+        :return: None
+        """
+        input_vector = np.array([[complex(np.sqrt(0.02), -np.sqrt(0.01)),
+                                  complex(np.sqrt(0.01), -np.sqrt(0.01)),
+                                  complex(np.sqrt(0.01), -np.sqrt(0.01)),
+                                  complex(np.sqrt(0.02), -np.sqrt(0.01))],
+                                 [complex(np.sqrt(0.05), -np.sqrt(0.05)),
+                                  complex(np.sqrt(0.2), -np.sqrt(0.2)),
+                                  complex(np.sqrt(0.2), -np.sqrt(0.1)),
+                                  complex(np.sqrt(0.05), -np.sqrt(0.05))]])
+
+        transformed_data, n_data_qbits = transform_dataset(input_vector)
+
+        circuit = encoding.park_quantum_circuit(transformed_data, n_data_qbits)
+
+        returned_state_vector = encoding.parks_state_vector_post_selection(circuit)
+
+        expected_state_vector = np.array([0, 0,
+                                          0, 0,
+                                          0, 0,
+                                          0, 0,
+                                          complex(np.sqrt(0.02), -np.sqrt(0.01)),
+                                          complex(np.sqrt(0.01), -np.sqrt(0.01)),
+                                          complex(np.sqrt(0.01), -np.sqrt(0.01)),
+                                          complex(np.sqrt(0.02), -np.sqrt(0.01)),
+                                          complex(np.sqrt(0.05), -np.sqrt(0.05)),
+                                          complex(np.sqrt(0.2), -np.sqrt(0.2)),
+                                          complex(np.sqrt(0.2), -np.sqrt(0.1)),
+                                          complex(np.sqrt(0.05), -np.sqrt(0.05))])
+
+        for returned, target in zip(returned_state_vector, expected_state_vector):
+            self.assertTrue((returned - target) < 10 ** -5)
+
+    def test_dataset_with_two_feature_vectors_with_negative_real_parts(self):
+        """
+            Test the output of the quantum circuit for a dataset with
+            two feature vectors with features with negative real values
+        :return: None
+        """
+        input_vector = np.array([[complex(-np.sqrt(0.02), np.sqrt(0.01)),
+                                  complex(-np.sqrt(0.01), np.sqrt(0.01)),
+                                  complex(-np.sqrt(0.01), np.sqrt(0.01)),
+                                  complex(-np.sqrt(0.02), np.sqrt(0.01))],
+                                 [complex(-np.sqrt(0.05), np.sqrt(0.05)),
+                                  complex(-np.sqrt(0.2), np.sqrt(0.2)),
+                                  complex(-np.sqrt(0.2), np.sqrt(0.1)),
+                                  complex(-np.sqrt(0.05), np.sqrt(0.05))]])
+
+        transformed_data, n_data_qbits = transform_dataset(input_vector)
+
+        circuit = encoding.park_quantum_circuit(transformed_data, n_data_qbits)
+
+        returned_state_vector = encoding.parks_state_vector_post_selection(circuit)
+
+        expected_state_vector = np.array([0, 0,
+                                          0, 0,
+                                          0, 0,
+                                          0, 0,
+                                          complex(-np.sqrt(0.02), np.sqrt(0.01)),
+                                          complex(-np.sqrt(0.01), np.sqrt(0.01)),
+                                          complex(-np.sqrt(0.01), np.sqrt(0.01)),
+                                          complex(-np.sqrt(0.02), np.sqrt(0.01)),
+                                          complex(-np.sqrt(0.05), np.sqrt(0.05)),
+                                          complex(-np.sqrt(0.2), np.sqrt(0.2)),
+                                          complex(-np.sqrt(0.2), np.sqrt(0.1)),
+                                          complex(-np.sqrt(0.05), np.sqrt(0.05))])
+
+        for returned, target in zip(returned_state_vector, expected_state_vector):
+            self.assertTrue((returned - target) < 10 ** -5)
+
+    def test_dataset_with_two_feature_vectors_with_alternating_negative_parts(self):
+        """
+            Test the output of the quantum circuit for a dataset with
+            two feature vectors with features with alternating negative parts
+        :return: None
+        """
+        input_vector = np.array([[complex(-np.sqrt(0.02), np.sqrt(0.01)),
+                                  complex(-np.sqrt(0.01), -np.sqrt(0.01)),
+                                  complex(np.sqrt(0.01), -np.sqrt(0.01)),
+                                  complex(-np.sqrt(0.02), np.sqrt(0.01))],
+                                 [complex(np.sqrt(0.05), -np.sqrt(0.05)),
+                                  complex(-np.sqrt(0.2), np.sqrt(0.2)),
+                                  complex(np.sqrt(0.2), -np.sqrt(0.1)),
+                                  complex(-np.sqrt(0.05), -np.sqrt(0.05))]])
+
+        transformed_data, n_data_qbits = transform_dataset(input_vector)
+
+        circuit = encoding.park_quantum_circuit(transformed_data, n_data_qbits)
+
+        returned_state_vector = encoding.parks_state_vector_post_selection(circuit)
+
+        expected_state_vector = np.array([0, 0,
+                                          0, 0,
+                                          0, 0,
+                                          0, 0,
+                                          complex(-np.sqrt(0.02), np.sqrt(0.01)),
+                                          complex(-np.sqrt(0.01), -np.sqrt(0.01)),
+                                          complex(np.sqrt(0.01), -np.sqrt(0.01)),
+                                          complex(-np.sqrt(0.02), np.sqrt(0.01)),
+                                          complex(np.sqrt(0.05), -np.sqrt(0.05)),
+                                          complex(-np.sqrt(0.2), np.sqrt(0.2)),
+                                          complex(np.sqrt(0.2), - np.sqrt(0.1)),
+                                          complex(-np.sqrt(0.05), -np.sqrt(0.05))])
+
+        for returned, target in zip(returned_state_vector, expected_state_vector):
+            self.assertTrue((returned - target) < 10 ** -5)
