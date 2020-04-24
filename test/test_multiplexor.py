@@ -1,14 +1,14 @@
 from unittest import TestCase
 import numpy as np
 from qiskit import execute, Aer, QuantumRegister
-from qclib.encoding import _recursive_compute_angles
 from qclib import QuantumCircuit
+
 
 class TestMultiplexor(TestCase):
     def test_ry_multiplexor(self):
-        angles = []
+        angles = [1.9823131728623846, 1.9106332362490186, 1.4274487578895312]
         state = [np.sqrt(0.1), np.sqrt(0.2), np.sqrt(0.4), np.sqrt(0.3)]
-        _recursive_compute_angles(state, angles)
+
         qr = QuantumRegister(2)
         circuit = QuantumCircuit(qr)
         circuit.ry(angles[0], qr[1])

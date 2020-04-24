@@ -40,8 +40,6 @@ class Multiplexor(Instruction):
             step = step // 2
             pos = pos // 2
 
-        print(self.cnot_control)
-
     def _compute_multiplexor_angles(self):
 
         local_angles = self.params
