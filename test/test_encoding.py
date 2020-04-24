@@ -6,8 +6,8 @@ import unittest
 from unittest import TestCase
 from random import randint
 import numpy as np
-from qiskit import execute, Aer
-from qclib.encoding import mottonen_quantum_circuit, _resize_feature_vectors
+from qiskit import execute, Aer, QuantumRegister
+from qclib import QuantumCircuit
 
 
 class TestCircuitCreation(TestCase):
@@ -15,7 +15,7 @@ class TestCircuitCreation(TestCase):
     Class dedicated to the implementation of the unittests for the creation of the quantum circuit.
     """
 
-    def test_mottonen_initialization(self):
+    def test_ur_initialization(self):
         """
         Load a 3 qubits state
         """
@@ -27,7 +27,11 @@ class TestCircuitCreation(TestCase):
                         np.sqrt(0.4),
                         -np.sqrt(0.3),
                         -np.sqrt(0.1)]
-        quantum_circuit = mottonen_quantum_circuit(input_vector)
+
+        qr = QuantumRegister(3)
+        quantum_circuit = QuantumCircuit(qr)
+        quantum_circuit.ur_initialize(input_vector, qr)
+
         backend_sim = Aer.backends('statevector_simulator')[0]
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
@@ -37,7 +41,7 @@ class TestCircuitCreation(TestCase):
         for exp_amplitude, out_amplitude in zip(input_vector, out_state):
             self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
 
-    def test_mottonen_initialization_basis_state(self):
+    def test_ur_initialization_basis_state(self):
         """
         Load a basis state
         """
@@ -49,7 +53,11 @@ class TestCircuitCreation(TestCase):
                         1,
                         0,
                         0]
-        quantum_circuit = mottonen_quantum_circuit(input_vector)
+
+        qr = QuantumRegister(3)
+        quantum_circuit = QuantumCircuit(qr)
+        quantum_circuit.ur_initialize(input_vector, qr)
+
         backend_sim = Aer.backends('statevector_simulator')[0]
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
@@ -59,40 +67,46 @@ class TestCircuitCreation(TestCase):
         for exp_amplitude, out_amplitude in zip(input_vector, out_state):
             self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
 
-    def test_mottonen_initialization_random_4qubtis(self):
+    def test_ur_initialization_random_4qubtis(self):
         """
-        exemplo de teste
-        :return:
+        Load a 4 qubit state
         """
         input_vector = np.random.rand(16)
         input_vector = input_vector / np.linalg.norm(input_vector)
-        quantum_circuit = mottonen_quantum_circuit(input_vector)
+
+        qr = QuantumRegister(4)
+        quantum_circuit = QuantumCircuit(qr)
+        quantum_circuit.ur_initialize(input_vector, qr)
+
         backend_sim = Aer.backends('statevector_simulator')[0]
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
 
         out_state = result.get_statevector(quantum_circuit)
-
         for exp_amplitude, out_amplitude in zip(input_vector, out_state):
             self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
 
-    def test_mottonen_random_sized_feature_vector(self):
+    def test_ur_random_sized_feature_vector(self):
         """
         Testing mottonen's quantum circuit resulting state vector for a randomly sized feature
         vector
         :return:
         """
 
-        input_vector = np.random.uniform(low=-10, high=10, size=randint(2, 17))
+        size = randint(2, 5)
+        input_vector = np.random.uniform(low=-10, high=10, size=2**size)
         input_vector = input_vector / np.linalg.norm(input_vector)
-        input_vector_resized = _resize_feature_vectors(input_vector)
-        quantum_circuit = mottonen_quantum_circuit(input_vector)
+
+        qr = QuantumRegister(size)
+        quantum_circuit = QuantumCircuit(qr)
+        quantum_circuit.ur_initialize(input_vector, qr)
+
         backend_sim = Aer.backends('statevector_simulator')[0]
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
         out_state = result.get_statevector()
-        for exp_amplitude, out_amplitude in zip(input_vector_resized, out_state):
+        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
             self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
-    
+
 if __name__ == "__main__":
     unittest.main()
