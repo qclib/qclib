@@ -2,8 +2,8 @@
  Loading real vectors in the amplitude of a quantum system based on arXiv:quant-ph/0407010v1
 """
 from itertools import product
-import numpy as np
 from abc import ABC, abstractmethod
+import numpy as np
 from qiskit.circuit import Instruction
 
 from qclib import QuantumCircuit
@@ -11,8 +11,10 @@ from qclib import QuantumCircuit
 
 class Initializer(ABC, Instruction):
     @abstractmethod
-    def initialize(self, params):
+    def initialize(self, params, qubits):
         pass
+
+
 
 class InitializerUniformlyRotation(Initializer):
     """
@@ -59,7 +61,6 @@ class InitializerUniformlyRotation(Initializer):
             for value in angles:
                 self._angles_tree.append(value)
 
-
     def _apply_controlled_rotations(self, controls, angle, n_qubits):
         """
         This procedure applies controlled rotations using a tuple
@@ -95,35 +96,12 @@ class InitializerUniformlyRotation(Initializer):
             if ctrl == 0:
                 self._circuit.x(n_qubits - i - 1)
 
-
-    def _check_angles_list(self, angles):
-        """
-        Check if the poperties of the input are according to the type of input expected in the
-        cascading_ry procedure
-
-        :param angles: input angles
-        :return: adjusted input angles
-        """
-
-        if isinstance(angles, list) and angles == []:
-            raise Exception("Empty iterable")
-
-        if isinstance(angles[0], (list, tuple, np.ndarray)):
-            raise Exception("Expected an uni-dimensional iterable")
-
-        if isinstance(angles, np.ndarray):
-            angles = angles.tolist()
-
-        return angles
-
-
-    def _cascading_ry(self):
+    def _create_circuit(self):
         """
         This procedure creates the quantum circuit for the Mottonen method for phase encoding.
         Building a coherent superposition from the ground state with the features encoded in the phase.
         """
         angles = self._angles_tree
-        angles = self._check_angles_list(angles)
 
         n_qubits = int(np.ceil(np.log2(len(angles) + 1)))
 
@@ -141,25 +119,6 @@ class InitializerUniformlyRotation(Initializer):
                 current_value = angles.pop(0)
                 self._apply_controlled_rotations(controls, current_value, n_qubits)
 
-
-    def _resize_feature_vectors(features):
-        """
-        Resize the feature vector if its dimension is not in a 2^n format
-        by concatenating zeroes.
-        The input is expected to be uni-dimensional.
-
-        :param features: Feature vector to be resized
-        :return: feature vector
-        """
-
-        features_size = len(features)
-        if np.log2(features_size) < np.ceil(np.log2(features_size)):
-
-            multiplier = int(2 ** np.ceil(np.log2(features_size)) - features_size)
-            features = np.concatenate((features, [0] * multiplier))
-        return features
-
-
     def _define(self):
         """
             Generates the quantum circuit for the Mottonen's method based on a feature vector of
@@ -170,12 +129,27 @@ class InitializerUniformlyRotation(Initializer):
         """
 
         self._recursive_compute_angles(self.params)
-        self._cascading_ry()
+        self._create_circuit()
         self.definition = self._circuit.data
 
     def initialize(self, params, qubits):
         return self.append(InitializerUniformlyRotation(params), qubits)
 
-
-
     QuantumCircuit.ur_initialize = initialize
+
+
+class InitializerMultiplexor(InitializerUniformlyRotation):
+    """
+    State preparation arXiv:quant-ph/0406176
+    """
+    def _create_circuit(self):
+        self._circuit.ry(self._angles_tree[0], self.num_qubits-1)
+        for k in range(1, self.num_qubits):
+            angles = self._angles_tree[2 ** k - 1: 2 ** (k + 1) - 1]
+            qubits = list(range(self.num_qubits-k-1, self.num_qubits))
+            self._circuit.ry_multiplexor(angles, qubits)
+
+    def initialize(self, params, qubits):
+        return self.append(InitializerMultiplexor(params), qubits)
+
+    QuantumCircuit.mult_initialize = initialize
