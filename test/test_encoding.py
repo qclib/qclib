@@ -2,7 +2,6 @@
  This module contains a set of unit tests dedicated to verify if the creation of quantum circuit
  in the mottonen module work properly.
 """
-import unittest
 from unittest import TestCase
 from random import randint
 import numpy as np
@@ -28,9 +27,9 @@ class TestCircuitCreation(TestCase):
                         -np.sqrt(0.3),
                         -np.sqrt(0.1)]
 
-        qr = QuantumRegister(3)
-        quantum_circuit = QuantumCircuit(qr)
-        quantum_circuit.ur_initialize(input_vector, qr)
+        quantum_register = QuantumRegister(3)
+        quantum_circuit = QuantumCircuit(quantum_register)
+        quantum_circuit.ur_initialize(input_vector, quantum_register)
 
         backend_sim = Aer.backends('statevector_simulator')[0]
         job = execute(quantum_circuit, backend_sim)
@@ -54,9 +53,9 @@ class TestCircuitCreation(TestCase):
                         0,
                         0]
 
-        qr = QuantumRegister(3)
-        quantum_circuit = QuantumCircuit(qr)
-        quantum_circuit.ur_initialize(input_vector, qr)
+        quantum_register = QuantumRegister(3)
+        quantum_circuit = QuantumCircuit(quantum_register)
+        quantum_circuit.ur_initialize(input_vector, quantum_register)
 
         backend_sim = Aer.backends('statevector_simulator')[0]
         job = execute(quantum_circuit, backend_sim)
@@ -74,9 +73,9 @@ class TestCircuitCreation(TestCase):
         input_vector = np.random.rand(16)
         input_vector = input_vector / np.linalg.norm(input_vector)
 
-        qr = QuantumRegister(4)
-        quantum_circuit = QuantumCircuit(qr)
-        quantum_circuit.ur_initialize(input_vector, qr)
+        quantum_register = QuantumRegister(4)
+        quantum_circuit = QuantumCircuit(quantum_register)
+        quantum_circuit.ur_initialize(input_vector, quantum_register)
 
         backend_sim = Aer.backends('statevector_simulator')[0]
         job = execute(quantum_circuit, backend_sim)
@@ -97,9 +96,9 @@ class TestCircuitCreation(TestCase):
         input_vector = np.random.uniform(low=-10, high=10, size=2**size)
         input_vector = input_vector / np.linalg.norm(input_vector)
 
-        qr = QuantumRegister(size)
-        quantum_circuit = QuantumCircuit(qr)
-        quantum_circuit.ur_initialize(input_vector, qr)
+        quantum_register = QuantumRegister(size)
+        quantum_circuit = QuantumCircuit(quantum_register)
+        quantum_circuit.ur_initialize(input_vector, quantum_register)
 
         backend_sim = Aer.backends('statevector_simulator')[0]
         job = execute(quantum_circuit, backend_sim)
@@ -108,5 +107,21 @@ class TestCircuitCreation(TestCase):
         for exp_amplitude, out_amplitude in zip(input_vector, out_state):
             self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_mult_initialization_random_4qubtis(self):
+        """
+        Load a 4 qubit state
+        """
+        input_vector = np.random.rand(16)
+        input_vector = input_vector / np.linalg.norm(input_vector)
+
+        quantum_register = QuantumRegister(4)
+        quantum_circuit = QuantumCircuit(quantum_register)
+        quantum_circuit.mult_initialize(input_vector, quantum_register)
+
+        backend_sim = Aer.backends('statevector_simulator')[0]
+        job = execute(quantum_circuit, backend_sim)
+        result = job.result()
+
+        out_state = result.get_statevector(quantum_circuit)
+        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
+            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
