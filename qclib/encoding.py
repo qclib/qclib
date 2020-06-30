@@ -37,7 +37,76 @@ class InitializerUniformlyRotation(Initializer):
 
         super().__init__("initialize UR", self.num_qubits, 0, self.params)
 
-    def _recursive_compute_angles(self, input_vector):
+    def _extract_phase_from_complex(self, input_vector):
+        """
+            Extract the phase of any complex entry in the feature vector
+        :param input_vector: The feature vector to be encoded in the quantum state,
+                             it is expected to be normalized.
+        :return: two numpy arrays
+                 First with the norm of the complex entry
+                 Second with its phase
+
+        """
+        phases = []
+
+        for idx_entry, entry in enumerate(input_vector):
+            if isinstance(entry, complex):
+                phases += np.log(entry).imag
+                input_vector[idx_entry] = np.linalg.norm(entry)
+            else:
+                phases += 0
+        return input_vector, np.array(phases)
+
+    def _get_angle_computation(self, phase_vector, start, end, skip):
+        """
+        Performs two-by-two subtraction between the phase angles in the phase vector
+        using skip to define which angles keep a positive signal and which keep a negative
+
+        Let "phase_idx" be the phase index in the phase_vector. And let "a" be the angle
+
+            a_(phase_idx + skip) - a_(phase_idx)
+
+        :param phase_vector: list with the extracted phases from the complex features
+        :param start: index of the starting angle of the two-by-two subtraction
+        :param end: index of the ending angle of the two-by-two subtraction
+        :param skip: the skiping index to define which term will be the positive term
+                    the subtracion
+        :return: sumation of a two-by-two subtraction of angles in the phase_vector
+        """
+        sumation = 0
+        for phase_idx in range(start, end):
+            sumation += (phase_vector[phase_idx + skip] - phase_vector[phase_idx])
+        return sumation
+
+    def _compute_phase_equalization_angles(self, phase_vector, n_qubits):
+        """
+
+        :param phase_vector: list with the extracted phases from the complex features
+        :param n_qubits: number of qubits necessary to encode the phases
+        :return: Computed angles for the phase equalization algorithm
+        """
+        tree_level = 0
+        phase_angles = []
+        while tree_level < n_qubits:
+
+            main_factor = 1 / 2 ** (n_qubits - tree_level)
+            # Defining how many indices must be skiped before applying subtraction
+            skip = 2 ** (n_qubits - tree_level - 1)
+            # Defining start and  end indices
+            start = 0
+            end = 2 ** (n_qubits - tree_level - 1)
+            # defining how many cells the start and end indices must be shifted
+            offset = 2 ** (n_qubits - tree_level)
+            n_nodes = 2 ** tree_level
+            for node in range(n_nodes):
+                phase_angles.append(main_factor * self._get_angle_computation(phase_vector, start, end, skip))
+                start += offset
+                end += offset
+
+            tree_level += 1
+        return phase_angles
+
+    def _recursive_compute_amplitude_angles(self, input_vector):
         """
         :param input_vector: The feature vector to be encoded in the quantum state,
                              it is expected to be normalized.
@@ -57,7 +126,7 @@ class InitializerUniformlyRotation(Initializer):
                         angles.append(2 * np.pi - 2 * np.arcsin(input_vector[k + 1] / norm))
                     else:
                         angles.append(2 * np.arcsin(input_vector[k + 1] / norm))
-            self._recursive_compute_angles(new_input)
+            self._recursive_compute_amplitude_angles(new_input)
             for value in angles:
                 self._angles_tree.append(value)
 
@@ -128,7 +197,7 @@ class InitializerUniformlyRotation(Initializer):
         :return: Quantum Circuit object generated to perform Mottonen's method
         """
 
-        self._recursive_compute_angles(self.params)
+        self._recursive_compute_amplitude_angles(self.params)
         self._create_circuit()
         self.definition = self._circuit.data
 
