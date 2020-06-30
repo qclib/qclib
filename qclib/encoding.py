@@ -15,7 +15,6 @@ class Initializer(ABC, Instruction):
         pass
 
 
-
 class InitializerUniformlyRotation(Initializer):
     """
     State preparation arXiv:quant-ph/0407010
@@ -77,6 +76,30 @@ class InitializerUniformlyRotation(Initializer):
         for phase_idx in range(start, end):
             sumation += (phase_vector[phase_idx + skip] - phase_vector[phase_idx])
         return sumation
+
+    def _apply_global_phase(self, phase_vector):
+        """
+            Apply global phase to the most significant qubit.
+            According to arXiv:quant-ph/0407010v1 after the phase equalization
+            the global phase of the state is the mean of the all phase angles.
+            That is
+
+            exp(i * 1 / 2**n_qubits * sum(phase_vector))
+
+            In order to compute the reversed process of phase equalization
+            the quantum state must have the presented global phase
+
+
+        :param phase_vector: list with the extracted phases from the complex features
+        :return: None
+        """
+        omega = 1 / 2**self.num_qubits * np.sum(phase_vector)
+        # most significant qubit
+        ms_qubit = self.num_qubits - 1
+        self._circuit.x(ms_qubit)
+        self._circuit.u1(omega, ms_qubit)
+        self._circuit.x(ms_qubit)
+        self._circuit.u1(omega, ms_qubit)
 
     def _compute_phase_equalization_angles(self, phase_vector, n_qubits):
         """
