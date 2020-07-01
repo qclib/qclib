@@ -53,7 +53,7 @@ class InitializerUniformlyRotation(Initializer):
                 phases += np.log(entry).imag
                 input_vector[idx_entry] = np.linalg.norm(entry)
             else:
-                phases += 0
+                phases += [0]
         return phases
 
     def _apply_global_phase(self, phase_vector):
@@ -171,7 +171,7 @@ class InitializerUniformlyRotation(Initializer):
         """
 
         # Define global phase
-        self._apply_global_phase()
+        self._apply_global_phase(self._phase_vector)
 
         n_controls = len(controls)
         control_qubit_indexes = list(range(n_controls))
