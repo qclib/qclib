@@ -31,7 +31,7 @@ class InitializerUniformlyRotation(Initializer):
 
         self._angles_tree = []
         self._phases_tree = []
-        self._phase_vector = []
+        self._phases_vector = []
         self.params = params
         self.num_qubits = int(np.log2(len(params)))
         self._circuit = QuantumCircuit(self.num_qubits)
@@ -43,18 +43,19 @@ class InitializerUniformlyRotation(Initializer):
             Extract the phase of any complex entry in the feature vector
         :param input_vector: The feature vector to be encoded in the quantum state,
                              it is expected to be normalized.
-        :return: The phase of the entries in the complex
+        :return:The input_vector with the amplitudes of the states
+                The phase of the complex entries
 
         """
         phases = []
 
         for idx_entry, entry in enumerate(input_vector):
             if isinstance(entry, complex):
-                phases += np.log(entry).imag
-                input_vector[idx_entry] = np.linalg.norm(entry)
+                phases += [np.log(entry).imag]
+                input_vector[idx_entry] = np.abs(entry)
             else:
                 phases += [0]
-        return phases
+        return input_vector, phases
 
     def _apply_global_phase(self, phase_vector):
         """
@@ -170,9 +171,6 @@ class InitializerUniformlyRotation(Initializer):
         :param n_qubits: (int) Number of qubits in the quantum circtuin
         """
 
-        # Define global phase
-        self._apply_global_phase(self._phase_vector)
-
         n_controls = len(controls)
         control_qubit_indexes = list(range(n_controls))
 
@@ -210,7 +208,7 @@ class InitializerUniformlyRotation(Initializer):
 
         n_qubits = int(np.ceil(np.log2(len(angles) + 1)))
 
-        self._apply_global_phase(self._phase_vector)
+        self._apply_global_phase(self._phases_vector)
 
         # Building Circuit
         current_value = angles.pop(0)
@@ -237,10 +235,9 @@ class InitializerUniformlyRotation(Initializer):
                          it is expected to be normalized.
         :return: Quantum Circuit object generated to perform Mottonen's method
         """
-
-        self._recursive_compute_amplitude_angles(self.params)
-        self._phase_vector = self._extract_phase_from_complex(self.params)
-        self._compute_phase_equalization_angles(self._phase_vector)
+        amplitues, self._phases_vector = self._extract_phase_from_complex(self.params)
+        self._recursive_compute_amplitude_angles(amplitues)
+        self._compute_phase_equalization_angles(self._phases_vector)
         self._create_circuit()
         self.definition = self._circuit.data
 
