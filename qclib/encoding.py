@@ -48,14 +48,16 @@ class InitializerUniformlyRotation(Initializer):
 
         """
         phases = []
+        amplitudes = []
 
         for idx_entry, entry in enumerate(input_vector):
             if isinstance(entry, complex):
                 phases += [np.log(entry).imag]
-                input_vector[idx_entry] = np.abs(entry)
+                amplitudes += [np.abs(entry)]
             else:
                 phases += [0]
-        return input_vector, phases
+                amplitudes += [input_vector[idx_entry]]
+        return amplitudes, np.array(phases)
 
     def _apply_global_phase(self, phase_vector):
         """
@@ -79,7 +81,7 @@ class InitializerUniformlyRotation(Initializer):
         self._circuit.x(ms_qubit)
         self._circuit.u1(omega, ms_qubit)
         self._circuit.x(ms_qubit)
-        self._circuit.u1(omega, ms_qubit)
+        # self._circuit.u1(omega, ms_qubit)
 
     def _get_angle_computation(self, phase_vector, start, end, skip):
         """
