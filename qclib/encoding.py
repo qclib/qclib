@@ -59,7 +59,7 @@ class InitializerUniformlyRotation(Initializer):
                 amplitudes += [input_vector[idx_entry]]
         return amplitudes, np.array(phases)
 
-    def _apply_global_phase(self, phase_vector):
+    def _apply_global_phase(self, phase_vector, angle):
         """
             Apply global phase to the most significant qubit.
             According to arXiv:quant-ph/0407010v1 after the phase equalization
@@ -76,12 +76,18 @@ class InitializerUniformlyRotation(Initializer):
         :return: None
         """
         omega = 1 / 2**self.num_qubits * np.sum(phase_vector)
-        # most significant qubit
+
+        phi_plus = omega + angle
+        phi_minus = omega - angle
+
         ms_qubit = self.num_qubits - 1
+        # Phase |1>|0...0>
+        self._circuit.u1(phi_plus, ms_qubit)
+
+        # Phase |0>|0...0>
         self._circuit.x(ms_qubit)
-        self._circuit.u1(omega, ms_qubit)
+        self._circuit.u1(phi_minus, ms_qubit)
         self._circuit.x(ms_qubit)
-        # self._circuit.u1(omega, ms_qubit)
 
     def _get_angle_computation(self, phase_vector, start, end, skip):
         """
@@ -210,14 +216,13 @@ class InitializerUniformlyRotation(Initializer):
 
         n_qubits = int(np.ceil(np.log2(len(angles) + 1)))
 
-        self._apply_global_phase(self._phases_vector)
-
         # Building Circuit
         current_value = angles.pop(0)
         current_phase = phases.pop(0)
 
         self._circuit.ry(current_value, n_qubits - 1)
-        self._circuit.rz(current_phase, n_qubits - 1)
+        self._apply_global_phase(self._phases_vector, current_phase)
+        # self._circuit.rz(current_phase, n_qubits - 1)
 
         for i in range(1, n_qubits):
 
