@@ -7,6 +7,7 @@ from random import randint
 import numpy as np
 from qiskit import execute, Aer, QuantumRegister
 from qclib import QuantumCircuit
+from qclib.encoding import InitializerUniformlyRotation
 
 
 class TestCircuitCreation(TestCase):
@@ -126,10 +127,116 @@ class TestCircuitCreation(TestCase):
         for exp_amplitude, out_amplitude in zip(input_vector, out_state):
             self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
 
+    def test_phase_extraction(self):
+        """
+            Test phase extraction procedure for phase encoding
+        """
+        expected_phases = np.array([0.9553166181245093, 0.3962075716952029,
+                                    0.7297276562269663, 0.25268025514207865])
+
+        complex_vector = [complex(np.sqrt(0.01), np.sqrt(0.02)),
+                          complex(np.sqrt(0.4), np.sqrt(0.07)),
+                          complex(np.sqrt(0.1), np.sqrt(0.08)),
+                          complex(np.sqrt(0.3), np.sqrt(0.02))]
+
+        _, returned_phases = InitializerUniformlyRotation._extract_phase_from_complex(0, complex_vector)
+
+        for phase_index in range(len(expected_phases)):
+            self.assertTrue(np.abs(expected_phases[phase_index] - returned_phases[phase_index]) < 10e-5)
+
+    def test_phase_with_only_one_entry(self):
+        """
+            Testing phase calculation where the state vector has only one entry
+        """
+
+        expected_phases = [0.7853981633974483, 0.0, 0.0, 0.0]
+        input_vector = np.array([complex(np.sqrt(0.5), np.sqrt(0.5)), 0, 0, 0])
+
+        _, returned_phases = InitializerUniformlyRotation._extract_phase_from_complex(0, input_vector)
+
+        for phase_index in range(len(expected_phases)):
+            self.assertTrue(np.abs(expected_phases[phase_index] - returned_phases[phase_index]) < 10e-5)
+
+    def test_phase_angles_computation(self):
+        """
+            Testing phases calculations of the phase encoding procedure
+        """
+
+        complex_vector = [complex(np.sqrt(0.01), np.sqrt(0.02)),
+                          complex(np.sqrt(0.4), np.sqrt(0.07)),
+                          complex(np.sqrt(0.1), np.sqrt(0.08)),
+                          complex(np.sqrt(0.3), np.sqrt(0.02))]
+
+        phases_vector = np.array([0.9553166181245093,
+                                  0.3962075716952029,
+                                  0.7297276562269663,
+                                  0.25268025514207865])
+
+        expected_angles = np.array([-0.0922790696126668,
+                                    -0.27955452321465324,
+                                    -0.23852370054244385])
+
+        initializer = InitializerUniformlyRotation(complex_vector)
+        initializer._compute_phase_equalization_angles(phases_vector)
+        phases_angles = initializer._angles_tree
+
+        for angles_indexes in range(len(phases_angles)):
+            self.assertTrue(np.abs(expected_angles[angles_indexes] - phases_angles[angles_indexes]) < 10e-5)
+
+    def test_phase_angles_computations_with_one_entry(self):
+        """
+            Test phases calculations for feature vectors with only one entry
+        """
+        input_vector = [complex(np.sqrt(0.5), np.sqrt(0.5)), 0, 0, 0]
+        phases_vector = [0.7853981633974483, 0.0, 0.0, 0.0]
+
+        expected_angles = [-0.19634954084936207, -0.39269908169872414, 0.0]
+
+        initializer = InitializerUniformlyRotation(input_vector)
+        initializer._compute_phase_equalization_angles(phases_vector)
+        phases_angles = initializer._angles_tree
+
+        for angles_indexes in range(len(phases_angles)):
+            self.assertTrue(np.abs(expected_angles[angles_indexes] - phases_angles[angles_indexes]) < 10e-5)
+
+    def test_global_phase_application(self):
+        """
+            Test  the output of the circuit if only the global phase is applied
+        """
+        mock_params = [complex(np.sqrt(0.01), np.sqrt(0.02)),
+                       complex(np.sqrt(0.4), np.sqrt(0.07)),
+                       complex(np.sqrt(0.1), np.sqrt(0.08)),
+                       complex(np.sqrt(0.3), np.sqrt(0.02))]
+        
+        phases_vector = [0.9553166181245093,
+                         0.3962075716952029,
+                         0.7297276562269663,
+                         0.25268025514207865]
+
+        expected_state = [0.834548798785615+0.5509340273077049j, 0.0, 0.0, 0.0]
+
+        expected_global_phase = 0.5834830252971893
+
+        global_phase = 1 / 4 * np.sum(phases_vector)
+
+        self.assertTrue(np.abs(expected_global_phase - global_phase) < 10e-5)
+
+        qr = QuantumRegister(2)
+        qc = QuantumCircuit(qr)
+        initializer = InitializerUniformlyRotation(mock_params)
+        initializer.num_qubits = 2
+        initializer._apply_global_phase(phases_vector)
+
+        backend = Aer.get_backend('statevector_simulator')
+        job = execute(qc, backend)
+        result = job.result()
+        returned_state = result.get_statevector()
+
+        for angles_indexes in range(len(expected_state)):
+            self.assertTrue(np.abs(expected_state[angles_indexes] - returned_state[angles_indexes]) < 10e-5)
+
     def test_ur_intialization_with_phase_encoding(self):
-        """
-        Load  a 2 Qubit state
-        """
+        
         input_vector = [complex(np.sqrt(0.01), np.sqrt(0.02)),
                         complex(np.sqrt(0.4), np.sqrt(0.07)),
                         complex(np.sqrt(0.1), np.sqrt(0.08)),
