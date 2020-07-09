@@ -200,7 +200,14 @@ class InitializerUniformlyRotation(Initializer):
         # If phase == 0 then the Rz becomes Identity,
         # thus increasing the depth of the circuit unnecessarily
         if phase != 0:
-            self._circuit.mcrz(phase, control_qubit_objects_list, target)
+            # Phase |0>
+            self._circuit.x(target)
+            self._circuit.mcu1(-phase, control_qubit_objects_list, target)
+            self._circuit.x(target)
+
+            # Phase |1>
+            self._circuit.mcu1(phase, control_qubit_objects_list, target)
+            # self._circuit.mcrz(phase, control_qubit_objects_list, target)
 
         for i, ctrl in enumerate(controls):
             if ctrl == 0:
