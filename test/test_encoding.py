@@ -38,8 +38,9 @@ class TestCircuitCreation(TestCase):
 
         out_state = result.get_statevector(quantum_circuit)
 
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        # for exp_amplitude, out_amplitude in zip(input_vector, out_state):
+        #    self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        self.assertTrue(np.isclose(input_vector, out_state).all())
 
     def test_ur_initialization_basis_state(self):
         """
@@ -64,8 +65,9 @@ class TestCircuitCreation(TestCase):
 
         out_state = result.get_statevector(quantum_circuit)
 
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        # for exp_amplitude, out_amplitude in zip(input_vector, out_state):
+        #    self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        self.assertTrue(np.isclose(input_vector, out_state).all())
 
     def test_ur_initialization_random_4qubtis(self):
         """
@@ -83,8 +85,9 @@ class TestCircuitCreation(TestCase):
         result = job.result()
 
         out_state = result.get_statevector(quantum_circuit)
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        # for exp_amplitude, out_amplitude in zip(input_vector, out_state):
+        #    self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        self.assertTrue(np.isclose(input_vector, out_state).all())
 
     def test_ur_random_sized_feature_vector(self):
         """
@@ -105,8 +108,9 @@ class TestCircuitCreation(TestCase):
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
         out_state = result.get_statevector()
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        # for exp_amplitude, out_amplitude in zip(input_vector, out_state):
+        #    self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        self.assertTrue(np.isclose(input_vector, out_state).all())
 
     def test_mult_initialization_random_4qubtis(self):
         """
@@ -124,8 +128,9 @@ class TestCircuitCreation(TestCase):
         result = job.result()
 
         out_state = result.get_statevector(quantum_circuit)
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        # for exp_amplitude, out_amplitude in zip(input_vector, out_state):
+        #    self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+        self.assertTrue(np.isclose(input_vector, out_state).all())
 
     def test_phase_extraction(self):
         """
@@ -141,8 +146,9 @@ class TestCircuitCreation(TestCase):
 
         _, returned_phases = InitializerUniformlyRotation._extract_phase_from_complex(0, complex_vector)
 
-        for phase_index in range(len(expected_phases)):
-            self.assertTrue(np.abs(expected_phases[phase_index] - returned_phases[phase_index]) < 10e-5)
+        # for phase_index in range(len(expected_phases)):
+        #    self.assertTrue(np.abs(expected_phases[phase_index] - returned_phases[phase_index]) < 10e-5)
+        self.assertTrue(np.isclose(expected_phases, returned_phases).all())
 
     def test_phase_with_only_one_entry(self):
         """
@@ -154,8 +160,9 @@ class TestCircuitCreation(TestCase):
 
         _, returned_phases = InitializerUniformlyRotation._extract_phase_from_complex(0, input_vector)
 
-        for phase_index in range(len(expected_phases)):
-            self.assertTrue(np.abs(expected_phases[phase_index] - returned_phases[phase_index]) < 10e-5)
+        # for phase_index in range(len(expected_phases)):
+        #    self.assertTrue(np.abs(expected_phases[phase_index] - returned_phases[phase_index]) < 10e-5)
+        self.assertTrue(np.isclose(expected_phases, returned_phases).all())
 
     def test_phase_angles_computation(self):
         """
@@ -178,10 +185,11 @@ class TestCircuitCreation(TestCase):
 
         initializer = InitializerUniformlyRotation(complex_vector)
         initializer._compute_phase_equalization_angles(phases_vector)
-        phases_angles = initializer._angles_tree
+        phases_angles = initializer._phases_tree
 
-        for angles_indexes in range(len(phases_angles)):
-            self.assertTrue(np.abs(expected_angles[angles_indexes] - phases_angles[angles_indexes]) < 10e-5)
+        # for angles_indexes in range(len(phases_angles)):
+        #    self.assertTrue(np.abs(expected_angles[angles_indexes] - phases_angles[angles_indexes]) < 10e-5)
+        self.assertTrue(np.isclose(expected_angles, phases_angles).all())
 
     def test_phase_angles_computations_with_one_entry(self):
         """
@@ -194,17 +202,16 @@ class TestCircuitCreation(TestCase):
 
         initializer = InitializerUniformlyRotation(input_vector)
         initializer._compute_phase_equalization_angles(phases_vector)
-        phases_angles = initializer._angles_tree
+        phases_angles = initializer._phases_tree
 
-        for angles_indexes in range(len(phases_angles)):
-            self.assertTrue(np.abs(expected_angles[angles_indexes] - phases_angles[angles_indexes]) < 10e-5)
+        self.assertTrue(np.isclose(expected_angles, phases_angles).all())
 
     def test_ur_intialization_with_phase_encoding(self):
         """
             Test phase Möttönen encoding with complex features.
             Using a 2 qubit statevector as input
         """
-        
+
         input_vector = [complex(np.sqrt(0.01), np.sqrt(0.02)),
                         complex(np.sqrt(0.4), np.sqrt(0.07)),
                         complex(np.sqrt(0.1), np.sqrt(0.08)),
@@ -218,8 +225,8 @@ class TestCircuitCreation(TestCase):
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
         out_state = result.get_statevector()
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+
+        self.assertTrue(np.isclose(out_state, input_vector).all())
 
     def test_ur_phase_encoding_initialization_with_negative_complex(self):
         """
@@ -241,8 +248,8 @@ class TestCircuitCreation(TestCase):
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
         out_state = result.get_statevector()
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+
+        self.assertTrue(np.isclose(out_state, input_vector).all())
 
     def test_ur_phase_encoding_initialization_3qubit_with_negative_complex(self):
         """
@@ -268,8 +275,8 @@ class TestCircuitCreation(TestCase):
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
         out_state = result.get_statevector()
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+
+        self.assertTrue(np.isclose(out_state, input_vector).all())
 
     def test_ur_phase_encoding_3qubit_with_negative_real(self):
         """
@@ -294,8 +301,8 @@ class TestCircuitCreation(TestCase):
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
         out_state = result.get_statevector()
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+
+        self.assertTrue(np.isclose(out_state, input_vector).all())
 
     def test_ur_phase_encoding_3qubit_alternating_signs(self):
         """
@@ -320,8 +327,8 @@ class TestCircuitCreation(TestCase):
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
         out_state = result.get_statevector()
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+
+        self.assertTrue(np.isclose(out_state, input_vector).all())
 
     def test_ur_phase_encoding_3qubit_all_negative(self):
         """
@@ -346,8 +353,8 @@ class TestCircuitCreation(TestCase):
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
         out_state = result.get_statevector()
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+
+        self.assertTrue(np.isclose(out_state, input_vector).all())
 
     def test_ur_phase_encoding_3qubit_random_complex_entries(self):
         """
@@ -365,5 +372,5 @@ class TestCircuitCreation(TestCase):
         job = execute(quantum_circuit, backend_sim)
         result = job.result()
         out_state = result.get_statevector()
-        for exp_amplitude, out_amplitude in zip(input_vector, out_state):
-            self.assertTrue(np.abs(exp_amplitude - out_amplitude) < 10 ** (-5))
+
+        self.assertTrue(np.isclose(out_state, input_vector).all())
