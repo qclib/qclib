@@ -25,8 +25,11 @@ def initialize(unit_vector):
 
     sp_circuit = qiskit.QuantumCircuit(A, B)
 
-
-    sp_circuit.initialize(d, B)
+    if len(d) > 2:
+        circ = initialize(d)
+        sp_circuit.append(circ, B)
+    else:
+        sp_circuit.initialize(d, B)
 
     for k in range(int(n_qubits//2)):
         sp_circuit.cx(B[k], A[k])

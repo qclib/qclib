@@ -3,6 +3,7 @@ import numpy as np
 from qclib.state_preparation import initialize
 from qclib.util import get_state
 
+
 class TestInitialize(TestCase):
     def test_initialize(self):
         a = np.random.rand(16) + np.random.rand(16) * 1j
@@ -12,4 +13,4 @@ class TestInitialize(TestCase):
 
         state = get_state(circ)
 
-        print(np.allclose(a, state))
+        self.assertTrue(np.allclose(a, state))
