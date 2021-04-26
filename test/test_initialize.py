@@ -1,7 +1,7 @@
 from unittest import TestCase
 import numpy as np
 from qclib.state_preparation import initialize
-import qiskit
+from qclib.util import get_state
 
 class TestInitialize(TestCase):
     def test_initialize(self):
@@ -10,6 +10,6 @@ class TestInitialize(TestCase):
 
         circ = initialize(a)
 
-        state = get_state(circ1)
+        state = get_state(circ)
 
         print(np.allclose(a, state))
