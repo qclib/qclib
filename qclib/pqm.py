@@ -1,24 +1,39 @@
 import numpy as np
 
-def pqm(circ, bin_input, memory, auxiliary):
+def pqm(circuit, pattern, q_memory, q_auxiliary, is_classical_pattern=False):
     """
-    circ: QuantumCircuit
-    bin_input: binary list
-    memory: Memory quantum register
-    auxiliary: auxiliary quantum register
+    circuit     : quantum circuit
+    pattern     : binary input register (classical or quantum)
+    q_memory    : memory quantum register
+    q_auxiliary : auxiliary quantum register
     """
+    
+    size = len(q_memory)
 
-    size = int(len(memory))
+    circuit.h(q_auxiliary)
+        
+    if (is_classical_pattern):          
+        for k, q_m in enumerate(q_memory): # classical pattern register
+            if (pattern[k]==0):            
+                circuit.x(q_m)
+    else:
+        for k, q_m in enumerate(q_memory): # quantum pattern register
+            circuit.cx(pattern[k], q_m)    
+            circuit.x(q_m)
 
-    for k in range(size):
-        if bin_input[k] == 1:
-            circ.x(memory[k])
+    for k, q_m in enumerate(q_memory):
+        circuit.p(-np.pi / (2 * size), q_m)
+    
+    for k, q_m in enumerate(q_memory):
+        circuit.cp( np.pi / size, q_auxiliary, q_m)
+    
+    if (is_classical_pattern):
+        for k, q_m in list(enumerate(q_memory))[::-1]: # classical pattern register
+            if (pattern[k]==0):            
+                circuit.x(q_m)
+    else:
+        for k, q_m in list(enumerate(q_memory))[::-1]: # quantum pattern register
+            circuit.x(q_m)                 
+            circuit.cx(q_pattern[k], q_m)  
 
-    for k in range(size):
-        circ.p(np.pi / 2 * size, memory[k])
-
-    # initialize auxiliary quantum bit |c>
-    circ.h(auxiliary[0])
-    for k in range(size):
-        circ.cp(- np.pi / size, auxiliary[0], memory[k])
-    circ.h(auxiliary[0])
+    circuit.h(q_auxiliary)
