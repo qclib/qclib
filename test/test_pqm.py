@@ -25,7 +25,7 @@ class TestPQM(TestCase):
 
         # run pqm recovery algorithm
         bin_input = [0, 0]
-        pqm(circ, bin_input, memory, aux)
+        pqm(circ, bin_input, memory, aux, is_classical_pattern=True)
 
         # measure output and verify results
         circ.measure(aux, output)
