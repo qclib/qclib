@@ -8,6 +8,7 @@ from qclib.util import get_counts
 
 class TestPQM(TestCase):
 
+    @staticmethod
     def _run_pqm(is_classical_pattern):
         # pqm memory data
         data = [0, 1, 0, 0]
@@ -47,13 +48,13 @@ class TestPQM(TestCase):
         
     def test_classical_input(self):
         # classical input pattern
-        counts = _run_pqm(True)
+        counts = TestPQM._run_pqm(True)
         
         self.assertTrue(counts['0'] / 1024 == 1)
 
     def test_quantum_input(self):
         # quantum input pattern
-        counts = _run_pqm(False)
+        counts = TestPQM._run_pqm(False)
         
         self.assertTrue(counts['0'] / 1024 == 1)
         
