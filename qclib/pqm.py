@@ -10,7 +10,7 @@ def pqm(circuit, pattern, q_memory, q_auxiliary, is_classical_pattern=False):
     auxiliary register.
     .. note::
         The operator ``U``, used in Trugenberger's article, has been replaced by ``XPX`` (where ``P`` is the phase
-        gate). Therefore, we remove the ``X`` (``NOT``) operators from equations (12) and (16) of the 
+        gate). Therefore, we removed the ``X`` (``NOT``) operators from equations (12) and (16) of the 
         paper.
     .. note::
         If the pattern is classical (``is_classical_pattern = True``), the ``CNOT`` operators of equations
@@ -21,7 +21,7 @@ def pqm(circuit, pattern, q_memory, q_auxiliary, is_classical_pattern=False):
     Args:
         circuit: a qiskit quantum circuit.
         pattern: a list of bits (0 and 1 ints) or a basis encoded quantum register .
-        q_memory: an amplitude encoded quantum register with memory data.
+        q_memory: an amplitude encoded quantum register with memory data (superposition of ``p`` patterns on ``n`` entangled qbits).
         q_auxiliary: an uninitialized one-qubit quantum register.
         is_classical_pattern: indicates if ``pattern`` is a classical data (list of bits) or a quantum register.
     """
