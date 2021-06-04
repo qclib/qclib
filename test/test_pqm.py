@@ -8,9 +8,10 @@ from qclib.util import get_counts
 
 class TestPQM(TestCase):
 
-    def test_pqm(self):
+    @staticmethod
+    def _run_pqm(is_classical_pattern):
         # pqm memory data
-        data = [1, 0, 0, 0]
+        data = [0, 1, 0, 0]
         data = data / np.linalg.norm(data)
 
         # initialize quantum registers
@@ -23,14 +24,39 @@ class TestPQM(TestCase):
         init_gate = initialize(data)
         circ.append(init_gate, memory)
 
-        # run pqm recovery algorithm
-        bin_input = [0, 0]
-        pqm(circ, bin_input, memory, aux)
+        # initialize input pattern
+        bin_input = [1, 0]
+
+        if (is_classical_pattern):
+            pqm(circ, bin_input, memory, aux, is_classical_pattern=True) # run pqm recovery algorithm
+        else:
+            q_bin_input = QuantumRegister(2)
+            circ.add_register(q_bin_input)
+
+            # Pattern basis encoding
+            for k, b in enumerate(bin_input):
+                if (b == 1):
+                    circ.x(q_bin_input[k])
+
+            pqm(circ, q_bin_input, memory, aux, is_classical_pattern=False) # run pqm recovery algorithm
 
         # measure output and verify results
         circ.measure(aux, output)
         counts = get_counts(circ)
-
+        
+        return counts
+        
+    def test_classical_input(self):
+        # classical input pattern
+        counts = TestPQM._run_pqm(True)
+        
         self.assertTrue(counts['0'] / 1024 == 1)
+
+    def test_quantum_input(self):
+        # quantum input pattern
+        counts = TestPQM._run_pqm(False)
+        
+        self.assertTrue(counts['0'] / 1024 == 1)
+        
 
 
