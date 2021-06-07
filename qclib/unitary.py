@@ -10,7 +10,7 @@ import qiskit
 import numpy as np
 
 
-def _unitary(gate_list, n_qubits):
+def _unitary(gate_list, n_qubits, decomposition='csd'):
 
     if len(gate_list[0]) == 2:
         qubits = qiskit.QuantumRegister(n_qubits)
@@ -18,22 +18,29 @@ def _unitary(gate_list, n_qubits):
         circuit.uc(gate_list, qubits[1:], qubits[0])
         return circuit
 
-    left, mid, right = _multiplexed_csd(gate_list)
+    if decomposition == 'csd':
+        left, mid, right = _multiplexed_csd(gate_list)
 
-    gate_left = _unitary(left, n_qubits)
-    gate_right = _unitary(right, n_qubits)
+        gate_left = _unitary(left, n_qubits)
+        gate_right = _unitary(right, n_qubits)
 
-    qubits = qiskit.QuantumRegister(n_qubits)
-    circuit = qiskit.QuantumCircuit(qubits)
+        qubits = qiskit.QuantumRegister(n_qubits)
+        circuit = qiskit.QuantumCircuit(qubits)
 
-    circuit = circuit.compose(gate_left, qubits)
+        circuit = circuit.compose(gate_left, qubits)
 
-    target = int(n_qubits - np.log2(len(left)))
-    control = list(range(0, target)) + list(range(target + 1, n_qubits))
-    circuit.ucry(list(mid), control, target)
+        target = int(n_qubits - np.log2(len(left)))
+        control = list(range(0, target)) + list(range(target + 1, n_qubits))
+        circuit.ucry(list(mid), control, target)
 
-    circuit = circuit.compose(gate_right, qubits)
-    return circuit
+        circuit = circuit.compose(gate_right, qubits)
+        return circuit
+
+    # qsd
+    return _qsd(*gate_list)
+
+
+
 
 
 def _multiplexed_csd(gate_list):
@@ -51,14 +58,39 @@ def _multiplexed_csd(gate_list):
 
     return left, mid, right
 
+def _qsd(gate1, gate2):
+    n_qubits = int(np.log2(len(gate1))) + 1
 
-def unitary(gate):
+    list_d, gate_v, gate_w = _compute_gates(gate1, gate2)
+    left_gate = unitary(gate_w, 'qsd')
+    right_gate = unitary(gate_v, 'qsd')
+
+    qubits = qiskit.QuantumRegister(n_qubits)
+    circuit = qiskit.QuantumCircuit(qubits)
+
+    circuit = circuit.compose(left_gate, qubits[0:-1])
+    circuit.ucrz(list(-2*np.angle(list_d)), qubits[0:-1], qubits[-1])
+    circuit = circuit.compose(right_gate, qubits[0:-1])
+    return circuit
+
+
+def _compute_gates(gate1, gate2):
+
+    d_square, gate_v = np.linalg.eig(gate1 @ gate2.conj().T)
+    list_d = np.sqrt(d_square)
+    gate_d = np.diag(list_d)
+    gate_w = gate_d @ gate_v.conj().T @ gate2
+
+    return list_d, gate_v, gate_w
+
+
+def unitary(gate, decomposition='csd'):
     """
     Implements a generic quantum computation from a
     unitary matrix gate using the cosine sine decomposition.
     """
     size = len(gate)
-    if size > 2:
+    if size > 4:
         n_qubits = int(np.log2(size))
 
         qubits = qiskit.QuantumRegister(n_qubits)
@@ -67,8 +99,8 @@ def unitary(gate):
         right_gates, theta, left_gates = \
             sp.linalg.cossin(gate, size/2, size/2, separate=True)
 
-        gate_left = _unitary(list(left_gates), n_qubits)
-        gate_right = _unitary(list(right_gates), n_qubits)
+        gate_left = _unitary(list(left_gates), n_qubits, decomposition)
+        gate_right = _unitary(list(right_gates), n_qubits, decomposition)
 
         circuit = circuit.compose(gate_left, qubits)
         circuit.ucry(list(2*theta), list(range(n_qubits-1)), n_qubits-1)
@@ -76,7 +108,7 @@ def unitary(gate):
 
         return circuit
 
-    circuit = qiskit.QuantumCircuit(1)
+    circuit = qiskit.QuantumCircuit(np.log2(size))
     circuit.unitary(gate, circuit.qubits)
 
     return circuit
