@@ -6,7 +6,7 @@ from qclib.util import get_state
 
 class TestInitialize(TestCase):
     def test_initialize(self):
-        a = np.random.rand(16) + np.random.rand(16) * 1j
+        a = np.random.rand(32) + np.random.rand(32) * 1j
         a = a / np.linalg.norm(a)
 
         circ = initialize(a)

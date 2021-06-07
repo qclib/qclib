@@ -3,6 +3,7 @@ State preparation using Schmidt decomposition 	arXiv:1003.5760
 """
 import numpy as np
 import qiskit
+from qclib.unitary import unitary
 
 
 def initialize(unit_vector):
@@ -35,8 +36,11 @@ def initialize(unit_vector):
         sp_circuit.cx(B[k], A[k])
 
     # apply gate U to the first register
-    sp_circuit.unitary(u, B, 'u')
+    gate_u = unitary(u, 'qsd')
+    sp_circuit.compose(gate_u, B, inplace=True)
 
     # apply gate V to the second register
-    sp_circuit.unitary(v.T, A, 'v')
+    gate_v = unitary(v.T, 'qsd')
+    sp_circuit.compose(gate_v, A, inplace=True)
+
     return sp_circuit
