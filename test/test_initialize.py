@@ -1,6 +1,6 @@
 from unittest import TestCase
 import numpy as np
-from qclib.state_preparation import initialize, pivoting, sparse_initialize
+from qclib.state_preparation import initialize, _pivoting, sparse_initialize
 from qclib.util import get_state
 from qiskit import transpile
 
@@ -25,7 +25,7 @@ class TestInitialize(TestCase):
         index_zero = txt.format(1)
         index_nonzero = txt.format(7)
 
-        circuit, next_state = pivoting(index_zero, index_nonzero, 2, state=vector)
+        circuit, next_state = _pivoting(index_zero, index_nonzero, 2, state=vector)
         circ.compose(circuit, circ.qubits, inplace=True)
         vector2 = get_state(circ)
         self.assertTrue(np.isclose(vector2[0], vector[0]))
@@ -46,7 +46,7 @@ class TestInitialize(TestCase):
         index_zero = txt.format(1)
         index_nonzero = txt.format(7)
 
-        circuit, next_state = pivoting(index_zero, index_nonzero, 2, state=vector2)
+        circuit, next_state = _pivoting(index_zero, index_nonzero, 2, state=vector2)
 
         circ.compose(circuit.reverse_bits(), circ.qubits, inplace=True)
 
@@ -55,7 +55,7 @@ class TestInitialize(TestCase):
         print([int(key,2) for key, value in next_state.items()])
         vector3 = get_state(circ)
         print(vector3.nonzero())
-        circuit, next_state = pivoting(index_zero, index_nonzero, 2, state=next_state)
+        circuit, next_state = _pivoting(index_zero, index_nonzero, 2, state=next_state)
         circ.compose(circuit.reverse_bits(), circ.qubits, inplace=True)
 
         # circuit, next_state = pivoting(index_zero, index_nonzero, 2, state=next_state)
@@ -67,7 +67,7 @@ class TestInitialize(TestCase):
 
     def test_sparse_initialize(self):
         s = 2
-        n = 4
+        n = 8
         vector = np.zeros(2**n)
 
         for k in range(2**s):
@@ -77,6 +77,7 @@ class TestInitialize(TestCase):
             vector[index] = np.random.rand()# + np.random.rand() * 1j
 
         vector = vector / np.linalg.norm(vector)
+        # vector = np.loadtxt('vetor')
         vector2 = {}
         for index, value in enumerate(vector):
             if not np.isclose(value, 0.0):
@@ -88,8 +89,9 @@ class TestInitialize(TestCase):
         circ = sparse_initialize(vector2)
         calc_vector = get_state(circ)
         circt = transpile(circ, basis_gates=['u', 'cx'], optimization_level=3)
+        print(circ.count_ops())
         print(circt.count_ops())
-
+        print(circ.draw())
         self.assertTrue(np.allclose(vector, calc_vector))
 
 
