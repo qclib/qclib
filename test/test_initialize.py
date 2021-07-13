@@ -33,8 +33,8 @@ class TestInitialize(TestCase):
 
     def test_pivoting_3nonzero(self):
         vector = [-1/np.sqrt(4), 0, 0, 0, 0, 0, 0, 1/np.sqrt(4), 0, 0, 0, 1/np.sqrt(4), 0, 0, 0, 1/np.sqrt(4)]
-        vector2 = {}
 
+        vector2 = {}
         for k, value in enumerate(vector):
             if value != 0:
                 index = format(k, '04b')
@@ -58,15 +58,11 @@ class TestInitialize(TestCase):
         circuit, next_state = _pivoting(index_zero, index_nonzero, 2, state=next_state)
         circ.compose(circuit.reverse_bits(), circ.qubits, inplace=True)
 
-        # circuit, next_state = pivoting(index_zero, index_nonzero, 2, state=next_state)
-        # circ.compose(circuit, circ.qubits, inplace=True)
-
         vector2 = get_state(circ)
         self.assertTrue(np.allclose(vector2, vector))
 
-
     def test_sparse_initialize(self):
-        s = 2
+        s = 3
         n = 8
         vector = np.zeros(2**n)
 
@@ -77,7 +73,7 @@ class TestInitialize(TestCase):
             vector[index] = np.random.rand()# + np.random.rand() * 1j
 
         vector = vector / np.linalg.norm(vector)
-        # vector = np.loadtxt('vetor')
+
         vector2 = {}
         for index, value in enumerate(vector):
             if not np.isclose(value, 0.0):
@@ -85,7 +81,6 @@ class TestInitialize(TestCase):
                 index_txt = txt.format(index)
                 vector2[index_txt] = vector[index]
 
-        # vector = [1 / np.sqrt(4), 1 / np.sqrt(4), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 / np.sqrt(4), 0, 0, 1 / np.sqrt(4)]
         circ = sparse_initialize(vector2)
         calc_vector = get_state(circ)
         circt = transpile(circ, basis_gates=['u', 'cx'], optimization_level=3)
@@ -93,11 +88,3 @@ class TestInitialize(TestCase):
         print(circt.count_ops())
         print(circ.draw())
         self.assertTrue(np.allclose(vector, calc_vector))
-
-
-
-
-
-
-
-
