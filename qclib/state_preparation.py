@@ -109,7 +109,8 @@ def pivoting(index_zero, index_nonzero, target_size, state=None):
     for k in rg:
         if index_nonzero[k] != index_zero[k]:
             circuit.cx(index_differ, k, ctrl_state=ctrl_state)
-            target_remainder.append(k)
+            # target_remainder.append(k)
+            target_cx.append(k)
 
     # target_remainder = []
     # for index, value  in enumerate(remainder_nonzero):
@@ -143,33 +144,22 @@ def pivoting(index_zero, index_nonzero, target_size, state=None):
         if index == '1011':
             print(1)
 
+        if index[index_differ] == ctrl_state:
 
-        target_index = index[:n_qubits - target_size]
-        remainder_index = index[n_qubits - target_size:]
-        if target_index[index_differ] == ctrl_state:
-
-            n_remainder_index = ''
-            for k in range(len(remainder_index)):
-                if k in target_remainder:
-                    n_remainder_index = n_remainder_index + tab[remainder_index[k]]
-                else:
-                    n_remainder_index = n_remainder_index + remainder_index[k]
-
-            n_target_index = ''
-            for k in range(len(target_index)):
+            n_index = ''
+            for k, value in enumerate(index):
                 if k in target_cx:
-                    n_target_index = n_target_index + tab[target_index[k]]
-                elif k == index_differ:
-                    if n_remainder_index == remainder_nonzero:
-                        n_target_index = n_target_index + tab[target_index[k]]
-                    else:
-                        n_target_index = n_target_index + target_index[k]
+                    n_index = n_index + tab[index[k]]
                 else:
-                    n_target_index = n_target_index + target_index[k]
+                    n_index = n_index + index[k]
 
-            new_state[n_target_index[::-1] + n_remainder_index[::-1]] = state[index]
+
         else:
-            new_state[index] = state[index]
+            n_index = index
+        if n_index[rg[0]:] == index_zero[rg[0]:]:
+            n_index = n_index[:index_differ] + tab[index[index_differ]] + n_index[index_differ+1:]
+
+        new_state[n_index] = state[index]
 
 
     return circuit, new_state
