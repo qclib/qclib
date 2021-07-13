@@ -16,21 +16,6 @@ class TestInitialize(TestCase):
 
         self.assertTrue(np.allclose(a, state))
 
-    def test_pivoting_2nonzero(self):
-        vector = [np.sqrt(2)/np.sqrt(3), 0, 0, 0, 0, 0, 0, 1/np.sqrt(3), 0, 0, 0, 0, 0, 0, 0, 0]
-
-        circ = initialize(vector)
-        n_qubits = int(np.log2(len(vector)))
-        txt = "{0:0" + str(n_qubits) + "b}"
-        index_zero = txt.format(1)
-        index_nonzero = txt.format(7)
-
-        circuit, next_state = _pivoting(index_zero, index_nonzero, 2, state=vector)
-        circ.compose(circuit, circ.qubits, inplace=True)
-        vector2 = get_state(circ)
-        self.assertTrue(np.isclose(vector2[0], vector[0]))
-        self.assertTrue(np.isclose(vector2[1], vector[7]))
-
     def test_pivoting_3nonzero(self):
         vector = [-1/np.sqrt(4), 0, 0, 0, 0, 0, 0, 1/np.sqrt(4), 0, 0, 0, 1/np.sqrt(4), 0, 0, 0, 1/np.sqrt(4)]
 
@@ -52,14 +37,12 @@ class TestInitialize(TestCase):
 
         index_zero = txt.format(2)
         index_nonzero = txt.format(9)
-        print([int(key,2) for key, value in next_state.items()])
-        vector3 = get_state(circ)
-        print(vector3.nonzero())
+
         circuit, next_state = _pivoting(index_zero, index_nonzero, 2, state=next_state)
         circ.compose(circuit.reverse_bits(), circ.qubits, inplace=True)
 
         vector2 = get_state(circ)
-        self.assertTrue(np.allclose(vector2, vector))
+        self.assertTrue(np.allclose(vector2[:3], [vector[0], vector[7], vector[11]]))
 
     def test_sparse_initialize(self):
         s = 3
@@ -83,8 +66,5 @@ class TestInitialize(TestCase):
 
         circ = sparse_initialize(vector2)
         calc_vector = get_state(circ)
-        circt = transpile(circ, basis_gates=['u', 'cx'], optimization_level=3)
-        print(circ.count_ops())
-        print(circt.count_ops())
-        print(circ.draw())
+        
         self.assertTrue(np.allclose(vector, calc_vector))
