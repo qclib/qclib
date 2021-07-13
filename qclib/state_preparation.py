@@ -5,6 +5,8 @@ import numpy as np
 import qiskit
 from qclib.unitary import unitary
 
+# pylint: disable=maybe-no-member
+
 
 def initialize(unit_vector):
     """
@@ -64,17 +66,16 @@ def _pivoting(index_zero, index_nonzero, target_size, state=None):
 
     target_cx = []
     for k in target:
-        if index_differ != k:
-            if index_nonzero[k] != index_zero[k]:
-                circuit.cx(index_differ, k, ctrl_state=ctrl_state)
-                target_cx.append(k)
+        if index_differ != k and index_nonzero[k] != index_zero[k]:
+            circuit.cx(index_differ, k, ctrl_state=ctrl_state)
+            target_cx.append(k)
 
     for k in remain:
         if index_nonzero[k] != index_zero[k]:
             circuit.cx(index_differ, k, ctrl_state=ctrl_state)
             target_cx.append(k)
 
-    tab = {'0':'1', '1':'0'}
+
 
     for k in remain:
         if index_zero[k] == '0':
@@ -86,6 +87,13 @@ def _pivoting(index_zero, index_nonzero, target_size, state=None):
         if index_zero[k] == '0':
             circuit.x(k)
 
+    new_state = _next_state(ctrl_state, index_differ, index_zero, remain, state, target_cx)
+
+    return circuit, new_state
+
+
+def _next_state(ctrl_state, index_differ, index_zero, remain, state, target_cx):
+    tab = {'0': '1', '1': '0'}
     new_state = {}
     for index, _ in state.items():
 
@@ -98,16 +106,14 @@ def _pivoting(index_zero, index_nonzero, target_size, state=None):
                 else:
                     n_index = n_index + index[k]
 
-
         else:
             n_index = index
+
         if n_index[remain[0]:] == index_zero[remain[0]:]:
-            n_index = n_index[:index_differ] + tab[index[index_differ]] + n_index[index_differ+1:]
+            n_index = n_index[:index_differ] + tab[index[index_differ]] + n_index[index_differ + 1:]
 
         new_state[n_index] = state[index]
-
-
-    return circuit, new_state
+    return new_state
 
 
 def sparse_initialize(state):
@@ -120,7 +126,8 @@ def sparse_initialize(state):
     Parameters
     ----------
     state: dict of {str:int}
-        A unit vector representing a quantum state. Keys are binary strings and values are amplitudes.
+        A unit vector representing a quantum state.
+        Keys are binary strings and values are amplitudes.
 
     Returns
     -------
@@ -150,7 +157,7 @@ def sparse_initialize(state):
 
         index_nonzero = _get_index_nz(next_state, n_qubits - target_size)
 
-    dense_state = np.zeros(2**(target_size))
+    dense_state = np.zeros(2**target_size)
     for key, value in next_state.items():
         dense_state[int(key, 2)] = value
 
@@ -173,16 +180,18 @@ def _get_index_zero(n_qubits, non_zero, state):
     for k in range(2 ** non_zero):
         txt = '0' + str(n_qubits) + 'b'
         index = format(k, txt)
-        if not index in state:
+
+        if index not in state:
             index_zero = index
             break
+
     return index_zero
 
 
 def _get_index_nz(state, target_size):
     index_nonzero = None
     for index, _ in state.items():
-        if index[:target_size] != (target_size) * '0':
+        if index[:target_size] != target_size * '0':
             index_nonzero = index
             break
     return index_nonzero
