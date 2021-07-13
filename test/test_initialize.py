@@ -32,7 +32,13 @@ class TestInitialize(TestCase):
         self.assertTrue(np.isclose(vector2[1], vector[7]))
 
     def test_pivoting_3nonzero(self):
-        vector = [1/np.sqrt(3), 0, 0, 0, 0, 0, 0, 1/np.sqrt(3), 0, 0, 0, 0, 0, 0, 0, 1/np.sqrt(3)]
+        vector = [-1/np.sqrt(4), 0, 0, 0, 0, 0, 0, 1/np.sqrt(4), 0, 0, 0, 1/np.sqrt(4), 0, 0, 0, 1/np.sqrt(4)]
+        vector2 = {}
+
+        for k, value in enumerate(vector):
+            if value != 0:
+                index = format(k, '04b')
+                vector2[index] = value
 
         circ = initialize(vector)
         n_qubits = int(np.log2(len(vector)))
@@ -40,18 +46,24 @@ class TestInitialize(TestCase):
         index_zero = txt.format(1)
         index_nonzero = txt.format(7)
 
-        circuit, next_state = pivoting(index_zero, index_nonzero, 2, state=vector)
-        circ.compose(circuit, circ.qubits, inplace=True)
+        circuit, next_state = pivoting(index_zero, index_nonzero, 2, state=vector2)
+
+        circ.compose(circuit.reverse_bits(), circ.qubits, inplace=True)
 
         index_zero = txt.format(2)
         index_nonzero = txt.format(9)
-
+        print([int(key,2) for key, value in next_state.items()])
+        vector3 = get_state(circ)
+        print(vector3.nonzero())
         circuit, next_state = pivoting(index_zero, index_nonzero, 2, state=next_state)
-        circ.compose(circuit, circ.qubits, inplace=True)
+        circ.compose(circuit.reverse_bits(), circ.qubits, inplace=True)
+
+        # circuit, next_state = pivoting(index_zero, index_nonzero, 2, state=next_state)
+        # circ.compose(circuit, circ.qubits, inplace=True)
 
         vector2 = get_state(circ)
-        self.assertTrue(np.isclose(vector2[0], vector[0]))
-        self.assertTrue(np.isclose(vector2[1], vector[7]))
+        self.assertTrue(np.allclose(vector2, vector))
+
 
     def test_sparse_initialize(self):
         s = 2
@@ -65,14 +77,21 @@ class TestInitialize(TestCase):
             vector[index] = np.random.rand()# + np.random.rand() * 1j
 
         vector = vector / np.linalg.norm(vector)
+        vector2 = {}
+        for index, value in enumerate(vector):
+            if not np.isclose(value, 0.0):
+                txt = '{0:0' + str(n) + 'b}'
+                index_txt = txt.format(index)
+                vector2[index_txt] = vector[index]
 
         # vector = [1 / np.sqrt(4), 1 / np.sqrt(4), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 / np.sqrt(4), 0, 0, 1 / np.sqrt(4)]
-        circ = sparse_initialize(vector)
+        circ = sparse_initialize(vector2)
         calc_vector = get_state(circ)
-        print(np.allclose(vector, calc_vector))
-
         circt = transpile(circ, basis_gates=['u', 'cx'], optimization_level=3)
         print(circt.count_ops())
+
+        self.assertTrue(np.allclose(vector, calc_vector))
+
 
 
 
