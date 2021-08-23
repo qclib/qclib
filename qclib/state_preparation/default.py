@@ -6,7 +6,6 @@
 
 import numpy as np
 import qiskit
-from qclib.unitary import unitary
 from qclib.state_preparation.schmidt import initialize as dense_init
 from qclib.state_preparation.sparse_isometry import initialize as sparse_init
 

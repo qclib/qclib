@@ -1,5 +1,6 @@
 import numpy as np
 import qiskit
+from qclib.state_preparation.schmidt import initialize as dense_init
 
 # pylint: disable=maybe-no-member
 
@@ -52,7 +53,7 @@ def initialize(state):
         initialize_circ = qiskit.QuantumCircuit(1)
         initialize_circ.initialize(dense_state)
     else:
-        initialize_circ = initialize(dense_state)
+        initialize_circ = dense_init(dense_state)
 
     sp_circuit = qiskit.QuantumCircuit(n_qubits)
     sp_circuit.compose(initialize_circ, sp_circuit.qubits[:target_size], inplace=True)
