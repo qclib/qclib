@@ -1,6 +1,6 @@
 import numpy as np
 
-def pqm(circuit, pattern, q_memory, q_auxiliary, is_classical_pattern=False):
+def initialize(circuit, pattern, q_memory, q_auxiliary, is_classical_pattern=False):
     r"""
     Prepares a circuit which the output is determined by a probability distribution on the memory
     which is peaked around the stored patterns closest in Hamming distance to the input.

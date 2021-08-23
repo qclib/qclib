@@ -1,8 +1,8 @@
 from unittest import TestCase
 import numpy as np
 from qiskit import ClassicalRegister, QuantumRegister, QuantumCircuit
-from qclib.pqm import pqm
-from qclib.state_preparation import initialize
+from qclib.memory.pqm import initialize as pqm
+from qclib.state_preparation.default import initialize
 from qclib.util import get_counts
 
 
