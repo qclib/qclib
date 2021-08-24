@@ -49,7 +49,7 @@ class TestBidirectional(TestCase):
 		circuit = QuantumCircuit()
 		state = TestBidirectional.bidirectional_experiment(circuit, a, 1)
 
-		self.assertTrue(np.allclose( np.power(np.abs(a),2), state ))
+		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-03, atol=1e-05))
 
 	def test_top_down(self):
 		a = np.random.rand(32) + np.random.rand(32) * 1j
@@ -58,7 +58,7 @@ class TestBidirectional(TestCase):
 		circuit = QuantumCircuit()
 		state = TestBidirectional.bidirectional_experiment(circuit, a, int(np.log2(len(a))))
 
-		self.assertTrue(np.allclose( np.power(np.abs(a),2), state ))
+		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-03, atol=1e-05))
 
 	def test_sublinear(self):
 		a = np.random.rand(32) + np.random.rand(32) * 1j
@@ -67,5 +67,5 @@ class TestBidirectional(TestCase):
 		circuit = QuantumCircuit()
 		state = TestBidirectional.bidirectional_experiment(circuit, a)
 
-		self.assertTrue(np.allclose( np.power(np.abs(a),2), state ))
+		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-03, atol=1e-05))
 
