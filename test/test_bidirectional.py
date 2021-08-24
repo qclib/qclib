@@ -5,9 +5,10 @@ from qiskit import QuantumCircuit, ClassicalRegister, execute, Aer
 import numpy as np
 import qclib.state_preparation.bdsp as bd
 
+backend = Aer.get_backend('qasm_simulator') 
+shots   = 8192
+	
 class TestBidirectional(TestCase):
-	backend = Aer.get_backend('qasm_simulator') 
-	shots   = 8192
 	
 	@staticmethod
 	def measurement(circuit, q, c):
@@ -38,14 +39,14 @@ class TestBidirectional(TestCase):
 		c = ClassicalRegister(n)
 		circuit.add_register(c)
 
-		return measurement(circuit, q_output, c)
+		return TestBidirectional.measurement(circuit, q_output, c)
 		
 	def test_bottom_up(self):
 		a = np.random.rand(32) + np.random.rand(32) * 1j
 		a = a / np.linalg.norm(a)
 
 		circuit = QuantumCircuit()
-		state = bidirectional_experiment(circuit, a, 1)
+		state = TestBidirectional.bidirectional_experiment(circuit, a, 1)
 
 		self.assertTrue(np.allclose( np.power(np.abs(a),2), state ))
 
@@ -54,7 +55,7 @@ class TestBidirectional(TestCase):
 		a = a / np.linalg.norm(a)
 
 		circuit = QuantumCircuit()
-		state = bidirectional_experiment(circuit, a, int(np.log2(len(a))))
+		state = TestBidirectional.bidirectional_experiment(circuit, a, int(np.log2(len(a))))
 
 		self.assertTrue(np.allclose( np.power(np.abs(a),2), state ))
 
@@ -63,7 +64,7 @@ class TestBidirectional(TestCase):
 		a = a / np.linalg.norm(a)
 
 		circuit = QuantumCircuit()
-		state = bidirectional_experiment(circuit, a)
+		state = TestBidirectional.bidirectional_experiment(circuit, a)
 
 		self.assertTrue(np.allclose( np.power(np.abs(a),2), state ))
 
