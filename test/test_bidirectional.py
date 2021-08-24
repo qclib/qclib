@@ -7,9 +7,9 @@ import qclib.state_preparation.bdsp as bd
 
 backend = Aer.get_backend('qasm_simulator') 
 shots   = 8192
-	
+
 class TestBidirectional(TestCase):
-	
+
 	@staticmethod
 	def measurement(circuit, q, c):
 		circuit.measure(q, c)
@@ -29,7 +29,7 @@ class TestBidirectional(TestCase):
 				counts2[pattern] = 0.0
 
 		return [ value/v for (key, value) in counts2.items() ]
-	
+
 	@staticmethod
 	def bidirectional_experiment(circuit, input_state, s=None):
 		state = [Amplitude(i, a) for i, a in enumerate(input_state)]
@@ -43,29 +43,29 @@ class TestBidirectional(TestCase):
 		return TestBidirectional.measurement(circuit, q_output, c)
 		
 	def test_bottom_up(self):
-		a = np.random.rand(32) + np.random.rand(32) * 1j
+		a = np.random.rand(16) + np.random.rand(16) * 1j
 		a = a / np.linalg.norm(a)
 
 		circuit = QuantumCircuit()
 		state = TestBidirectional.bidirectional_experiment(circuit, a, 1)
 
-		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-03, atol=1e-05))
+		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-02, atol=1e-03))
 
 	def test_top_down(self):
-		a = np.random.rand(32) + np.random.rand(32) * 1j
+		a = np.random.rand(16) + np.random.rand(16) * 1j
 		a = a / np.linalg.norm(a)
 
 		circuit = QuantumCircuit()
 		state = TestBidirectional.bidirectional_experiment(circuit, a, int(np.log2(len(a))))
 
-		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-03, atol=1e-05))
+		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-02, atol=1e-03))
 
 	def test_sublinear(self):
-		a = np.random.rand(32) + np.random.rand(32) * 1j
+		a = np.random.rand(16) + np.random.rand(16) * 1j
 		a = a / np.linalg.norm(a)
 
 		circuit = QuantumCircuit()
 		state = TestBidirectional.bidirectional_experiment(circuit, a)
 
-		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-03, atol=1e-05))
+		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-02, atol=1e-03))
 
