@@ -3,7 +3,7 @@ from qclib.state_preparation.bidirectional.state_tree_preparation import Amplitu
 from qiskit import QuantumCircuit, ClassicalRegister, execute, Aer
 
 import numpy as np
-import qclib.state_preparation.bidirectional as bd
+import qclib.state_preparation.bdsp as bd
 
 class TestBidirectional(TestCase):
 	backend = Aer.get_backend('qasm_simulator') 
