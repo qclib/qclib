@@ -19,8 +19,9 @@ class TestBidirectional(TestCase):
 		counts = job.result().get_counts(circuit)
 		v = sum(counts.values())
 		
+		n = len(q)
 		counts2 = {}
-		for m in range(2**len(q)):
+		for m in range(2**n):
 			pattern = '{:0{}b}'.format(m, n)
 			if pattern in counts:
 				counts2[pattern] = counts[pattern]
