@@ -273,7 +273,3 @@ def _compute_matrix_angles(feature, norm):
         alpha = 2 * (np.arcsin(sin_value))
 
     return alpha, beta, phi
-
-if __name__ == '__main__':
-    vetor = double_sparse(10, 2, 0.3)
-    print(vetor)
