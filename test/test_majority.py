@@ -30,35 +30,35 @@ class TestMajority(TestCase):
     def test_majority_1(self):
         counts = TestMajority._run_majority([0,0])
         
-        self.assertTrue(counts['0'] / 1024 == 0)
+        self.assertTrue(counts['0'] / 1024 == 1)
 
     def test_majority_2(self):
         counts = TestMajority._run_majority([0,1])
         
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts['1'] / 1024 == 1)
        
     def test_majority_3(self):
         counts = TestMajority._run_majority([1,1])
         
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts['1'] / 1024 == 1)
         
     def test_majority_4(self):
         counts = TestMajority._run_majority([0,0,0,1])
         
-        self.assertTrue(counts['0'] / 1024 == 0)
+        self.assertTrue(counts['0'] / 1024 == 1)
         
     def test_majority_5(self):
         counts = TestMajority._run_majority([0,1,0,1])
         
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts['1'] / 1024 == 1)
 
     def test_majority_6(self):
         counts = TestMajority._run_majority([1,0,0,1])
         
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts['1'] / 1024 == 1)
 
     def test_majority_7(self):
         counts = TestMajority._run_majority([0,1,0,0])
         
-        self.assertTrue(counts['0'] / 1024 == 0)
+        self.assertTrue(counts['0'] / 1024 == 1)
 
