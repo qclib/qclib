@@ -7,7 +7,7 @@ from qclib.util import get_counts
 class TestMajority(TestCase):
 
     @staticmethod
-    def _run_majority(n, bin_input):
+    def _run_majority(bin_input):
         # initialize quantum registers
         controls = QuantumRegister(len(bin_input), 'controls')
         target = QuantumRegister(1, 'target')
@@ -17,7 +17,7 @@ class TestMajority(TestCase):
         # Pattern basis encoding
         for k, b in enumerate(bin_input):
             if (b == 1):
-                circ.x(controls[k])
+                circuit.x(controls[k])
 
         majority(circuit, controls, target)
 
@@ -28,37 +28,37 @@ class TestMajority(TestCase):
         return counts
         
     def test_majority_1(self):
-        counts = TestMajority._run_majority(2, [0,0])
+        counts = TestMajority._run_majority([0,0])
         
-        self.assertTrue(counts['0'] / 1024 == 0)
+        self.assertTrue(counts['0'] / 1024 == 1)
 
     def test_majority_2(self):
-        counts = TestMajority._run_majority(2, [0,1])
+        counts = TestMajority._run_majority([0,1])
         
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts['1'] / 1024 == 1)
        
     def test_majority_3(self):
-        counts = TestMajority._run_majority(2, [1,1])
+        counts = TestMajority._run_majority([1,1])
         
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts['1'] / 1024 == 1)
         
     def test_majority_4(self):
-        counts = TestMajority._run_majority(4, [0,0,0,1])
+        counts = TestMajority._run_majority([0,0,0,1])
         
-        self.assertTrue(counts['0'] / 1024 == 0)
+        self.assertTrue(counts['0'] / 1024 == 1)
         
     def test_majority_5(self):
-        counts = TestMajority._run_majority(4, [0,1,0,1])
+        counts = TestMajority._run_majority([0,1,0,1])
         
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts['1'] / 1024 == 1)
 
     def test_majority_6(self):
-        counts = TestMajority._run_majority(4, [1,0,0,1])
+        counts = TestMajority._run_majority([1,0,0,1])
         
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts['1'] / 1024 == 1)
 
     def test_majority_7(self):
-        counts = TestMajority._run_majority(4, [0,1,0,0])
+        counts = TestMajority._run_majority([0,1,0,0])
         
-        self.assertTrue(counts['0'] / 1024 == 0)
+        self.assertTrue(counts['0'] / 1024 == 1)
 
