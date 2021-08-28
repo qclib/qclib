@@ -29,8 +29,6 @@ def initialize(state, aux=False):
     n_qubits = len(key)
     n_qubits = int(n_qubits)
 
-    pivot_circuit = qiskit.QuantumCircuit(n_qubits)
-
     non_zero = len(state)
     target_size = np.log2(non_zero)
     target_size = np.ceil(target_size)
