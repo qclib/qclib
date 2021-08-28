@@ -1,6 +1,6 @@
 from unittest import TestCase
-from qclib.state_preparation.bidirectional.state_tree_preparation import Amplitude
 from qiskit import QuantumCircuit, ClassicalRegister, execute, Aer
+from qclib.state_preparation.bidirectional.state_tree_preparation import Amplitude
 
 import numpy as np
 import qclib.state_preparation.bdsp as bd
