@@ -28,7 +28,7 @@ class TestMajority(TestCase):
         return counts
     
     @staticmethod
-    def _test_majority(n):
+    def _test_majority(self, n):
         for i in range(2**n):
             bits = [ int(j) for j in '{:0{}b}'.format(i, n) ]
             counts = TestMajority._run_majority(bits)
@@ -40,26 +40,26 @@ class TestMajority(TestCase):
     
     # Keep tests separated by number of qubits to make it easier to identify errors.
     def test_majority_2(self):
-        TestMajority._test_majority(2)
+        TestMajority._test_majority(self, 2)
         
     def test_majority_3(self):
-        TestMajority._test_majority(3)
+        TestMajority._test_majority(self, 3)
 
     def test_majority_4(self):
-        TestMajority._test_majority(4)
+        TestMajority._test_majority(self, 4)
 
     def test_majority_5(self):
-        TestMajority._test_majority(5)
+        TestMajority._test_majority(self, 5)
 
     def test_majority_6(self):
-        TestMajority._test_majority(6)
+        TestMajority._test_majority(self, 6)
 
     def test_majority_7(self):
-        TestMajority._test_majority(7)
+        TestMajority._test_majority(self, 7)
 
     def test_majority_8(self):
-        TestMajority._test_majority(8)
+        TestMajority._test_majority(self, 8)
 
     def test_majority_9(self):
-        TestMajority._test_majority(9)
+        TestMajority._test_majority(self, 9)
 
