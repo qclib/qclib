@@ -62,3 +62,23 @@ class TestMajority(TestCase):
         
         self.assertTrue(counts['0'] / 1024 == 1)
 
+    def test_majority_8(self):
+        counts = TestMajority._run_majority([0,1,0,0,1])
+        
+        self.assertTrue(counts['0'] / 1024 == 1)
+
+    def test_majority_9(self):
+        counts = TestMajority._run_majority([0,1,0,1,1])
+        
+        self.assertTrue(counts['1'] / 1024 == 1)
+
+    def test_majority_10(self):
+        counts = TestMajority._run_majority([1,1,1,1,1])
+        
+        self.assertTrue(counts['1'] / 1024 == 1)
+
+    def test_majority_11(self):
+        counts = TestMajority._run_majority([0,0,0,0,0])
+        
+        self.assertTrue(counts['0'] / 1024 == 1)
+
