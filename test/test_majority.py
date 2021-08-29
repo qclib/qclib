@@ -26,59 +26,40 @@ class TestMajority(TestCase):
         counts = get_counts(circuit)
         
         return counts
-        
-    def test_majority_1(self):
-        counts = TestMajority._run_majority([0,0])
-        
-        self.assertTrue(counts['0'] / 1024 == 1)
-
+    
+    @staticmethod
+    def _test_majority(n):
+        for i in range(2**n):
+            bits = [ int(j) for j in '{:0{}b}'.format(i, n) ]
+            counts = TestMajority._run_majority(bits)
+            
+            if (sum(bits) >= n/2):
+                self.assertTrue(counts['1'] / 1024 == 1)
+            else:
+                self.assertTrue(counts['0'] / 1024 == 1)
+    
+    # Keep tests separated by number of qubits to make it easier to identify errors.
     def test_majority_2(self):
-        counts = TestMajority._run_majority([0,1])
+        TestMajority._test_majority(2)
         
-        self.assertTrue(counts['1'] / 1024 == 1)
-       
     def test_majority_3(self):
-        counts = TestMajority._run_majority([1,1])
-        
-        self.assertTrue(counts['1'] / 1024 == 1)
-        
+        TestMajority._test_majority(3)
+
     def test_majority_4(self):
-        counts = TestMajority._run_majority([0,0,0,1])
-        
-        self.assertTrue(counts['0'] / 1024 == 1)
-        
+        TestMajority._test_majority(4)
+
     def test_majority_5(self):
-        counts = TestMajority._run_majority([0,1,0,1])
-        
-        self.assertTrue(counts['1'] / 1024 == 1)
+        TestMajority._test_majority(5)
 
     def test_majority_6(self):
-        counts = TestMajority._run_majority([1,0,0,1])
-        
-        self.assertTrue(counts['1'] / 1024 == 1)
+        TestMajority._test_majority(6)
 
     def test_majority_7(self):
-        counts = TestMajority._run_majority([0,1,0,0])
-        
-        self.assertTrue(counts['0'] / 1024 == 1)
+        TestMajority._test_majority(7)
 
     def test_majority_8(self):
-        counts = TestMajority._run_majority([0,1,0,0,1])
-        
-        self.assertTrue(counts['0'] / 1024 == 1)
+        TestMajority._test_majority(8)
 
     def test_majority_9(self):
-        counts = TestMajority._run_majority([0,1,0,1,1])
-        
-        self.assertTrue(counts['1'] / 1024 == 1)
-
-    def test_majority_10(self):
-        counts = TestMajority._run_majority([1,1,1,1,1])
-        
-        self.assertTrue(counts['1'] / 1024 == 1)
-
-    def test_majority_11(self):
-        counts = TestMajority._run_majority([0,0,0,0,0])
-        
-        self.assertTrue(counts['0'] / 1024 == 1)
+        TestMajority._test_majority(9)
 
