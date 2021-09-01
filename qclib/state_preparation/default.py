@@ -17,4 +17,4 @@ def initialize(state):
 
 
 def sparse_initialize(state):
-	return sparse_init(state)
+    return sparse_init(state)
