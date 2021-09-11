@@ -57,9 +57,3 @@ class TestMajority(TestCase):
     def test_majority_7(self):
         TestMajority._test_majority(self, 7)
 
-    def test_majority_8(self):
-        TestMajority._test_majority(self, 8)
-
-    def test_majority_9(self):
-        TestMajority._test_majority(self, 9)
-
