@@ -1,10 +1,24 @@
+# Copyright 2021 qclib project.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 
 def initialize(circuit, pattern, q_memory, q_auxiliary, is_classical_pattern=False):
     r"""
     Prepares a circuit which the output is determined by a probability distribution on the memory
     which is peaked around the stored patterns closest in Hamming distance to the input.
-    Developed by `C. A. Trugenberger (2001) <https://arxiv.org/pdf/quant-ph/0012100v2.pdf>`_.
+    `<https://arxiv.org/pdf/quant-ph/0012100v2.pdf>`_.
     The retrieval algorithm requires three registers. The first, of ``n`` qubits, contains the input
     pattern; the second, also of ``n`` qbits, contains the memory; and finally there is a single qubit
     auxiliary register.
