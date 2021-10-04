@@ -1,11 +1,54 @@
-"""
-function to load classical data in a quantum device
-"""
+# Copyright 2021 qclib project.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import numpy as np
-import qiskit
+from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+
+from qclib.state_preparation.util.state_tree_preparation import *
+from qclib.state_preparation.util.angle_tree_preparation import *
+from qclib.state_preparation.util.tree_register          import *
+from qclib.state_preparation.util.tree_walk              import bottom_up
+
+def initialize(state):
+    """
+        https://arxiv.org/abs/2108.10182
+    """
+    n_qubits = int(np.log2(len(state)))
+    data = [Amplitude(i, a) for i, a in enumerate(state)]
+
+    state_tree = state_decomposition(n_qubits, data)
+    angle_tree = create_angles_tree(state_tree)
+    
+    circuit = QuantumCircuit()
+    add_register(circuit, angle_tree, n_qubits-1)
+
+    bottom_up(angle_tree, circuit, n_qubits)
+    
+    return circuit
+
+
+
+
+
 
 class bin_tree:
+    """ 
+        State preparation using DCSP https://www.nature.com/articles/s41598-021-85474-1.
+        This class implements the original algorithm as defined in the paper.
+        It is kept here for didactic reasons.
+        The ``initialize`` function should preferably be used.
+    """
     size = None
     values = None
 
@@ -52,9 +95,9 @@ class Encoding:
         encoding a binary string x in a basis state |x>
         """
         self.num_qubits = int(len(input_vector))
-        self.quantum_data = qiskit.QuantumRegister(self.num_qubits)
-        self.classical_data = qiskit.ClassicalRegister(n_classical)
-        self.qcircuit = qiskit.QuantumCircuit(self.quantum_data, self.classical_data)
+        self.quantum_data = QuantumRegister(self.num_qubits)
+        self.classical_data = ClassicalRegister(n_classical)
+        self.qcircuit = QuantumCircuit(self.quantum_data, self.classical_data)
         for k, _ in enumerate(input_vector):
             if input_vector[k] == 1:
                 self.qcircuit.x(self.quantum_data[k])
@@ -64,9 +107,9 @@ class Encoding:
         """
         encoding a binary string x as
         """
-        input_pattern = qiskit.QuantumRegister(len(input_vector))
-        classical_register = qiskit.ClassicalRegister(n_classical)
-        self.qcircuit = qiskit.QuantumCircuit(input_pattern, classical_register)
+        input_pattern = QuantumRegister(len(input_vector))
+        classical_register = ClassicalRegister(n_classical)
+        self.qcircuit = QuantumCircuit(input_pattern, classical_register)
         for k, _ in enumerate(input_vector):
             self.qcircuit.ry(input_vector[k], input_pattern[k])
 
@@ -102,8 +145,8 @@ class Encoding:
         load real vector x to the amplitude of a quantum state
         """
         self.num_qubits = int(np.log2(len(input_vector)))
-        self.quantum_data = qiskit.QuantumRegister(self.num_qubits)
-        self.qcircuit = qiskit.QuantumCircuit(self.quantum_data)
+        self.quantum_data = QuantumRegister(self.num_qubits)
+        self.qcircuit = QuantumCircuit(self.quantum_data)
         newx = np.copy(input_vector)
         betas = []
         Encoding._recursive_compute_beta(newx, betas)
@@ -111,8 +154,8 @@ class Encoding:
 
     def dc_amplitude_encoding(self, input_vector):
         self.num_qubits = int(len(input_vector))-1
-        self.quantum_data = qiskit.QuantumRegister(self.num_qubits)
-        self.qcircuit = qiskit.QuantumCircuit(self.quantum_data)
+        self.quantum_data = QuantumRegister(self.num_qubits)
+        self.qcircuit = QuantumCircuit(self.quantum_data)
         newx = np.copy(input_vector)
         betas = []
         Encoding._recursive_compute_beta(newx, betas)
