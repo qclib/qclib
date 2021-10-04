@@ -1,25 +1,36 @@
-from unittest import TestCase
-from qiskit import QuantumCircuit, ClassicalRegister, execute, Aer
-from qclib.state_preparation.bidirectional.state_tree_preparation import Amplitude
+# Copyright 2021 qclib project.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import numpy as np
-import qclib.state_preparation.bdsp as bd
+from unittest import TestCase
+from qiskit import QuantumCircuit, ClassicalRegister, execute, Aer
+from qclib.state_preparation.bdsp import initialize
 
 backend = Aer.get_backend('qasm_simulator') 
 shots   = 8192
 
-class TestBidirectional(TestCase):
+class TestBdsp(TestCase):
 
 	@staticmethod
-	def measurement(circuit, q, c):
-		circuit.measure(q, c)
+	def measurement(circuit, n, c):
+		circuit.measure(list(range(n)), c)
 
 		job = execute(circuit, backend, shots=shots, optimization_level=3)
 		
 		counts = job.result().get_counts(circuit)
 		v = sum(counts.values())
 		
-		n = len(q)
 		counts2 = {}
 		for m in range(2**n):
 			pattern = '{:0{}b}'.format(m, n)
@@ -31,23 +42,20 @@ class TestBidirectional(TestCase):
 		return [ value/v for (key, value) in counts2.items() ]
 
 	@staticmethod
-	def bidirectional_experiment(circuit, input_state, s=None):
-		state = [Amplitude(i, a) for i, a in enumerate(input_state)]
+	def bdsp_experiment(state, s=None):
+		circuit = initialize(state, s)
 
-		q_output, state_tree, angle_tree = bd.initialize(circuit, state, s)
-
-		n = int(np.log2(len(input_state)))
+		n = int(np.log2(len(state)))
 		c = ClassicalRegister(n)
 		circuit.add_register(c)
 
-		return TestBidirectional.measurement(circuit, q_output, c)
+		return TestBdsp.measurement(circuit, n, c)
 		
 	def test_bottom_up(self):
 		a = np.random.rand(16) + np.random.rand(16) * 1j
 		a = a / np.linalg.norm(a)
 
-		circuit = QuantumCircuit()
-		state = TestBidirectional.bidirectional_experiment(circuit, a, 1)
+		state = TestBdsp.bdsp_experiment(a, 1)
 
 		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-01, atol=0.005))
 
@@ -55,8 +63,7 @@ class TestBidirectional(TestCase):
 		a = np.random.rand(16) + np.random.rand(16) * 1j
 		a = a / np.linalg.norm(a)
 
-		circuit = QuantumCircuit()
-		state = TestBidirectional.bidirectional_experiment(circuit, a, int(np.log2(len(a))))
+		state = TestBdsp.bdsp_experiment(a, int(np.log2(len(a))))
 
 		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-01, atol=0.005))
 
@@ -64,8 +71,7 @@ class TestBidirectional(TestCase):
 		a = np.random.rand(16) + np.random.rand(16) * 1j
 		a = a / np.linalg.norm(a)
 
-		circuit = QuantumCircuit()
-		state = TestBidirectional.bidirectional_experiment(circuit, a)
+		state = TestBdsp.bdsp_experiment(a)
 
 		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-01, atol=0.005))
 

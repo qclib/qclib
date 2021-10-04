@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from math import ceil
+import numpy as np
 from qiskit import QuantumCircuit
 
 from qclib.state_preparation.util.state_tree_preparation import *
 from qclib.state_preparation.util.angle_tree_preparation import *
 from qclib.state_preparation.util.tree_register          import *
-from qclib.state_preparation.util.tree_walk              import top_down, bottom_up
+from qclib.state_preparation.util.tree_walk              import top_down
 
-def initialize(state, split=None):
+def initialize(state, global_phase=True):
     """
+        https://arxiv.org/abs/quant-ph/0407010
         https://arxiv.org/abs/2108.10182
     """
     n_qubits = int(np.log2(len(state)))
@@ -29,15 +30,12 @@ def initialize(state, split=None):
 
     state_tree = state_decomposition(n_qubits, data)
     angle_tree = create_angles_tree(state_tree)
-    
-    if (split == None):
-        split = int(ceil(n_qubits/2)) # sublinear
 
     circuit = QuantumCircuit()
-    add_register(circuit, angle_tree, n_qubits-split)
+    add_register(circuit, angle_tree, 0)
 
-    top_down(angle_tree, circuit, n_qubits-split)
-    bottom_up(angle_tree, circuit, n_qubits-split)
-    
+    top_down(angle_tree, circuit, 0)
+    if (global_phase):
+        circuit.global_phase += sum(np.angle(state))/len(state) # equivalent to unitary(I * exp(1j*sum(np.angle(state))/len(state)))
+
     return circuit
-
