@@ -15,10 +15,12 @@
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.state_preparation.mottonen import initialize as mottonen
-                        
+from qclib.unitary import unitary
+from qclib.isometry import decompose
+
 # pylint: disable=maybe-no-member
 
-def initialize(state, rank=0):
+def initialize(state, low_rank=0):
     """ State preparation using Schmidt decomposition arXiv:1003.5760
 
     For instance, to initialize the state a|0> + b|1>
@@ -31,9 +33,9 @@ def initialize(state, rank=0):
         A unit vector representing a quantum state.
         Values are amplitudes.
 
-    rank: int
-        ``state`` low-rank approximation (1 <= ``rank`` < 2**(n_qubits//2)).
-        If ``rank`` is not in the valid range, it will be ignored and the full
+    low_rank: int
+        ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
+        If ``low_rank`` is not in the valid range, it will be ignored and the effective
         ``rank`` will be used.
 
     Returns
@@ -55,28 +57,25 @@ def initialize(state, rank=0):
 
     u, d, v = np.linalg.svd(s)
     
-    if (rank >= 1 and rank <= n):
-        # This code is equivalent to the commented one below. It is more compact, but the one below is easier to read.
-        d = d[:rank]
-        u = u[:,:rank]
-        v = v[:rank ,:]
-        if (not np.log2(rank).is_integer()): # To use isometries, the rank needs to be a power of 2.
-            s = u @ np.diag(d) @ v 
-            """
-            s = np.zeros((n, m), dtype=complex)
-            for i in range(rank):
-                s += d[i] * np.outer(u.T[i], v[i])
-            """ 
-            u, d, v = np.linalg.svd(s)
-
-        d = np.concatenate((d, [0]*(s.shape[0]-d.shape[0])))
-    else:
-        rank = n
-
-    v = v[:n, :] # Isometry n to m.
+    
+    rank = sum(j > 10**-16 for j in d)     # Effective rank ( rank \in {1, 2, ..., n} ).
+    if (low_rank > 0 and low_rank < rank):
+        rank = low_rank                    # Low-rank approximation
+    
+    k = int(2**np.ceil(np.log2(rank)))     # To use isometries, the rank needs to be a power of 2.
+    
+    u = u[:,:k]                            # Matrix u can be a unitary (k=n) or isometry (k<n).
+    v = v[:k,:]                            # If n<m, v.T is always an isometry of log2(k) to log2(m) (k<=n).
+                                           # If n=m, v.T can be a unitary (k=n) or isometry (k<n).
+    d = d[:k]                              # The length of the state vector needs to be a power of 2.
+    d[rank:] = np.zeros(k-rank)            # If k>rank, zeroes out the additional elements.
+    
+    if (rank == 1):
+        d = np.concatenate((d, [0]))       # The length of the state vector needs to be a power of 2 and >1.
+    
 
     d = d / np.linalg.norm(d)
-
+    
     A = QuantumRegister(n_qubits//2 + r)
     B = QuantumRegister(n_qubits//2)
 
@@ -86,19 +85,21 @@ def initialize(state, rank=0):
         circ = initialize(d)
     else:
         circ = mottonen(d)
-    circuit.compose(circ, B, inplace=True)
         
-    for k in range(int( np.ceil(np.log2(rank)) )):
-        circuit.cx(B[k], A[k])
+    circuit.compose(circ, B[:int( np.log2( len(d) ) )], inplace=True)
 
-    def encode(U, reg):                           # Encodes the data using the most appropriate method.
-        if (U.shape[1] == 1):                     # State preparation.
-            gate_u = initialize(U[:,0])
-        elif (U.shape[0] > U.shape[1]):           # Isometry decomposition.
-            from qclib.isometry import decompose
+    for j in range(int( np.log2( k ) )):           # Entangles only the necessary qubits, according to rank.
+        circuit.cx(B[j], A[j])
+
+    def encode(U, reg):                            # Encodes the data using the most appropriate method:
+        if (U.shape[1] == 1):                      #   State preparation.
+            if (U.shape[0] > 2):
+                gate_u = initialize(U[:,0])
+            else:
+                gate_u = mottonen(U[:,0])
+        elif (U.shape[0] > U.shape[1]):            #   Isometry decomposition.
             gate_u = decompose(U, scheme='knill') 
-        else:                                     # Unitary.
-            from qclib.unitary import unitary
+        else:                                      #   Unitary decomposition.
             gate_u = unitary(U, 'qsd')
         
         circuit.compose(gate_u, reg, inplace=True) # Apply gate U to the register.
@@ -163,8 +164,6 @@ def initialize_original(state):
 
     for k in range(int(n_qubits//2)):
         circuit.cx(B[k], A[k])
-
-    from qclib.unitary import unitary
     
     gate_u = unitary(u, 'qsd')
     gate_v = unitary(v.T, 'qsd')
