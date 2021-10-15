@@ -12,139 +12,148 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+""" Test isometry """
+
 from unittest import TestCase
 import numpy as np
 from qiskit import QuantumCircuit
 from scipy.stats import unitary_group
 from qclib.isometry import decompose
 from qclib.util import get_state
+from qclib.unitary import unitary
+from qclib.state_preparation.mottonen import initialize
 
 class TestInitialize(TestCase):
-
+    """ Testing isometry """
     def test_state_preparation_knill(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
+        """ Testing state preparation with isometry Knill scheme """
+        vector = np.random.rand(32) + np.random.rand(32) * 1j
+        vector = vector / np.linalg.norm(vector)
 
-        circuit = decompose(a, scheme='knill')
+        circuit = decompose(vector, scheme='knill')
 
         state = get_state(circuit)
 
-        self.assertTrue(np.allclose(a, state))
+        self.assertTrue(np.allclose(vector, state))
 
     def test_unitary_knill(self):
-        a = unitary_group.rvs(32)
-        
-        circuit = decompose(a, scheme='knill')
+        """ Testing isometry Knill scheme with unitary matrix"""
+        unitary_matrix = unitary_group.rvs(32)
+
+        circuit = decompose(unitary_matrix, scheme='knill')
 
         state = get_state(circuit)
 
-        self.assertTrue(np.allclose(a[:, 0], state))
+        self.assertTrue(np.allclose(unitary_matrix[:, 0], state))
 
     def test_isometry_knill(self):
-        a = unitary_group.rvs(32)[:,:4]
+        """ Testing isometry Knill scheme with isometry matrix"""
+        isometry_matrix = unitary_group.rvs(32)[:, :4]
 
-        gate = decompose(a, scheme='knill')
+        gate = decompose(isometry_matrix, scheme='knill')
 
         state = get_state(gate)
 
-        self.assertTrue(np.allclose(a[:, 0], state))
+        self.assertTrue(np.allclose(isometry_matrix[:, 0], state))
 
         circuit = QuantumCircuit(5)
         circuit.x(0)
         circuit.append(gate, circuit.qubits)
         state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 1], state))
+        self.assertTrue(np.allclose(isometry_matrix[:, 1], state))
 
         circuit = QuantumCircuit(5)
         circuit.x(1)
         circuit.append(gate, circuit.qubits)
         state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 2], state))
+        self.assertTrue(np.allclose(isometry_matrix[:, 2], state))
 
         circuit = QuantumCircuit(5)
         circuit.x([0,1])
         circuit.append(gate, circuit.qubits)
         state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 3], state))
-    
+        self.assertTrue(np.allclose(isometry_matrix[:, 3], state))
+
     def test_compare_mottonen_isometry_knill(self):
-        from qclib.state_preparation.mottonen import initialize
+        """ Compare Mottonen and Isometry state preparation"""
 
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
-        
-        circuit1 = decompose(a, scheme='knill')
-        circuit2 = initialize(a)
+        vector = np.random.rand(32) + np.random.rand(32) * 1j
+        vector = vector / np.linalg.norm(vector)
+
+        circuit1 = decompose(vector, scheme='knill')
+        circuit2 = initialize(vector)
 
         state1 = get_state(circuit1)
         state2 = get_state(circuit2)
-        
+
         self.assertTrue(np.allclose(state1, state2))
-        
+
     def test_compare_unitary_qsd_isometry_knill(self):
-        from qclib.unitary import unitary
+        """ Compare unitary and isometry"""
+        unitary_matrix = unitary_group.rvs(32)
 
-        a = unitary_group.rvs(32)
-        
-        circuit1 = decompose(a, scheme='knill')
-        circuit2 = unitary(a, decomposition='qsd')
+        circuit1 = decompose(unitary_matrix, scheme='knill')
+        circuit2 = unitary(unitary_matrix, decomposition='qsd')
 
         state1 = get_state(circuit1)
         state2 = get_state(circuit2)
-        
+
         self.assertTrue(np.allclose(state1, state2))
-    
+
     def test_compare_unitary_csd_isometry_knill(self):
-        from qclib.unitary import unitary
+        """ Compare unitary and csd"""
+        unitary_matrix = unitary_group.rvs(32)
 
-        a = unitary_group.rvs(32)
-        
-        circuit1 = decompose(a, scheme='knill')
-        circuit2 = unitary(a, decomposition='csd')
+        circuit1 = decompose(unitary_matrix, scheme='knill')
+        circuit2 = unitary(unitary_matrix, decomposition='csd')
 
         state1 = get_state(circuit1)
         state2 = get_state(circuit2)
-        
+
         self.assertTrue(np.allclose(state1, state2))
-    
+
     def test_compare_unitary_qiskit_isometry_knill(self):
-        a = unitary_group.rvs(32)
-        
-        circuit1 = decompose(a, scheme='knill')
+        """ Compare qiskit isometry and Knill isometry"""
+        unitary_matrix = unitary_group.rvs(32)
+
+        circuit1 = decompose(unitary_matrix, scheme='knill')
         circuit2 = QuantumCircuit(5)
-        circuit2.unitary(a, list(range(5)))
+
+        # pylint: disable=maybe-no-member
+        circuit2.unitary(unitary_matrix, list(range(5)))
 
         state1 = get_state(circuit1)
         state2 = get_state(circuit2)
-                
+
         self.assertTrue(np.allclose(state1, state2))
 
     def test_schmidt_isometry_knill(self):
-        a = np.copy([[-0.5391073,  -0.12662419, -0.73739705, -0.38674956],
-                    [ 0.15705405,  0.20566939,  0.32663193, -0.9090356 ],
+        """  Testing decompose """
+        unitary_gate = np.copy([[-0.5391073,  -0.12662419, -0.73739705, -0.38674956],
+                    [0.15705405,  0.20566939,  0.32663193, -0.9090356],
                     [-0.77065035, -0.23739918,  0.59084039,  0.02544217],
                     [-0.30132273,  0.9409081,  -0.02155946,  0.15307435]])
-        
-        gate = decompose(a, scheme='knill')
-        
+
+        gate = decompose(unitary_gate, scheme='knill')
+
         state = get_state(gate)
-        
-        self.assertTrue(np.allclose(a[:, 0], state))
+
+        self.assertTrue(np.allclose(unitary_gate[:, 0], state))
 
         circuit = QuantumCircuit(2)
         circuit.x(0)
         circuit.append(gate, circuit.qubits)
         state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 1], state))
+        self.assertTrue(np.allclose(unitary_gate[:, 1], state))
 
         circuit = QuantumCircuit(2)
         circuit.x(1)
         circuit.append(gate, circuit.qubits)
         state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 2], state))
+        self.assertTrue(np.allclose(unitary_gate[:, 2], state))
 
         circuit = QuantumCircuit(2)
         circuit.x([0,1])
         circuit.append(gate, circuit.qubits)
         state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 3], state))
+        self.assertTrue(np.allclose(unitary_gate[:, 3], state))

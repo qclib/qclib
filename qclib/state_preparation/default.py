@@ -18,8 +18,6 @@
 	For sparse states, use ``sparse_initialize``.
 """
 
-import numpy as np
-import qiskit
 from qclib.state_preparation.schmidt import initialize as dense_init
 from qclib.state_preparation.sparse_isometry import initialize as sparse_init
 
@@ -27,8 +25,10 @@ from qclib.state_preparation.sparse_isometry import initialize as sparse_init
 
 
 def initialize(state):
+    """ Initialize dense state """
     return dense_init(state)
 
 
 def sparse_initialize(state):
+    """ Initialize sparse state """
     return sparse_init(state)

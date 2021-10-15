@@ -12,13 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+        https://arxiv.org/abs/quant-ph/0407010
+        https://arxiv.org/abs/2108.10182
+"""
+
 import numpy as np
 from qiskit import QuantumCircuit
 
-from qclib.state_preparation.util.state_tree_preparation import *
-from qclib.state_preparation.util.angle_tree_preparation import *
-from qclib.state_preparation.util.tree_register          import *
-from qclib.state_preparation.util.tree_walk              import top_down
+from qclib.state_preparation.util.angle_tree_preparation import \
+    Amplitude, state_decomposition, create_angles_tree
+
+from qclib.state_preparation.util.tree_register import add_register
+from qclib.state_preparation.util.tree_walk import top_down
+
 
 def initialize(state, global_phase=True):
     """
@@ -35,7 +42,8 @@ def initialize(state, global_phase=True):
     add_register(circuit, angle_tree, 0)
 
     top_down(angle_tree, circuit, 0)
-    if (global_phase):
-        circuit.global_phase += sum(np.angle(state))/len(state) # equivalent to unitary(I * exp(1j*sum(np.angle(state))/len(state)))
+    if global_phase:
+        # equivalent to unitary(I * exp(1j*sum(np.angle(state))/len(state)))
+        circuit.global_phase += sum(np.angle(state))/len(state)
 
     return circuit

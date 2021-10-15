@@ -12,59 +12,62 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
+""" Test state preparation """
+
 from unittest import TestCase
-from qiskit import QuantumCircuit, ClassicalRegister, execute, Aer
+import numpy as np
+from qiskit import execute, Aer
 from qclib.state_preparation.mottonen import initialize
 from qclib.util import get_state
 
-backend = Aer.get_backend('qasm_simulator') 
-shots   = 8192
+backend = Aer.get_backend('qasm_simulator')
+SHOTS = 8192
+
 
 class TestInitialize(TestCase):
+    """ Testing qclib.state_preparation.mottonen """
     @staticmethod
-    def measurement(circuit, n, c):
-        circuit.measure(list(range(n)), c)
+    def measurement(circuit):
+        """ get state preparation counts"""
 
-        job = execute(circuit, backend, shots=shots, optimization_level=3)
-		
+        circuit.measure_all()
+        job = execute(circuit, backend, shots=SHOTS, optimization_level=0)
+
         counts = job.result().get_counts(circuit)
-        v = sum(counts.values())
-		
+
         counts2 = {}
-        for m in range(2**n):
-            pattern = '{:0{}b}'.format(m, n)
+        for j in range(2**circuit.num_qubits):
+            pattern = '{:0{}b}'.format(j, circuit.num_qubits)
             if pattern in counts:
-            	counts2[pattern] = counts[pattern]
+                counts2[pattern] = counts[pattern]
             else:
                 counts2[pattern] = 0.0
 
-        return [ value/v for (key, value) in counts2.items() ]
+        return [value/SHOTS for (key, value) in counts2.items()]
 
     @staticmethod
     def mottonen_experiment(state):
+        """ Creates circuit with Mottonen state preparation algorithm"""
         circuit = initialize(state)
 
-        n = int(np.log2(len(state)))
-        c = ClassicalRegister(n)
-        circuit.add_register(c)
-
-        return TestInitialize.measurement(circuit, n, c)
+        return TestInitialize.measurement(circuit)
 
     def test_mottonen_state(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
+        """ Testiong Mottonen state preparation """
+        vector = np.random.rand(32) + np.random.rand(32) * 1j
+        vector = vector / np.linalg.norm(vector)
 
-        circuit = initialize(a)
+        circuit = initialize(vector)
 
         state = get_state(circuit)
-        
-        self.assertTrue(np.allclose(a, state))
+
+        self.assertTrue(np.allclose(vector, state))
 
     def test_mottonen_measure(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
+        """ Testiong Mottonen state preparation with measurements"""
+        vector = np.random.rand(32) + np.random.rand(32) * 1j
+        vector = vector / np.linalg.norm(vector)
 
-        state = TestInitialize.mottonen_experiment(a)
+        state = TestInitialize.mottonen_experiment(vector)
 
-        self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-01, atol=0.005))
+        self.assertTrue(np.allclose( np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))
