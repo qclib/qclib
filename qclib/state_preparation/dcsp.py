@@ -20,8 +20,10 @@
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 
+from qclib.state_preparation.util.state_tree_preparation import Amplitude, state_decomposition
+
 from qclib.state_preparation.util.angle_tree_preparation import \
-    Amplitude, state_decomposition, create_angles_tree
+    create_angles_tree
 
 from qclib.state_preparation.util.tree_register import add_register
 from qclib.state_preparation.util.tree_walk import bottom_up

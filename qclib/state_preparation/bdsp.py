@@ -18,8 +18,9 @@ from math import ceil
 from qiskit import QuantumCircuit
 
 import numpy as np
-from qclib.state_preparation.util.angle_tree_preparation import \
-    Amplitude, state_decomposition, create_angles_tree
+from qclib.state_preparation.util.state_tree_preparation import Amplitude, state_decomposition
+
+from qclib.state_preparation.util.angle_tree_preparation import create_angles_tree
 
 from qclib.state_preparation.util.tree_register import add_register
 from qclib.state_preparation.util.tree_walk import top_down, bottom_up

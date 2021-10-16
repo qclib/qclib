@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-from dataclasses import dataclass
-from qclib.state_preparation.util.tree_utils import *
-from qclib.state_preparation.util.state_tree_preparation import *
-
 """
 https://arxiv.org/abs/2108.10182
 """
+
+
+from dataclasses import dataclass
+import numpy as np
+
+from qclib.state_preparation.util.state_tree_preparation import is_leaf
 
 @dataclass
 class NodeAngleTree:
@@ -32,12 +33,12 @@ class NodeAngleTree:
     angle_z: float
     left: 'NodeAngleTree'
     right: 'NodeAngleTree'
-        
+
     def __str__(self):
         return str(self.level) + '_' + \
                str(self.index) + '\n' + \
                '{0:.2g}'.format(self.angle_y) + '_' + \
-               '{0:.2g}'.format(self.angle_z) 
+               '{0:.2g}'.format(self.angle_z)
 
 def create_angles_tree(state_tree):
     """
@@ -57,8 +58,7 @@ def create_angles_tree(state_tree):
     node = NodeAngleTree(state_tree.index, state_tree.level, angle_y, angle_z, None, None)
 
     if not is_leaf(state_tree.left):
-        node.right = create_angles_tree(state_tree.right) 
+        node.right = create_angles_tree(state_tree.right)
         node.left = create_angles_tree(state_tree.left)
-    
-    return node
 
+    return node
