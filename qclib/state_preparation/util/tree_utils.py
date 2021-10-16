@@ -30,6 +30,7 @@ def is_leaf(tree):
     return False
 
 def remove_leafs(tree):
+    """ remove tree leafs """
     if tree.left:
         if is_leaf(tree.left):
             tree.left = None
@@ -119,8 +120,9 @@ def level_length(tree, level):
             n_nodes_level = level_length(tree.left, level)
             n_nodes_level += level_length(tree.right, level)
             return n_nodes_level
-        else:
-            return 1
+
+        return 1
+
     return 0
 
 def height(root):

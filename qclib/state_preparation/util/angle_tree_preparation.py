@@ -20,7 +20,7 @@ https://arxiv.org/abs/2108.10182
 from dataclasses import dataclass
 import numpy as np
 
-from qclib.state_preparation.util.state_tree_preparation import is_leaf
+from qclib.state_preparation.util.tree_utils import is_leaf
 
 @dataclass
 class NodeAngleTree:
