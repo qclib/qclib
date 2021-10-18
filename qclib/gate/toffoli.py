@@ -1,12 +1,24 @@
 """
-Linear depth 'toffoli' gate
+n-qubit toffoli gate
 """
 import qiskit
 import numpy as np
 
 
+def toffoli(qcirc: qiskit.QuantumCircuit, controls: list, targ: int, first=True):
+    """
 
-def toffoli(qcirc, controls, targ, first=True):
+    Parameters
+    ----------
+    qcirc: qiskit.QuantumCircuit
+    controls: list of control qubits
+    targ: target qubit
+    first: True
+
+    Returns
+    -------
+
+    """
     n_controls = len(controls)
 
     for k in range(n_controls-1):
@@ -21,9 +33,7 @@ def toffoli(qcirc, controls, targ, first=True):
         toffoli(qcirc, controls[:-1], controls[-1], first=False)
 
 
-
-
-def _coluna(qcirc: qiskit.QuantumCircuit, targs: list, control: float, mid=False, inverse=False, first=True):
+def _coluna(qcirc, targs, control, mid=False, inverse=False, first=True):
     if mid:
         k = 0
     else:
@@ -34,29 +44,30 @@ def _coluna(qcirc: qiskit.QuantumCircuit, targs: list, control: float, mid=False
     else:
         signal = 1
 
-    for target in targs[:-1]:
+    for target in targs:
         qcirc.crx(np.pi / (signal * 2 ** k), control, target)
         k = k + 1
 
-    plus = (1/np.sqrt(2)) * np.array([[1], [1]])
-    minus = (1/np.sqrt(2)) * np.array([[1], [-1]])
-
-    gate = np.power(1+0j, 1/(signal*2**k)) * plus @ plus.T + \
-           np.power(-1+0j, 1/(2**k)) * minus @ minus.T
-
-    sqgate = qiskit.QuantumCircuit(1, name='X^1/' +str(signal*2**k))
-    sqgate.unitary(gate, 0)
-    csqgate = sqgate.control(1)
-    csqgate.name = "name=X^(1/?)"
-
-    if first:
-        qcirc.compose(csqgate, qubits=[control, targs[-1]], inplace=True)
-    else:
-        qcirc.crx(np.pi / (signal * 2 ** k), control, targs[-1])
+    # plus = (1/np.sqrt(2)) * np.array([[1], [1]])
+    # minus = (1/np.sqrt(2)) * np.array([[1], [-1]])
+    #
+    # gate = np.power(1+0j, 1/(signal*2**k)) * plus @ plus.T +\
+    #        np.power(-1+0j, 1/(2**k)) * minus @ minus.T
+    #
+    # sqgate = qiskit.QuantumCircuit(1, name='X^1/' + str(signal*2**k))
+    # sqgate.unitary(gate, 0) #pylint: disable=maybe-no-member
+    # csqgate = sqgate.control(1)
+    # csqgate.name = "name=X^(1/?)"
+    #
+    # if first:
+    #     qcirc.compose(csqgate, qubits=[control, targs[-1]], inplace=True)
+    # else:
+    #     qcirc.crx(np.pi / (signal * 2 ** k), control, targs[-1])
 
     return qcirc
 
-def coefficients(n_qubits):
+
+def _coefficients(n_qubits):
     coef = np.zeros((n_qubits - 1, 2 * n_qubits - 3))
     for i in range(0, n_qubits - 2):
         one_coef = 2 ** (i+1)
@@ -70,41 +81,30 @@ def coefficients(n_qubits):
         coef[k][n_qubits - 2] = 2 ** k
     return coef
 
+
 if __name__ == '__main__':
 
-    a = coefficients(6)
-    print(a)
+    # a = _coefficients(6)
+    # print(a)
 
-    # nqubits = 5
+    nqubits = 7
     # # gates = c1c2(nqubits)
     # # print(gates)
-    # circ = qiskit.QuantumCircuit(nqubits)
-    # circ.x(0)
-    # circ.x(1)
+    circ = qiskit.QuantumCircuit(nqubits)
+    circ.x(0)
+    circ.x(1)
     #
-    # # circ.mct(list(range(nqubits-1)), nqubits-1)
-    # toffoli(circ, list(range(nqubits-1)), nqubits-1)
+    # circ.mct(list(range(nqubits-1)), nqubits-1)
+    toffoli(circ, list(range(nqubits-1)), nqubits-1)
     # # print(circ.draw())
-    # # phase 1
-    # circ = _coluna(circ, [3], 2)
-    # circ = _coluna(circ, [2, 3], 1)
-    # circ = _coluna(circ, [1, 2, 3], 0, mid=True)
-    # circ = _coluna(circ, [2, 3], 1, inverse=True)
-    # circ = _coluna(circ, [3], 2, inverse=True)
-    #
-    # # phase 2
-    # circ = _coluna(circ, [2], 1)
-    # circ = _coluna(circ, [1, 2], 0, mid=True, inverse=True)
-    # circ = _coluna(circ, [2], 1, inverse=True)
-    #
-    # print(get_state(circ))
-    # circ.measure_all()
+
     # print('counts', get_counts(circ))
     # # print('depth', circ.depth())
     # #
-    # qc = qiskit.transpile(circ, basis_gates=['u', 'cx'])
-    # print('cx', qc.count_ops()['cx'])
-    # print('circ depth', circ.depth())
+    qc = qiskit.transpile(circ, basis_gates=['u', 'cx'])
+    print('cx', qc.count_ops()['cx'])
+    print('circ depth', qc.depth())
+    # print(qc.draw())
     # print('qc depth', qc.depth())
     # dagqc = qiskit.converters.circuit_to_dag(qc)
     # print('dag depth', dagqc.depth())
