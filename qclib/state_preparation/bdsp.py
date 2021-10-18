@@ -12,13 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+""" Bidirectional state preparation """
+
 from math import ceil
 from qiskit import QuantumCircuit
 
-from qclib.state_preparation.util.state_tree_preparation import *
-from qclib.state_preparation.util.angle_tree_preparation import *
-from qclib.state_preparation.util.tree_register          import *
-from qclib.state_preparation.util.tree_walk              import top_down, bottom_up
+import numpy as np
+from qclib.state_preparation.util.state_tree_preparation import Amplitude, state_decomposition
+
+from qclib.state_preparation.util.angle_tree_preparation import create_angles_tree
+
+from qclib.state_preparation.util.tree_register import add_register
+from qclib.state_preparation.util.tree_walk import top_down, bottom_up
 
 def initialize(state, split=None):
     """
@@ -29,8 +34,8 @@ def initialize(state, split=None):
 
     state_tree = state_decomposition(n_qubits, data)
     angle_tree = create_angles_tree(state_tree)
-    
-    if (split == None):
+
+    if split is None:
         split = int(ceil(n_qubits/2)) # sublinear
 
     circuit = QuantumCircuit()
@@ -38,6 +43,5 @@ def initialize(state, split=None):
 
     top_down(angle_tree, circuit, n_qubits-split)
     bottom_up(angle_tree, circuit, n_qubits-split)
-    
-    return circuit
 
+    return circuit

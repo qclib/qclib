@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-from typing import NamedTuple
-from dataclasses import dataclass
-from qclib.state_preparation.util.tree_utils import *
-
 """
 https://arxiv.org/abs/2108.10182
 """
+
+from dataclasses import dataclass
+from typing import NamedTuple
+import numpy as np
+
 
 class Amplitude(NamedTuple):
     """
@@ -51,7 +51,8 @@ class Node:
 
 def state_decomposition(nqubits, data):
     """
-    :param nqubits: number of qubits required to generate a state with the same length as the data vector (2^nqubits)
+    :param nqubits: number of qubits required to generate a
+                    state with the same length as the data vector (2^nqubits)
     :param data: list with exactly 2^nqubits pairs (index, amplitude)
     :return: root of the state tree
     """
@@ -82,4 +83,3 @@ def state_decomposition(nqubits, data):
 
     tree_root = new_nodes[0]
     return tree_root
-

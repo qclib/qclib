@@ -12,31 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.util import _compute_matrix_angles
-import numpy as np
 
 class CVQRAM:
+    """ """
     def __init__(self, nbits, data, mode='v-chain'):
 
         self.initialization(nbits, mode)
-        
+
         if mode == 'v-chain':
             #self.circuit.x(self.u1[0])
             self.circuit.x(self.u2[0])
-        elif mode=='mct':
+        elif mode == 'mct':
             self.circuit.x(self.u0[1])
-
 
         for binary_string, amplitude in data:
 
-            
             self._load_binary(binary_string)
             self._load_superposition(amplitude)
             self._load_binary(binary_string)
 
-
-    def initialization(self, nbits, mode):   
+    def initialization(self, nbits, mode):
         self.mode = mode
         self.nbits = nbits
         self.norm = 1
@@ -52,11 +50,10 @@ class CVQRAM:
             self.u1 = QuantumRegister(1, name='u1')
             self.u2 = QuantumRegister(1, name='u2')
             self.circuit = QuantumCircuit(self.u1,  self.u2,  self.memory, self.aux,)
-            
-        
 
-    # def mcxvchain(self, memory, anc, lst_ctrl, tgt):    
-        
+
+    # def mcxvchain(self, memory, anc, lst_ctrl, tgt):
+
     #     self.circuit.rccx(memory[lst_ctrl[0]], memory[lst_ctrl[1]], anc[0])
     #     for j in range(2, len(lst_ctrl)):
     #         self.circuit.rccx(memory[lst_ctrl[j]], anc[j - 2], anc[j - 1])
@@ -68,12 +65,12 @@ class CVQRAM:
     #     self.circuit.rccx(memory[lst_ctrl[0]], memory[lst_ctrl[1]], anc[0])
 
 
-    def _load_binary(self, binary_string):        
-     
-        for bit_index, bit in enumerate(binary_string):            
-           
+    def _load_binary(self, binary_string):
+
+        for bit_index, bit in enumerate(binary_string):
+
             if bit == '1':
-                if self.mode=='v-chain':               
+                if self.mode=='v-chain':
                     self.circuit.cx(self.u1[0], self.memory[bit_index])
                 elif self.mode=='mct':
                     self.circuit.cx(self.u1[1], self.memory[bit_index])
@@ -106,9 +103,11 @@ class CVQRAM:
         #     custom = U3Gate(alpha, beta, phi).control(len(self.control))
         #     self.circuit.append(custom, self.memory[self.control] + [self.u0[0]])
 
-        if self.mode =='v-chain': 
-            
-            self.circuit.rccx(self.memory[self.control[0]], self.memory[self.control[1]], self.aux[0])
+        if self.mode =='v-chain':
+
+            self.circuit.rccx(self.memory[self.control[0]],
+                              self.memory[self.control[1]], self.aux[0])
+
             for j in range(2, len(self.control)):
                 self.circuit.rccx(self.memory[self.control[j]], self.aux[j - 2], self.aux[j - 1])
 
@@ -120,12 +119,14 @@ class CVQRAM:
 
             for j in reversed(range(2, len(self.control))):
                 self.circuit.rccx(self.memory[self.control[j]], self.aux[j - 2], self.aux[j - 1])
-            self.circuit.rccx(self.memory[self.control[0]], self.memory[self.control[1]], self.aux[0]) 
-            
+
+            self.circuit.rccx(self.memory[self.control[0]],
+                              self.memory[self.control[1]], self.aux[0])
+
         if self.mode =='mct':
             self.circuit.mct(self.memory, self.u0[0])
             self.circuit.cu3(alpha, beta, phi, self.u0[0], self.u0[1])
-            self.circuit.mct(self.memory, self.u0[0])   
+            self.circuit.mct(self.memory, self.u0[0])
         self.norm = self.norm - np.absolute(np.power(feature, 2))
         # self.circuit.cu3(alpha, beta, phi, self.aux[0], ancillae[1])
 
