@@ -26,7 +26,7 @@ class TestLinearToffoli(TestCase):
 
         state = qclib.util.get_state(circuit)
         exp_state = np.zeros(16, dtype=complex)
-        exp_state[7] = -1j
+        exp_state[7] = 1
 
         self.assertTrue(np.allclose(state, exp_state))
 
@@ -83,12 +83,12 @@ class TestLinearToffoli(TestCase):
     def test_mct_toffoli(self):
         """ compare qiskit.mct and toffoli depth with 7 qubits """
 
-        qcirc1 = qiskit.QuantumCircuit(5)
-        qcirc1.mct([0, 1, 2, 3], 4)
+        qcirc1 = qiskit.QuantumCircuit(6)
+        qcirc1.mct([0, 1, 2, 3, 4], 5)
         t_qcirc1 = qiskit.transpile(qcirc1, basis_gates=['u', 'cx'])
 
-        qcirc2 = qiskit.QuantumCircuit(5)
-        toffoli(qcirc2, [0, 1, 2, 3], 4)
+        qcirc2 = qiskit.QuantumCircuit(6)
+        toffoli(qcirc2, [0, 1, 2, 3, 4], 5)
         t_qcirc2 = qiskit.transpile(qcirc2, basis_gates=['u', 'cx'])
 
         self.assertTrue(t_qcirc2.depth() < t_qcirc1.depth())
