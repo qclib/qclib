@@ -8,26 +8,25 @@ import qiskit
 import qclib.util
 from qclib.gate.toffoli import toffoli
 
+
 class TestLinearToffoli(TestCase):
     """ Testing qclib.gate.toffoli """
 
     def test_linear_toffoli3(self):
         """ Testing Toffoli control 111"""
 
-        circuit2 = qiskit.QuantumCircuit(4)
-
-        circuit2.x(1)
-        circuit2.x(2)
-        circuit2.x(3)
-        circuit2.x(0)
-
         circuit = qiskit.QuantumCircuit(4)
-        toffoli(circuit, [1, 2, 3], 0)
-        circuit = circuit2 + circuit
+
+        circuit.x(1)
+        circuit.x(2)
+        circuit.x(3)
+        circuit.x(0)
+
+        toffoli(circuit, [0, 1, 2], 3)
 
         state = qclib.util.get_state(circuit)
         exp_state = np.zeros(16, dtype=complex)
-        exp_state[14] = 1
+        exp_state[7] = -1j
 
         self.assertTrue(np.allclose(state, exp_state))
 
@@ -84,12 +83,12 @@ class TestLinearToffoli(TestCase):
     def test_mct_toffoli(self):
         """ compare qiskit.mct and toffoli depth with 7 qubits """
 
-        qcirc1 = qiskit.QuantumCircuit(7)
-        qcirc1.mct([0, 1, 2, 3, 4, 5], 6)
+        qcirc1 = qiskit.QuantumCircuit(5)
+        qcirc1.mct([0, 1, 2, 3], 4)
         t_qcirc1 = qiskit.transpile(qcirc1, basis_gates=['u', 'cx'])
 
-        qcirc2 =  qiskit.QuantumCircuit(7)
-        toffoli(qcirc2,[0, 1, 2, 3, 4, 5], 6)
+        qcirc2 = qiskit.QuantumCircuit(5)
+        toffoli(qcirc2, [0, 1, 2, 3], 4)
         t_qcirc2 = qiskit.transpile(qcirc2, basis_gates=['u', 'cx'])
 
         self.assertTrue(t_qcirc2.depth() < t_qcirc1.depth())

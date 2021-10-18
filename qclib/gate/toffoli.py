@@ -29,21 +29,59 @@ def toffoli(qcirc: qiskit.QuantumCircuit, controls: list, targ: int):
     c3(coef, n_qubits, gate_circuit)
 
     c1c2(coef[:-1,1:-1], n_qubits-1, gate_circuit, False)
-    c3(coef[:-1,1:-1], n_qubits-1, gate_circuit)
+    c3(coef[:-1,1:-1], n_qubits-1, gate_circuit, False)
 
     qcirc.compose(gate_circuit, controls + [targ], inplace=True)
 
 
-def c3(coef, n_qubits, qcirc):
-    for k in range(n_qubits - 2, 1, -1):
+def c3(coef, n_qubits, qcirc, first=True):
+    for k in range(1, n_qubits-1):
         line = k
         column = n_qubits - 1
-        while line <= n_qubits - 2:
-            qcirc.crx(np.pi / coef[line, column], (column % (n_qubits - 1) + 1), line + 1)
-            line = line + 1
+
+        while column < 2*n_qubits-3 and coef[line, column] != 0:
+            control = (column % (n_qubits - 1) + 1)
+            targ = line + 1
+            qcirc.crx(np.pi / coef[line, column], control, targ)
+
+            line = line - 1
             column = column + 1
-    for k in range(1, n_qubits - 1):
-        qcirc.crx(-np.pi / 2, k, k + 1)
+
+    # for k in range(n_qubits - 2, 1, -1):
+    #     line = k
+    #     column = n_qubits - 1
+    #     while line <= n_qubits - 2:
+    #         control = (column % (n_qubits - 1) + 1)
+    #         targ = line + 1
+    #         qcirc.crx(np.pi / coef[line, column], control, targ)
+            #
+            # if False and first and line == n_qubits-2:
+            #     csqgate = xgate(coef, column, line)
+            #     qcirc.compose(csqgate, qubits=[control, targ], inplace=True)
+            # else:
+            #     qcirc.crx(np.pi / coef[line, column], control, targ)
+
+
+    for k in range(n_qubits, 2*n_qubits-3):
+        line = n_qubits-2
+        column = k
+        control = column - line
+        while column< 2*n_qubits-3 and coef[line, column] != 0:
+            targ = line + 1
+
+            qcirc.crx(np.pi / coef[line, column], control, targ)
+
+            line = line - 1
+            column = column + 1
+            control = control + 1
+
+    # for k in range(1, n_qubits - 1):
+    #     qcirc.crx(-np.pi / 2, k, k + 1)
+        # if False and first and k+1 == n_qubits-1:
+        #     csqgate = xgate(coef, -1, -1)
+        #     qcirc.compose(csqgate, qubits=[control, targ], inplace=True)
+        # else:
+        #     qcirc.crx(-np.pi / 2, k, k + 1)
 
 
 def c1c2(coef, n_qubits, qcirc, first=True):
@@ -58,12 +96,14 @@ def c1c2(coef, n_qubits, qcirc, first=True):
             control = n_qubits - 2 - column
             targ = line + 1
 
-            if first and line == n_qubits-2:
-                csqgate = xgate(coef, column, line)
-                qcirc.compose(csqgate, qubits=[control, targ], inplace=True)
+            qcirc.crx(np.pi / coef[line, column], control, targ)
 
-            else:
-                qcirc.crx(np.pi / coef[line, column], control, targ)
+            # if False and first and line == n_qubits-2:
+            #     csqgate = xgate(coef, column, line)
+            #     qcirc.compose(csqgate, qubits=[control, targ], inplace=True)
+            #
+            # else:
+            #     qcirc.crx(np.pi / coef[line, column], control, targ)
 
             line = line - 1
             column = column - 1
@@ -80,12 +120,16 @@ def c1c2(coef, n_qubits, qcirc, first=True):
 
 
 def xgate(coef, column, line):
+    signal = np.sign(coef[line, column])
     param = np.abs( 1 / coef[line, column])
     plus = (1 / np.sqrt(2)) * np.array([[1], [1]])
     minus = (1 / np.sqrt(2)) * np.array([[1], [-1]])
 
-    gate = np.power(1 + 0j, 1 / param) * plus @ plus.T + \
-           np.power(-1 + 0j, 1 / param) * minus @ minus.T
+    gate = np.power(1 + 0j, param) * plus @ plus.T + \
+           np.power(-1 + 0j, param) * minus @ minus.T
+
+    if signal < 0:
+        gate = np.linalg.inv(gate)
 
     sqgate = qiskit.QuantumCircuit(1, name='X^1/' + str(coef[line, column]))
     sqgate.unitary(gate, 0)
@@ -159,5 +203,23 @@ def _coefficients(n_qubits):
     return coef
 
 if __name__ == '__main__':
+    from qclib.util import get_state, get_counts
+
+    circuit = qiskit.QuantumCircuit(4)
+
+    toffoli(circuit, [1, 2, 3], 0)
+
     qcirc = qiskit.QuantumCircuit(6)
-    toffoli(qcirc, [5,4,3,2,1], 0)
+    # qcirc.x(0)
+    qcirc.x(1)
+    qcirc.x(2)
+    # qcirc.x(3)
+    qcirc.x(4)
+    qcirc.x(5)
+
+
+
+    toffoli(qcirc, [0,1, 2, 3, 4], 5)
+    qcirc.measure_all()
+    print(get_counts(qcirc))
+    print(1)
