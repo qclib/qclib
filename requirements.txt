@@ -1,3 +1,2 @@
 qiskit
-numpy
 graphviz
