@@ -1,12 +1,25 @@
+# Copyright 2021 qclib project.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
-n-qubit toffoli gate
+n-qubit controlled gate
 """
-from typing import NamedTuple
 import qiskit
 import numpy as np
 
 
-def toffoli(gate:np.ndarray, qcirc: qiskit.QuantumCircuit, controls: list, targ: int):
+def mc_gate(gate:np.ndarray, qcirc: qiskit.QuantumCircuit, controls: list, targ: int):
     """
 
     Parameters
@@ -118,8 +131,8 @@ def _xgate(agate, coef, column, line):
     param = np.abs(coef[line, column])
 
     values, vectors = np.linalg.eig(agate)
-    gate = np.power(values[0], 1/param) * vectors[:,[0]] @ vectors[:,[0]].conj().T + \
-           np.power(values[1], 1/param) * vectors[:,[1]] @ vectors[:,[1]].conj().T
+    gate = np.power(values[0]+0j, 1/param) * vectors[:,[0]] @ vectors[:,[0]].conj().T + \
+           np.power(values[1]+0j, 1/param) * vectors[:,[1]] @ vectors[:,[1]].conj().T
 
     if signal < 0:
         gate = np.linalg.inv(gate)

@@ -1,5 +1,18 @@
+# Copyright 2021 qclib project.
 
-""" Test qclib.gate.toffoli """
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+""" Test qclib.gate.mc_gate """
 
 from unittest import TestCase
 
@@ -7,13 +20,14 @@ import numpy as np
 from scipy.stats import unitary_group
 import qiskit
 import qclib.util
-from qclib.gate.toffoli import toffoli
+from qclib.gate.mc_gate import mc_gate
 
 
 class TestLinearToffoli(TestCase):
     """ Testing qclib.gate.toffoli """
 
     def test_controlled_gate(self):
+        """ Testing multi controlled gate """
 
         gate_u = unitary_group.rvs(2)
 
@@ -23,7 +37,7 @@ class TestLinearToffoli(TestCase):
         circuit.x(3)
         circuit.x(4)
 
-        toffoli(gate_u, circuit, [4, 3, 2, 1], 0)
+        mc_gate(gate_u, circuit, [4, 3, 2, 1], 0)
 
         state = qclib.util.get_state(circuit)
         self.assertTrue(np.isclose(state[30], gate_u[0,0]))
@@ -36,7 +50,7 @@ class TestLinearToffoli(TestCase):
         circuit2.x(3)
         circuit2.x(4)
 
-        toffoli(gate_u, circuit2, [4, 3, 2, 1], 0)
+        mc_gate(gate_u, circuit2, [4, 3, 2, 1], 0)
 
         state = qclib.util.get_state(circuit2)
         self.assertTrue(np.isclose(state[30], gate_u[0, 1]))
@@ -52,7 +66,7 @@ class TestLinearToffoli(TestCase):
         circuit.x(3)
         circuit.x(0)
 
-        toffoli(gate_x, circuit, [3, 2, 1], 0)
+        mc_gate(gate_x, circuit, [0, 1, 2], 3)
 
         state = qclib.util.get_state(circuit)
         exp_state = np.zeros(16, dtype=complex)
@@ -71,7 +85,7 @@ class TestLinearToffoli(TestCase):
         state1 = qclib.util.get_state(circuit2)
 
         circuit = qiskit.QuantumCircuit(4)
-        toffoli(gate_x, circuit, [3, 2, 1], 0)
+        mc_gate(gate_x, circuit, [3, 2, 1], 0)
         circuit = circuit2 + circuit
 
         state2 = qclib.util.get_state(circuit)
@@ -89,7 +103,7 @@ class TestLinearToffoli(TestCase):
 
         circuit = qiskit.QuantumCircuit(4)
 
-        toffoli(gate_x, circuit, [0, 1, 2], 3)
+        mc_gate(gate_x, circuit, [0, 1, 2], 3)
         circuit = circuit2 + circuit
 
         state2 = qclib.util.get_state(circuit)
@@ -106,7 +120,7 @@ class TestLinearToffoli(TestCase):
 
         circuit = qiskit.QuantumCircuit(4)
 
-        toffoli(gate_x, circuit, [1, 2, 3], 0)
+        mc_gate(gate_x, circuit, [1, 2, 3], 0)
         circuit = circuit2 + circuit
 
         state2 = qclib.util.get_state(circuit)
@@ -121,7 +135,7 @@ class TestLinearToffoli(TestCase):
         t_qcirc1 = qiskit.transpile(qcirc1, basis_gates=['u', 'cx'])
 
         qcirc2 = qiskit.QuantumCircuit(6)
-        toffoli(gate_x, qcirc2, [0, 1, 2, 3, 4], 5)
+        mc_gate(gate_x, qcirc2, [0, 1, 2, 3, 4], 5)
         t_qcirc2 = qiskit.transpile(qcirc2, basis_gates=['u', 'cx'])
 
         self.assertTrue(t_qcirc2.depth() < t_qcirc1.depth())
