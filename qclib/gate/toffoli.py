@@ -6,7 +6,7 @@ import qiskit
 import numpy as np
 
 
-def toffoli(qcirc: qiskit.QuantumCircuit, controls: list, targ: int):
+def toffoli(gate:np.ndarray, qcirc: qiskit.QuantumCircuit, controls: list, targ: int):
     """
 
     Parameters
@@ -24,16 +24,16 @@ def toffoli(qcirc: qiskit.QuantumCircuit, controls: list, targ: int):
     gate_circuit = qiskit.QuantumCircuit(n_qubits, name="T" + str(targ))
     coef = _coefficients(n_qubits)
 
-    c1c2(coef, n_qubits, gate_circuit)
-    _c3(coef, n_qubits, gate_circuit)
+    c1c2(gate, coef, n_qubits, gate_circuit)
+    _c3(gate, coef, n_qubits, gate_circuit)
 
-    c1c2(coef[:-1,1:-1], n_qubits-1, gate_circuit, False)
-    _c3(coef[:-1, 1:-1], n_qubits - 1, gate_circuit, False)
+    c1c2(gate, coef[:-1,1:-1], n_qubits-1, gate_circuit, False)
+    _c3(gate, coef[:-1, 1:-1], n_qubits - 1, gate_circuit, False)
 
     qcirc.compose(gate_circuit, controls + [targ], inplace=True)
 
 
-def _c3(coef, n_qubits, qcirc, first=True):
+def _c3(gate, coef, n_qubits, qcirc, first=True):
     """ phase 2 """
     for k in range(1, n_qubits-1):
         line = k
@@ -44,7 +44,7 @@ def _c3(coef, n_qubits, qcirc, first=True):
             targ = line + 1
             # -----
             if first and targ == n_qubits-1:
-                csqgate = _xgate(coef, column, line)
+                csqgate = _xgate(gate, coef, column, line)
                 qcirc.compose(csqgate, qubits=[control, targ], inplace=True)
             else:
                 qcirc.crx(np.pi / coef[line, column], control, targ)
@@ -60,7 +60,7 @@ def _c3(coef, n_qubits, qcirc, first=True):
             targ = line + 1
             # -----
             if first and targ == n_qubits - 1:
-                csqgate = _xgate(coef, column, line)
+                csqgate = _xgate(gate, coef, column, line)
                 qcirc.compose(csqgate, qubits=[control, targ], inplace=True)
             else:
                 qcirc.crx(np.pi / coef[line, column], control, targ)
@@ -70,7 +70,7 @@ def _c3(coef, n_qubits, qcirc, first=True):
             control = control + 1
 
 
-def c1c2(coef, n_qubits, qcirc, first=True):
+def c1c2(gate, coef, n_qubits, qcirc, first=True):
     """ phase 1 """
     if not first:
         for k in range(n_qubits-1):
@@ -84,7 +84,7 @@ def c1c2(coef, n_qubits, qcirc, first=True):
             targ = line + 1
             # -----
             if first and targ == n_qubits - 1:
-                csqgate = _xgate(coef, column, line)
+                csqgate = _xgate(gate, coef, column, line)
                 qcirc.compose(csqgate, qubits=[control, targ], inplace=True)
             else:
                 qcirc.crx(np.pi / coef[line, column], control, targ)
@@ -104,7 +104,7 @@ def c1c2(coef, n_qubits, qcirc, first=True):
             control = n_qubits - 2 - column
             targ = line + 1
             if first and targ == n_qubits - 1:
-                csqgate = _xgate(coef, column, line)
+                csqgate = _xgate(gate, coef, column, line)
                 qcirc.compose(csqgate, qubits=[control, targ], inplace=True)
             else:
                 qcirc.crx(np.pi / coef[line, column], control, targ)
@@ -113,14 +113,13 @@ def c1c2(coef, n_qubits, qcirc, first=True):
             column = column - 1
 
 
-def _xgate(coef, column, line):
+def _xgate(agate, coef, column, line):
     signal = np.sign(coef[line, column])
     param = np.abs(coef[line, column])
-    plus = (1 / np.sqrt(2)) * np.array([[1], [1]])
-    minus = (1 / np.sqrt(2)) * np.array([[1], [-1]])
 
-    gate = np.power(1 + 0j, 1/param) * plus @ plus.T + \
-           np.power(-1 + 0j, 1/param) * minus @ minus.T
+    values, vectors = np.linalg.eig(agate)
+    gate = np.power(values[0], 1/param) * vectors[:,[0]] @ vectors[:,[0]].conj().T + \
+           np.power(values[1], 1/param) * vectors[:,[1]] @ vectors[:,[1]].conj().T
 
     if signal < 0:
         gate = np.linalg.inv(gate)
@@ -130,49 +129,6 @@ def _xgate(coef, column, line):
     csqgate = sqgate.control(1)
 
     return csqgate
-
-
-class _Flags(NamedTuple):
-    mid: bool
-    inverse: bool
-    first: bool
-
-
-def _coluna(qcirc, targs, control, flags):
-    if flags.mid:
-        k = 0
-    else:
-        k = 1
-
-    if flags.inverse:
-        signal = -1
-    else:
-        signal = 1
-
-    for target in targs[:-1]:
-        qcirc.crx(np.pi / (signal * 2 ** k), control, target)
-        k = k + 1
-
-    plus = (1/np.sqrt(2)) * np.array([[1], [1]])
-    minus = (1/np.sqrt(2)) * np.array([[1], [-1]])
-
-    gate = np.power(1+0j, 1/(signal*2**k)) * plus @ plus.T +\
-                np.power(-1+0j, 1/(2**k)) * minus @ minus.T
-
-    sqgate = qiskit.QuantumCircuit(1, name='X^1/' + str(2**k))
-    if signal == 1:
-        sqgate.unitary(gate, 0) #pylint: disable=maybe-no-member
-    else:
-        sqgate.unitary(np.linalg.inv(gate), 0)  # pylint: disable=maybe-no-member
-    csqgate = sqgate.control(1)
-    csqgate.name = "name=X^(1/?)"
-
-    if flags.first:
-        qcirc.compose(csqgate, qubits=[control, targs[-1]], inplace=True)
-    else:
-        qcirc.crx(np.pi / (signal * 2 ** k), control, targs[-1])
-
-    return qcirc
 
 
 def _coefficients(n_qubits):
