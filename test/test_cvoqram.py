@@ -13,8 +13,16 @@ class TestCvoqram(TestCase):
         data = [([0, 0, 1], 1/np.sqrt(3)), ([1, 1, 0], np.sqrt(2/3))]
         qc_cvoqram = cvoqram_initialize(data)
         state = get_state(qc_cvoqram)
-        self.assertTrue(np.isclose(state[0b011000], np.sqrt(2/3)))
-        self.assertTrue(np.isclose(state[0b100000], np.sqrt(1/3)))
+        self.assertTrue(np.isclose(state[0b110000], np.sqrt(2/3)))
+        self.assertTrue(np.isclose(state[0b001000], np.sqrt(1/3)))
+
+    def test_cvoqram_without_aux(self):
+        """ Testing cvoqram 2 real amplitudes and with auxiliary qubits """
+        data = [([0, 0, 1], 1/np.sqrt(3)), ([1, 1, 0], np.sqrt(2/3))]
+        qc_cvoqram = cvoqram_initialize(data, False)
+        state = get_state(qc_cvoqram)
+        self.assertTrue(np.isclose(state[0b1100], np.sqrt(2/3)))
+        self.assertTrue(np.isclose(state[0b0010], np.sqrt(1/3)))
 
     def test_cvoqram_random(self):
         """ Testing cvoqram 4 real amplitudes and with auxiliary qubits """
@@ -26,11 +34,10 @@ class TestCvoqram(TestCase):
         state = get_state(qc_cvoqram)
         for k, _ in enumerate(data):
             lst = data[k][0]
-            bin_index = ''.join(map(str,lst[::-1]))
-            bin_index = bin_index + n_qubits * '0' # padding work qubits
+            bin_index = ''.join(map(str, lst))
+            bin_index = bin_index + n_qubits * '0'  # padding work qubits
 
             self.assertTrue(np.isclose(state[int(bin_index, 2)], data[k][1]))
-
 
     def test_double_sparse(self):
         """ Test double sparse random generation """
