@@ -45,7 +45,7 @@ class TestInitialize(TestCase):
         vector = np.random.rand(32) + np.random.rand(32) * 1j
         vector = vector / np.linalg.norm(vector)
 
-        circuit = initialize(vector, rank=5)
+        circuit = initialize(a, low_rank=5)
 
         state = get_state(circuit)
 
@@ -56,18 +56,18 @@ class TestInitialize(TestCase):
         vector = np.random.rand(32) + np.random.rand(32) * 1j
         vector = vector / np.linalg.norm(vector)
 
-        circuit = initialize(vector, rank=4)
+        circuit = initialize(a, low_rank=4)
 
         state = get_state(circuit)
-
-        self.assertTrue(TestInitialize.mae(state, vector) < 10**-15)
+        
+        self.assertTrue(TestInitialize.mae(state,a) < 10**-14)
 
     def test_initialize_rank_3(self):
         """ Test rank 3 state vector initialization """
         vector = np.random.rand(32) + np.random.rand(32) * 1j
         vector = vector / np.linalg.norm(vector)
 
-        circuit = initialize(vector, rank=3)
+        circuit = initialize(a, low_rank=3)
 
         state = get_state(circuit)
 
@@ -78,7 +78,7 @@ class TestInitialize(TestCase):
         vector = np.random.rand(32) + np.random.rand(32) * 1j
         vector = vector / np.linalg.norm(vector)
 
-        circuit = initialize(vector, rank=2)
+        circuit = initialize(a, low_rank=2)
 
         state = get_state(circuit)
 
@@ -89,8 +89,9 @@ class TestInitialize(TestCase):
         vector = np.random.rand(32) + np.random.rand(32) * 1j
         vector = vector / np.linalg.norm(vector)
 
-        circuit = initialize(vector, rank=1)
+        circuit = initialize(a, low_rank=1)
 
         state = get_state(circuit)
+        
+        self.assertTrue(TestInitialize.mae(state,a) < 0.0825)
 
-        self.assertTrue(TestInitialize.mae(state,vector) < 0.08)
