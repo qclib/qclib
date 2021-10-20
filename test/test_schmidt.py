@@ -12,78 +12,65 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Tests for the schmidt.py module.
+"""
+
 from unittest import TestCase
 import numpy as np
 from qclib.state_preparation.schmidt import initialize
 from qclib.util import get_state
-from qiskit import transpile
 
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
 
 class TestInitialize(TestCase):
 
     @staticmethod
     def mae(state, ideal):
         """
-         Mean Absolute Error
+        Mean Absolute Error
         """
         return np.sum(np.abs(state-ideal))/len(ideal)
-        
-    def test_initialize(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
 
-        circuit = initialize(a)
+    def _test_initialize_rank(self, rank, max_mae=10**-17):
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = initialize(state_vector, low_rank=rank)
 
         state = get_state(circuit)
-        
-        self.assertTrue(np.allclose(a, state))
-    
+
+        self.assertTrue(TestInitialize.mae(state,state_vector) < max_mae)
+
+    def test_initialize_full_rank(self):
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = initialize(state_vector)
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))
+
     def test_initialize_rank_5(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(a, low_rank=5)
+        circuit = initialize(state_vector, low_rank=5)
 
         state = get_state(circuit)
-        
-        self.assertTrue(np.allclose(a, state)) # same as unitary.
+
+        self.assertTrue(np.allclose(state_vector, state)) # same as unitary.
 
     def test_initialize_rank_4(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
-
-        circuit = initialize(a, low_rank=4)
-
-        state = get_state(circuit)
-        
-        self.assertTrue(TestInitialize.mae(state,a) < 10**-14)
+        self._test_initialize_rank(4, max_mae=10**-14)
 
     def test_initialize_rank_3(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
-
-        circuit = initialize(a, low_rank=3)
-
-        state = get_state(circuit)
-
-        self.assertTrue(TestInitialize.mae(state,a) < 0.04)
+        self._test_initialize_rank(3, max_mae=0.04)
 
     def test_initialize_rank_2(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
+        self._test_initialize_rank(2, max_mae=0.06)
 
-        circuit = initialize(a, low_rank=2)
-
-        state = get_state(circuit)
-        
-        self.assertTrue(TestInitialize.mae(state,a) < 0.055)
-    
     def test_initialize_rank_1(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
-
-        circuit = initialize(a, low_rank=1)
-
-        state = get_state(circuit)
-        
-        self.assertTrue(TestInitialize.mae(state,a) < 0.0825)
+        self._test_initialize_rank(1, max_mae=0.0825)

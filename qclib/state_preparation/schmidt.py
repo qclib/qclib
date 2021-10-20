@@ -12,15 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Implements the state preparation
+defined at https://arxiv.org/abs/1003.5760.
+"""
+
 import numpy as np
+import deprecation
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.state_preparation.mottonen import initialize as mottonen
-from qclib.unitary import unitary
-from qclib.isometry import decompose
+from qclib.unitary import unitary as decompose_unitary
+from qclib.isometry import decompose as decompose_isometry
 
 # pylint: disable=maybe-no-member
 
-def initialize(state, low_rank=0):
+def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='qsd'):
     """ State preparation using Schmidt decomposition arXiv:1003.5760
 
     For instance, to initialize the state a|0> + b|1>
@@ -29,93 +35,109 @@ def initialize(state, low_rank=0):
 
     Parameters
     ----------
-    state: list of int
+    state_vector: list of int
         A unit vector representing a quantum state.
         Values are amplitudes.
 
     low_rank: int
         ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
-        If ``low_rank`` is not in the valid range, it will be ignored and the effective
-        ``rank`` will be used.
+        If ``low_rank`` is not in the valid range, it will be ignored.
+
+    isometry_scheme: string
+        Scheme used to decompose isometries.
+        Possible values are ``'knill'`` and ``'ccd'`` (column-by-column decomposition).
+        Default is ``isometry_scheme='ccd'``.
+
+    unitary_scheme: string
+        Scheme used to decompose unitaries.
+        Possible values are ``'csd'`` (cosine-sine decomposition) and ``'qsd'`` (quantum
+        Shannon decomposition).
+        Default is ``unitary_scheme='qsd'``.
 
     Returns
     -------
     circuit: QuantumCircuit
         QuantumCircuit to initialize the state.
     """
-    
-    s = np.copy(state)
 
-    size = len(s)
+    state = np.copy(state_vector)
+
+    size = len(state)
     n_qubits = int(np.log2(size))
 
-    r = n_qubits % 2
+    odd = n_qubits % 2
 
-    n = int(2**(n_qubits//2))
-    m = int(2**(n_qubits//2 + r))
-    s.shape = (n, m)
+    lines = int(2**(n_qubits//2))
+    cols = int(2**(n_qubits//2 + odd))
+    state.shape = (lines, cols)
 
-    u, d, v = np.linalg.svd(s)
-    
-    
-    rank = sum(j > 10**-16 for j in d)     # Effective rank ( rank \in {1, 2, ..., n} ).
-    if (low_rank > 0 and low_rank < rank):
-        rank = low_rank                    # Low-rank approximation
-    
-    k = int(2**np.ceil(np.log2(rank)))     # To use isometries, the rank needs to be a power of 2.
-    
-    u = u[:,:k]                            # Matrix u can be a unitary (k=n) or isometry (k<n).
-    v = v[:k,:]                            # If n<m, v.T is always an isometry of log2(k) to log2(m) (k<=n).
-                                           # If n=m, v.T can be a unitary (k=n) or isometry (k<n).
-    d = d[:k]                              # The length of the state vector needs to be a power of 2.
-    d[rank:] = np.zeros(k-rank)            # If k>rank, zeroes out the additional elements.
-    
-    if (rank == 1):
-        d = np.concatenate((d, [0]))       # The length of the state vector needs to be a power of 2 and >1.
-    
+    svd_u, singular_values, svd_v = np.linalg.svd(state)
 
-    d = d / np.linalg.norm(d)
-    
-    A = QuantumRegister(n_qubits//2 + r)
-    B = QuantumRegister(n_qubits//2)
+    rank = lines
+    if low_rank > 0 and low_rank < rank:
+        e_rank = sum(j > 10**-16 for j in singular_values) # Effective rank.
+        if low_rank < e_rank:
+            e_rank = low_rank                              # Low-rank approximation
 
-    circuit = QuantumCircuit(A, B)
-    
-    if len(d) > 2:
-        circ = initialize(d)
+        rank = int(2**np.ceil(np.log2(e_rank)))         # To use isometries, the rank needs to be
+                                                        # a power of 2.
+
+        svd_u = svd_u[:,:rank]                          # Matrix u can be a unitary (k=n) or
+                                                        # isometry (k<n).
+        svd_v = svd_v[:rank,:]                          # If n<m, v.T is always an isometry of
+                                                        # log2(k) to log2(m) (rank<=n).
+                                                        # If n=m, v.T can be a unitary (k=n) or
+                                                        # isometry (k<n).
+        singular_values = singular_values[:rank]        # The length of the state vector needs to
+                                                        # be a power of 2.
+        singular_values[e_rank:] = np.zeros(rank-e_rank) # If k>rank, zeroes out
+                                                                         # the additional elements.
+        if e_rank == 1:
+            singular_values = np.concatenate((singular_values, [0]))     # The length of the state
+                                                                         # vector needs to be a
+                                                                         # power of 2 and >1.
+    singular_values = singular_values / np.linalg.norm(singular_values)
+
+    reg_a = QuantumRegister(n_qubits//2 + odd)
+    reg_b = QuantumRegister(n_qubits//2)
+
+    circuit = QuantumCircuit(reg_a, reg_b)
+
+    if len(singular_values) > 2:
+        circ = initialize(singular_values)
     else:
-        circ = mottonen(d)
-        
-    circuit.compose(circ, B[:int( np.log2( len(d) ) )], inplace=True)
+        circ = mottonen(singular_values)
 
-    for j in range(int( np.log2( k ) )):           # Entangles only the necessary qubits, according to rank.
-        circuit.cx(B[j], A[j])
+    circuit.compose(circ, reg_b[:int( np.log2( len(singular_values) ) )], inplace=True)
 
-    def encode(U, reg):                            # Encodes the data using the most appropriate method:
-        if (U.shape[1] == 1):                      #   State preparation.
-            if (U.shape[0] > 2):
-                gate_u = initialize(U[:,0])
+    for j in range(int( np.log2( rank ) )):                # Entangles only the necessary qubits,
+        circuit.cx(reg_b[j], reg_a[j])                     # according to rank.
+
+    def _encode(unitary, circuit, reg): # Encodes the data using the most appropriate method:
+        if unitary.shape[1] == 1:                   # State preparation.
+            if unitary.shape[0] > 2:
+                gate_u = initialize(unitary[:,0])
             else:
-                gate_u = mottonen(U[:,0])
-        elif (U.shape[0] > U.shape[1]):            #   Isometry decomposition.
-            gate_u = decompose(U, scheme='knill') 
-        else:                                      #   Unitary decomposition.
-            gate_u = unitary(U, 'qsd')
-        
-        circuit.compose(gate_u, reg, inplace=True) # Apply gate U to the register.
+                gate_u = mottonen(unitary[:,0])
+        elif unitary.shape[0] > unitary.shape[1]:   # Isometry decomposition.
+            gate_u = decompose_isometry(unitary, scheme=isometry_scheme)
+        else:                                       # Unitary decomposition.
+            gate_u = decompose_unitary(unitary, decomposition=unitary_scheme)
 
-    encode(u, B)
-    encode(v.T, A)
-    
+        circuit.compose(gate_u, reg, inplace=True)  # Apply gate U to the register.
+
+    _encode(svd_u, circuit, reg_b)
+    _encode(svd_v.T, circuit, reg_a)
+
     return circuit
 
 
 
 
-#import deprecation
-#@deprecation.deprecated(deprecated_in="0.0.7",
-#                        details="Use the initialize function instead")
-def initialize_original(state):
+
+@deprecation.deprecated(deprecated_in="0.0.7",
+                        details="Use the initialize function instead")
+def initialize_original(state_vector):
     """ State preparation using Schmidt decomposition arXiv:1003.5760.
         This function implements the original algorithm as defined in arXiv:1003.5760.
         It is kept here for didactic reasons.
@@ -128,7 +150,7 @@ def initialize_original(state):
 
     Parameters
     ----------
-    state: list of int
+    state_vector: list of int
         A unit vector representing a quantum state.
         Values are amplitudes.
 
@@ -137,38 +159,38 @@ def initialize_original(state):
     circuit: QuantumCircuit
         QuantumCircuit to initialize the state.
     """
-    
-    s = np.copy(state)
 
-    size = len(s)
+    state = np.copy(state_vector)
+
+    size = len(state)
     n_qubits = int(np.log2(size))
 
-    r = n_qubits % 2
+    odd = n_qubits % 2
 
-    s.shape = (int(2**(n_qubits//2)), int(2**(n_qubits//2 + r)))
+    state.shape = (int(2**(n_qubits//2)), int(2**(n_qubits//2 + odd)))
 
-    u, d, v = np.linalg.svd(s)
-        
-    d = d / np.linalg.norm(d)
+    svd_u, singular_values, svd_v = np.linalg.svd(state)
 
-    A = QuantumRegister(n_qubits//2 + r)
-    B = QuantumRegister(n_qubits//2)
+    singular_values = singular_values / np.linalg.norm(singular_values)
 
-    circuit = QuantumCircuit(A, B)
+    reg_a = QuantumRegister(n_qubits//2 + odd)
+    reg_b = QuantumRegister(n_qubits//2)
 
-    if len(d) > 2:
-        circ = initialize_original(d)
+    circuit = QuantumCircuit(reg_a, reg_b)
+
+    if len(singular_values) > 2:
+        circ = initialize_original(singular_values)
     else:
-        circ = mottonen(d)
-    circuit.compose(circ, B, inplace=True)
+        circ = mottonen(singular_values)
+    circuit.compose(circ, reg_b, inplace=True)
 
     for k in range(int(n_qubits//2)):
-        circuit.cx(B[k], A[k])
-    
-    gate_u = unitary(u, 'qsd')
-    gate_v = unitary(v.T, 'qsd')
+        circuit.cx(reg_b[k], reg_a[k])
 
-    circuit.compose(gate_u, B, inplace=True) # apply gate U to the first register
-    circuit.compose(gate_v, A, inplace=True) # apply gate V to the second register
+    gate_u = decompose_unitary(svd_u, 'qsd')
+    gate_v = decompose_unitary(svd_v.T, 'qsd')
+
+    circuit.compose(gate_u, reg_b, inplace=True) # apply gate U to the first register
+    circuit.compose(gate_v, reg_a, inplace=True) # apply gate V to the second register
 
     return circuit
