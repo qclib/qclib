@@ -270,7 +270,7 @@ def _compute_matrix_angles(feature, norm):
         phase = np.abs(np.power(feature, 2))
 
         if (norm - phase) < 0:
-            norm = np.around(norm, decimals=4)
+            norm = phase
 
         cos_value = np.sqrt((norm - phase) / norm)
         cos_value = verify_trigonometric_interval(cos_value)
