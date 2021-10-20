@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Tests for the isometry.py module.
+"""
+
 from unittest import TestCase
 import numpy as np
 from qiskit import QuantumCircuit
@@ -19,132 +23,106 @@ from scipy.stats import unitary_group
 from qclib.isometry import decompose
 from qclib.util import get_state
 
-class TestInitialize(TestCase):
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
 
-    def test_state_preparation_knill(self):
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
+class TestIsometry(TestCase):
 
-        circuit = decompose(a, scheme='knill')
+    # scheme='knill' isometry tests
 
-        state = get_state(circuit)
+    def test_state_preparation_real_knill(self):
+        self._test_state_preparation_real('knill')
 
-        self.assertTrue(np.allclose(a, state))
-
-    def test_unitary_knill(self):
-        a = unitary_group.rvs(32)
-        
-        circuit = decompose(a, scheme='knill')
-
-        state = get_state(circuit)
-
-        self.assertTrue(np.allclose(a[:, 0], state))
+    def test_state_preparation_complex_knill(self):
+        self._test_state_preparation_complex('knill')
 
     def test_isometry_knill(self):
-        a = unitary_group.rvs(32)[:,:4]
+        self._test_isometry('knill')
 
-        gate = decompose(a, scheme='knill')
+    def test_fixed_isometry_knill(self):
+        self._test_fixed_isometry('knill')
+
+    # scheme='ccd' (column-by-column decomposition) isometry tests
+
+    def test_state_preparation_real_ccd(self):
+        self._test_state_preparation_real('ccd')
+
+    def test_state_preparation_complex_ccd(self):
+        self._test_state_preparation_complex('ccd')
+
+    def test_isometry_ccd(self):
+        self._test_isometry('ccd')
+
+    def test_fixed_isometry_ccd(self):
+        self._test_fixed_isometry('ccd')
+
+    # general functions for testing the schemes (knill and ccd).
+
+    def _test_state_preparation_real(self, scheme):
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = decompose(state_vector, scheme=scheme)
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))
+
+    def _test_state_preparation_complex(self, scheme):
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = decompose(state_vector, scheme=scheme)
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))
+
+    def _test_isometry(self, scheme):
+        log_lines = 4
+        log_cols = 2
+        isometry = unitary_group.rvs(2**log_lines)[:,:2**log_cols]
+
+        gate = decompose(isometry, scheme=scheme)
+
+        for j in range(2**log_cols):
+            circuit = QuantumCircuit(log_lines)
+
+            for i, bit in enumerate('{:0{}b}'.format(j, 1)[::-1]):
+                if bit == '1':
+                    circuit.x(i)
+
+            circuit.append(gate, circuit.qubits)
+            state = get_state(circuit)
+
+            self.assertTrue(np.allclose(isometry[:, j], state))
+
+    def _test_fixed_isometry(self, scheme):
+        isometry = np.copy([[-0.5391073,  -0.12662419, -0.73739705, -0.38674956],
+                            [ 0.15705405,  0.20566939,  0.32663193, -0.9090356 ],
+                            [-0.77065035, -0.23739918,  0.59084039,  0.02544217],
+                            [-0.30132273,  0.9409081,  -0.02155946,  0.15307435]])
+
+        gate = decompose(isometry, scheme=scheme)
 
         state = get_state(gate)
 
-        self.assertTrue(np.allclose(a[:, 0], state))
-
-        circuit = QuantumCircuit(5)
-        circuit.x(0)
-        circuit.append(gate, circuit.qubits)
-        state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 1], state))
-
-        circuit = QuantumCircuit(5)
-        circuit.x(1)
-        circuit.append(gate, circuit.qubits)
-        state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 2], state))
-
-        circuit = QuantumCircuit(5)
-        circuit.x([0,1])
-        circuit.append(gate, circuit.qubits)
-        state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 3], state))
-    
-    def test_compare_mottonen_isometry_knill(self):
-        from qclib.state_preparation.mottonen import initialize
-
-        a = np.random.rand(32) + np.random.rand(32) * 1j
-        a = a / np.linalg.norm(a)
-        
-        circuit1 = decompose(a, scheme='knill')
-        circuit2 = initialize(a)
-
-        state1 = get_state(circuit1)
-        state2 = get_state(circuit2)
-        
-        self.assertTrue(np.allclose(state1, state2))
-        
-    def test_compare_unitary_qsd_isometry_knill(self):
-        from qclib.unitary import unitary
-
-        a = unitary_group.rvs(32)
-        
-        circuit1 = decompose(a, scheme='knill')
-        circuit2 = unitary(a, decomposition='qsd')
-
-        state1 = get_state(circuit1)
-        state2 = get_state(circuit2)
-        
-        self.assertTrue(np.allclose(state1, state2))
-    
-    def test_compare_unitary_csd_isometry_knill(self):
-        from qclib.unitary import unitary
-
-        a = unitary_group.rvs(32)
-        
-        circuit1 = decompose(a, scheme='knill')
-        circuit2 = unitary(a, decomposition='csd')
-
-        state1 = get_state(circuit1)
-        state2 = get_state(circuit2)
-        
-        self.assertTrue(np.allclose(state1, state2))
-    
-    def test_compare_unitary_qiskit_isometry_knill(self):
-        a = unitary_group.rvs(32)
-        
-        circuit1 = decompose(a, scheme='knill')
-        circuit2 = QuantumCircuit(5)
-        circuit2.unitary(a, list(range(5)))
-
-        state1 = get_state(circuit1)
-        state2 = get_state(circuit2)
-                
-        self.assertTrue(np.allclose(state1, state2))
-
-    def test_schmidt_isometry_knill(self):
-        a = np.copy([[-0.5391073,  -0.12662419, -0.73739705, -0.38674956],
-                    [ 0.15705405,  0.20566939,  0.32663193, -0.9090356 ],
-                    [-0.77065035, -0.23739918,  0.59084039,  0.02544217],
-                    [-0.30132273,  0.9409081,  -0.02155946,  0.15307435]])
-        
-        gate = decompose(a, scheme='knill')
-        
-        state = get_state(gate)
-        
-        self.assertTrue(np.allclose(a[:, 0], state))
+        self.assertTrue(np.allclose(isometry[:, 0], state))
 
         circuit = QuantumCircuit(2)
         circuit.x(0)
         circuit.append(gate, circuit.qubits)
         state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 1], state))
+        self.assertTrue(np.allclose(isometry[:, 1], state))
 
         circuit = QuantumCircuit(2)
         circuit.x(1)
         circuit.append(gate, circuit.qubits)
         state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 2], state))
+        self.assertTrue(np.allclose(isometry[:, 2], state))
 
         circuit = QuantumCircuit(2)
         circuit.x([0,1])
         circuit.append(gate, circuit.qubits)
         state = get_state(circuit)
-        self.assertTrue(np.allclose(a[:, 3], state))
+        self.assertTrue(np.allclose(isometry[:, 3], state))
