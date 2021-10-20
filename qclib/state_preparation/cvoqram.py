@@ -29,14 +29,13 @@ class CVOQRAM:
         for k, binary_string_end_feature in enumerate(data):
             binary_string, feature = binary_string_end_feature
 
-            self.control = CVOQRAM._select_controls(binary_string)
-            self._flip_flop()
-            self._load_superposition(feature, with_aux)
-            if k<len(data)-1:
-                self._flip_flop()
+            control = CVOQRAM._select_controls(binary_string)
+            self._flip_flop(control)
+            self._load_superposition(feature, control, with_aux)
+            if k < len(data) - 1:
+                self._flip_flop(control)
             else:
                 break
-
 
     def initialization(self, nbits):
         """ Inicialize quantum registers """
@@ -51,10 +50,9 @@ class CVOQRAM:
         self.nbits = nbits
         self.norm = 1
 
+    def _flip_flop(self, control):
 
-    def _flip_flop(self):
-
-        for k in self.control:
+        for k in control:
             self.circuit.cx(self.aux[0], self.memory[k])
 
     @staticmethod
@@ -67,26 +65,25 @@ class CVOQRAM:
 
 
 
-    def mcuvchain(self, alpha, beta, phi):
+    def mcuvchain(self, alpha, beta, phi, control):
         """
          N-qubit controlled-unitary gate
         """
 
-
-        lst_ctrl = self.control
+        lst_ctrl = control
         lst_ctrl_reversed = list(reversed(lst_ctrl))
-        self.circuit.rccx(self.memory[lst_ctrl_reversed [0]],
+        self.circuit.rccx(self.memory[lst_ctrl_reversed[0]],
                           self.memory[lst_ctrl_reversed[1]],
                           self.anc[self.nbits-2])
 
         tof = {}
         i = self.nbits-1
-        for ctrl in lst_ctrl_reversed [2:]:
+        for ctrl in lst_ctrl_reversed[2:]:
             self.circuit.rccx(self.anc[i-1],
                               self.memory[ctrl],
                               self.anc[i-2])
             tof[ctrl] = [i-1, i-2]
-            i-=1
+            i -= 1
 
         self.circuit.cu(alpha, beta, phi, 0, self.anc[i-1], self.aux[0])
 
@@ -99,27 +96,26 @@ class CVOQRAM:
                           self.memory[lst_ctrl[-2]],
                           self.anc[self.nbits-2])
 
-
-
-    def _load_superposition(self, feature, with_aux=True):
+    def _load_superposition(self, feature, control, with_aux=True):
         """
         Load pattern in superposition
         """
 
         theta, phi, lam = _compute_matrix_angles(feature, self.norm)
 
-        if len(self.control) == 0:
+        if len(control) == 0:
             self.circuit.u(theta, phi, lam, self.aux[0])
-        elif len(self.control) == 1:
-            self.circuit.cu(theta, phi, lam, 0, self.memory[self.control[0]], self.aux[0])
+        elif len(control) == 1:
+            self.circuit.cu(theta, phi, lam, 0, self.memory[control[0]], self.aux[0])
         else:
             if with_aux:
-                self.mcuvchain(theta, phi, lam)
+                self.mcuvchain(theta, phi, lam, control)
             else:
-                gate = UGate(theta, phi, lam).control(len(self.control))
-                self.circuit.append(gate, self.memory[self.control] + [self.aux[0]])
+                gate = UGate(theta, phi, lam).control(len(control))
+                self.circuit.append(gate, self.memory[control] + [self.aux[0]])
 
         self.norm = self.norm - np.absolute(np.power(feature, 2))
+
 
 def cvoqram_initialize(state, with_aux=True):
     """
