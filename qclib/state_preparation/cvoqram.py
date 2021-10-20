@@ -106,17 +106,17 @@ class CVOQRAM:
         Load pattern in superposition
         """
 
-        alpha, beta, phi = _compute_matrix_angles(feature, self.norm)
+        theta, phi, lam = _compute_matrix_angles(feature, self.norm)
 
         if len(self.control) == 0:
-            self.circuit.u(alpha, beta, phi, self.aux[0])
+            self.circuit.u(theta, phi, lam, self.aux[0])
         elif len(self.control) == 1:
-            self.circuit.cu(alpha, beta, phi, 0, self.memory[self.control[0]], self.aux[0])
+            self.circuit.cu(theta, phi, lam, 0, self.memory[self.control[0]], self.aux[0])
         else:
             if with_aux:
-                self.mcuvchain(alpha, beta, phi)
+                self.mcuvchain(theta, phi, lam)
             else:
-                gate = UGate(alpha, beta, phi).control(len(self.control))
+                gate = UGate(theta, phi, lam).control(len(self.control))
                 self.circuit.append(gate, self.memory[self.control] + [self.aux[0]])
 
         self.norm = self.norm - np.absolute(np.power(feature, 2))
