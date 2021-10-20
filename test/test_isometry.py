@@ -22,6 +22,8 @@ from qiskit import QuantumCircuit
 from scipy.stats import unitary_group
 from qclib.isometry import decompose
 from qclib.util import get_state
+from qclib.unitary import unitary
+from qclib.state_preparation.mottonen import initialize
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring

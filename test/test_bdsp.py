@@ -12,66 +12,73 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
+""" Test bidirectional state preparation """
+
 from unittest import TestCase
-from qiskit import QuantumCircuit, ClassicalRegister, execute, Aer
+import numpy as np
+from qiskit import ClassicalRegister, execute, Aer
 from qclib.state_preparation.bdsp import initialize
 
-backend = Aer.get_backend('qasm_simulator') 
-shots   = 8192
+backend = Aer.get_backend('qasm_simulator')
+SHOTS = 8192
+
 
 class TestBdsp(TestCase):
+    """ Testing bdsp """
+    @staticmethod
+    def measurement(circuit, n_qubits, classical_register):
+        """ run circuit and return measurements """
+        circuit.measure(list(range(n_qubits)), classical_register)
 
-	@staticmethod
-	def measurement(circuit, n, c):
-		circuit.measure(list(range(n)), c)
+        job = execute(circuit, backend, shots=SHOTS, optimization_level=3)
 
-		job = execute(circuit, backend, shots=shots, optimization_level=3)
-		
-		counts = job.result().get_counts(circuit)
-		v = sum(counts.values())
-		
-		counts2 = {}
-		for m in range(2**n):
-			pattern = '{:0{}b}'.format(m, n)
-			if pattern in counts:
-				counts2[pattern] = counts[pattern]
-			else:
-				counts2[pattern] = 0.0
+        counts = job.result().get_counts(circuit)
 
-		return [ value/v for (key, value) in counts2.items() ]
+        counts2 = {}
+        for k in range(2 ** n_qubits):
+            pattern = '{:0{}b}'.format(k, n_qubits)
+            if pattern in counts:
+                counts2[pattern] = counts[pattern]
+            else:
+                counts2[pattern] = 0.0
 
-	@staticmethod
-	def bdsp_experiment(state, s=None):
-		circuit = initialize(state, s)
+        return [value / SHOTS for (key, value) in counts2.items()]
 
-		n = int(np.log2(len(state)))
-		c = ClassicalRegister(n)
-		circuit.add_register(c)
+    @staticmethod
+    def bdsp_experiment(state, split=None):
+        """ Run bdsp experiment """
+        circuit = initialize(state, split)
 
-		return TestBdsp.measurement(circuit, n, c)
-		
-	def test_bottom_up(self):
-		a = np.random.rand(16) + np.random.rand(16) * 1j
-		a = a / np.linalg.norm(a)
+        n_qubits = int(np.log2(len(state)))
+        classical_register = ClassicalRegister(n_qubits)
+        circuit.add_register(classical_register)
 
-		state = TestBdsp.bdsp_experiment(a, 1)
+        return TestBdsp.measurement(circuit, n_qubits, classical_register)
 
-		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-01, atol=0.005))
+    def test_bottom_up(self):
+        """ Testing bdsp """
 
-	def test_top_down(self):
-		a = np.random.rand(16) + np.random.rand(16) * 1j
-		a = a / np.linalg.norm(a)
+        vector = np.random.rand(16) + np.random.rand(16) * 1j
+        vector = vector / np.linalg.norm(vector)
 
-		state = TestBdsp.bdsp_experiment(a, int(np.log2(len(a))))
+        state = TestBdsp.bdsp_experiment(vector, 1)
 
-		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-01, atol=0.005))
+        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))
 
-	def test_sublinear(self):
-		a = np.random.rand(16) + np.random.rand(16) * 1j
-		a = a / np.linalg.norm(a)
+    def test_top_down(self):
+        """ Testing bdsp """
+        vector = np.random.rand(16) + np.random.rand(16) * 1j
+        vector = vector / np.linalg.norm(vector)
 
-		state = TestBdsp.bdsp_experiment(a)
+        state = TestBdsp.bdsp_experiment(vector, int(np.log2(len(vector))))
 
-		self.assertTrue(np.allclose( np.power(np.abs(a),2), state, rtol=1e-01, atol=0.005))
+        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))
 
+    def test_sublinear(self):
+        """ Testing bdsp """
+        vector = np.random.rand(16) + np.random.rand(16) * 1j
+        vector = vector / np.linalg.norm(vector)
+
+        state = TestBdsp.bdsp_experiment(vector)
+
+        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))

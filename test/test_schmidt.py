@@ -25,7 +25,6 @@ from qclib.util import get_state
 # pylint: disable=missing-class-docstring
 
 class TestInitialize(TestCase):
-
     @staticmethod
     def mae(state, ideal):
         """

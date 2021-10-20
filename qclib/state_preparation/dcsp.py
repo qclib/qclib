@@ -12,13 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+    Divide-and-conquer state preparation
+    https://arxiv.org/abs/2108.10182
+"""
+
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 
-from qclib.state_preparation.util.state_tree_preparation import *
-from qclib.state_preparation.util.angle_tree_preparation import *
-from qclib.state_preparation.util.tree_register          import *
-from qclib.state_preparation.util.tree_walk              import bottom_up
+from qclib.state_preparation.util.state_tree_preparation import Amplitude, state_decomposition
+
+from qclib.state_preparation.util.angle_tree_preparation import \
+    create_angles_tree
+
+from qclib.state_preparation.util.tree_register import add_register
+from qclib.state_preparation.util.tree_walk import bottom_up
 
 def initialize(state):
     """
@@ -29,12 +37,12 @@ def initialize(state):
 
     state_tree = state_decomposition(n_qubits, data)
     angle_tree = create_angles_tree(state_tree)
-    
+
     circuit = QuantumCircuit()
     add_register(circuit, angle_tree, n_qubits-1)
 
     bottom_up(angle_tree, circuit, n_qubits)
-    
+
     return circuit
 
 
@@ -42,8 +50,8 @@ def initialize(state):
 
 
 
-class bin_tree:
-    """ 
+class BinTree:
+    """
         State preparation using DCSP https://www.nature.com/articles/s41598-021-85474-1.
         This class implements the original algorithm as defined in the paper.
         It is kept here for didactic reasons.
@@ -56,16 +64,25 @@ class bin_tree:
         self.size = len(values)
         self.values = values
 
-    def parent(self, key):
+
+    @staticmethod
+    def parent(key):
+        """ returns parent node index"""
         return int((key-0.5)/2)
 
-    def left(self, key):
+    @staticmethod
+    def left(key):
+        """ returns left child index"""
         return int(2 * key + 1)
 
-    def right(self, key):
+    @staticmethod
+    def right(key):
+        """ returns right child index"""
         return int(2 * key + 2)
 
-    def root(self):
+    @staticmethod
+    def root():
+        """ returns root index """
         return 0
 
     def __getitem__(self, key):
@@ -73,6 +90,9 @@ class bin_tree:
 
 
 class Encoding:
+    """
+    Encode information into qubits
+    """
     qcircuit = None
     quantum_data = None
     classical_data = None
@@ -125,12 +145,12 @@ class Encoding:
                     beta.append(0)
                 else:
                     if input_vector[k] < 0:
-                        beta.append(2 * np.pi - 2 * np.arcsin(input_vector[k + 1] / norm)) ## testing
+                        ## testing
+                        beta.append(2 * np.pi - 2 * np.arcsin(input_vector[k + 1] / norm))
                     else:
                         beta.append(2 * np.arcsin(input_vector[k + 1] / norm))
             Encoding._recursive_compute_beta(new_x, betas)
             betas.append(beta)
-            output = []
 
     @staticmethod
     def _index(k, circuit, control_qubits, numberof_controls):
@@ -153,6 +173,9 @@ class Encoding:
         self._generate_circuit(betas, self.qcircuit, self.quantum_data)
 
     def dc_amplitude_encoding(self, input_vector):
+        """
+        Divide and conquer amplitude encoding
+        """
         self.num_qubits = int(len(input_vector))-1
         self.quantum_data = QuantumRegister(self.num_qubits)
         self.qcircuit = QuantumCircuit(self.quantum_data)
@@ -171,7 +194,7 @@ class Encoding:
                 qcircuit.ry(angle, quantum_input[k])
                 k += 1
 
-        self.tree = bin_tree(quantum_input)
+        self.tree = BinTree(quantum_input)
         my_tree = self.tree
 
         last = my_tree.size - 1

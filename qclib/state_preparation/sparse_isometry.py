@@ -86,7 +86,7 @@ def initialize(state, aux=False):
     else:
         initialize_circ = dense_init(dense_state)
 
-    if aux==True:
+    if aux:
         sp_circuit = qiskit.QuantumCircuit(anc, memory)
         nun_aux = n_anci-1  # TODO
         sp_circuit.compose(initialize_circ, sp_circuit.qubits[nun_aux:nun_aux+target_size], inplace=True)
@@ -139,7 +139,7 @@ def _pivoting(index_zero, index_nonzero, target_size, state=None, aux=False):
         if index_zero[k] == '0':
             circuit.x(k)
 
-    if aux == True:
+    if aux:
         # apply mcx using mode v-chain
         mcxvchain(circuit, memory, anc, remain, index_differ)
     else:

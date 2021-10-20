@@ -133,8 +133,6 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
 
 
 
-
-
 @deprecation.deprecated(deprecated_in="0.0.7",
                         details="Use the initialize function instead")
 def initialize_original(state_vector):
