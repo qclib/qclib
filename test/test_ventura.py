@@ -32,7 +32,7 @@ class TestInitialize(TestCase):
         max_denominator = max(function_io.values())-1
         n_qubits = 4
 
-        circuit = initialize(function_io, n_qubits=n_qubits, N=max_denominator)
+        circuit = initialize(function_io, n_qubits=n_qubits, n_output_values=max_denominator)
         state = get_state(circuit)
 
         desired_state = []
