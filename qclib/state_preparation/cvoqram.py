@@ -16,13 +16,14 @@
 
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
+from qiskit.circuit.library.standard_gates import UGate
 from qclib.util import _compute_matrix_angles
 
 
 class CVOQRAM:
     """ cvoqram """
-    def __init__(self, nbits, data):
-
+    def __init__(self, nbits, data, with_aux=True):
+        self.with_aux = with_aux
         self.initialization(nbits)
         self.circuit.x(self.aux[0])
         for k, binary_string_end_feature in enumerate(data):
@@ -30,7 +31,7 @@ class CVOQRAM:
 
             self.control = CVOQRAM._select_controls(binary_string)
             self._flip_flop()
-            self._load_superposition(feature)
+            self._load_superposition(feature, with_aux)
             if k<len(data)-1:
                 self._flip_flop()
             else:
@@ -41,8 +42,12 @@ class CVOQRAM:
         """ Inicialize quantum registers """
         self.aux = QuantumRegister(1, name='u')
         self.memory = QuantumRegister(nbits, name='m')
-        self.anc    = QuantumRegister(nbits-1, name='anc')
-        self.circuit = QuantumCircuit(self.aux, self.anc, self.memory)
+
+        if self.with_aux:
+            self.anc = QuantumRegister(nbits-1, name='anc')
+            self.circuit = QuantumCircuit(self.aux, self.anc, self.memory)
+        else:
+            self.circuit = QuantumCircuit(self.aux, self.memory)
         self.nbits = nbits
         self.norm = 1
 
@@ -55,7 +60,7 @@ class CVOQRAM:
     @staticmethod
     def _select_controls(binary_string):
         control = []
-        for k, bit in enumerate(binary_string):
+        for k, bit in enumerate(binary_string[::-1]):
             if bit == 1:
                 control.append(k)
         return control
@@ -96,7 +101,7 @@ class CVOQRAM:
 
 
 
-    def _load_superposition(self, feature):
+    def _load_superposition(self, feature, with_aux=True):
         """
         Load pattern in superposition
         """
@@ -108,10 +113,15 @@ class CVOQRAM:
         elif len(self.control) == 1:
             self.circuit.cu(alpha, beta, phi, 0, self.memory[self.control[0]], self.aux[0])
         else:
-            self.mcuvchain(alpha, beta, phi)
+            if with_aux:
+                self.mcuvchain(alpha, beta, phi)
+            else:
+                gate = UGate(alpha, beta, phi).control(len(self.control))
+                self.circuit.append(gate, self.memory[self.control] + [self.aux[0]])
+
         self.norm = self.norm - np.absolute(np.power(feature, 2))
 
-def cvoqram_initialize(state):
+def cvoqram_initialize(state, with_aux=True):
     """
     Creates a circuit to initialize a quantum state arXiv:
 
@@ -134,5 +144,5 @@ def cvoqram_initialize(state):
     qbit = state[0][0]
     size = len(qbit)
     n_qubits = int(size)
-    memory = CVOQRAM(n_qubits, state)
+    memory = CVOQRAM(n_qubits, state, with_aux)
     return memory.circuit
