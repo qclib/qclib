@@ -9,7 +9,7 @@ from qclib.util import double_sparse, get_state
 class TestCvoqram(TestCase):
     """ Testing qclib.state_preparation.cvoqram """
     def test_cvoqram(self):
-        """ Testing cvoqram 2 real amplitudes and with auxiliary qubits """
+        """ Testing cvoqram 2 amplitudes and with auxiliary qubits """
         data = [([0, 0, 1], 1/np.sqrt(3)), ([1, 1, 0], np.sqrt(2j/3))]
         qc_cvoqram = cvoqram_initialize(data)
         state = get_state(qc_cvoqram)
@@ -17,7 +17,7 @@ class TestCvoqram(TestCase):
         self.assertTrue(np.isclose(state[0b001000], np.sqrt(1/3)))
 
     def test_cvoqram_without_aux(self):
-        """ Testing cvoqram 2 real amplitudes and with auxiliary qubits """
+        """ Testing cvoqram 2 amplitudes and with auxiliary qubits """
         data = [([0, 0, 1], 1j * np.sqrt(1/3)), ([1, 1, 0], np.sqrt(2j/3))]
         qc_cvoqram = cvoqram_initialize(data, False)
         state = get_state(qc_cvoqram)
@@ -25,7 +25,7 @@ class TestCvoqram(TestCase):
         self.assertTrue(np.isclose(state[0b0010], 1j * np.sqrt(1/3)))
 
     def test_cvoqram_random(self):
-        """ Testing cvoqram 4 real amplitudes and with auxiliary qubits """
+        """ Testing cvoqram 4 amplitudes and with auxiliary qubits """
         n_qubits = 4
         log_npatterns = 2
         prob = 0.2

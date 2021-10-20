@@ -243,7 +243,7 @@ def double_sparse(nbits, log_size, p_1):
     -------
     \\sum_{k} x_k |p_k>, each bit of p_k is equal to 1 with probability p1
     """
-    data = np.random.rand(2 ** log_size)
+    data = np.random.rand(2 ** log_size) + np.random.rand(2 ** log_size)*1j
     length = np.linalg.norm(data)
     data = (1/length) * data
 
