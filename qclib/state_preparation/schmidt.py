@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+""" State preparation with Schmidt decomposition """
+
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.state_preparation.mottonen import initialize as mottonen
@@ -43,11 +45,27 @@ def initialize(state, low_rank=0):
     circuit: QuantumCircuit
         QuantumCircuit to initialize the state.
     """
-    
-    s = np.copy(state)
 
-    size = len(s)
-    n_qubits = int(np.log2(size))
+    state_copy = np.copy(state)
+
+    hsa, hsb, n_a, n_b = _init_params(state_copy)
+
+    state_copy.shape = (n_a, n_b)
+
+    u_matrix, diag, v_matrix = np.linalg.svd(state_copy)
+
+    if 1 <= rank <= n_a:
+        # This code is equivalent to the commented one below.
+        # It is more compact, but the one below is easier to read.
+        diag = diag[:rank]
+        u_matrix = u_matrix[:, :rank]
+        v_matrix = v_matrix[:rank, :]
+        if not np.log2(rank).is_integer(): # To use isometries, the rank needs to be a power of 2.
+            state_copy = u_matrix @ np.diag(diag) @ v_matrix
+
+            # s = np.zeros((n, m), dtype=complex)
+            # for i in range(rank):
+            #     s += d[i] * np.outer(u.T[i], v[i])
 
     r = n_qubits % 2
 
@@ -79,10 +97,8 @@ def initialize(state, low_rank=0):
     A = QuantumRegister(n_qubits//2 + r)
     B = QuantumRegister(n_qubits//2)
 
-    circuit = QuantumCircuit(A, B)
-    
-    if len(d) > 2:
-        circ = initialize(d)
+    if len(diag) > 2:
+        circ = initialize(diag)
     else:
         circ = mottonen(d)
         
@@ -104,12 +120,21 @@ def initialize(state, low_rank=0):
         
         circuit.compose(gate_u, reg, inplace=True) # Apply gate U to the register.
 
-    encode(u, B)
-    encode(v.T, A)
-    
+    encode(u_matrix, hsb)
+    encode(v_matrix.T, hsa)
+
     return circuit
 
 
+def _init_params(state_copy):
+    size = len(state_copy)
+    n_qubits = int(np.log2(size))
+    is_odd = n_qubits % 2
+    n_a = int(2 ** (n_qubits // 2))
+    n_b = int(2 ** (n_qubits // 2 + is_odd))
+    hsa = QuantumRegister(n_qubits // 2 + is_odd)
+    hsb = QuantumRegister(n_qubits // 2)
+    return hsa, hsb, n_a, n_b
 
 
 #import deprecation
@@ -137,30 +162,30 @@ def initialize_original(state):
     circuit: QuantumCircuit
         QuantumCircuit to initialize the state.
     """
-    
-    s = np.copy(state)
 
-    size = len(s)
+    state_copy = np.copy(state)
+
+    size = len(state_copy)
     n_qubits = int(np.log2(size))
 
-    r = n_qubits % 2
+    is_odd = n_qubits % 2
 
-    s.shape = (int(2**(n_qubits//2)), int(2**(n_qubits//2 + r)))
+    state_copy.shape = (int(2**(n_qubits//2)), int(2**(n_qubits//2 + is_odd)))
 
-    u, d, v = np.linalg.svd(s)
-        
-    d = d / np.linalg.norm(d)
+    u_matrix, diag, v_matrix = np.linalg.svd(state_copy)
 
-    A = QuantumRegister(n_qubits//2 + r)
-    B = QuantumRegister(n_qubits//2)
+    diag = diag / np.linalg.norm(diag)
 
-    circuit = QuantumCircuit(A, B)
+    hsa = QuantumRegister(n_qubits//2 + is_odd)
+    hsb = QuantumRegister(n_qubits//2)
 
-    if len(d) > 2:
-        circ = initialize_original(d)
+    circuit = QuantumCircuit(hsa, hsb)
+
+    if len(diag) > 2:
+        circ = initialize_original(diag)
     else:
-        circ = mottonen(d)
-    circuit.compose(circ, B, inplace=True)
+        circ = mottonen(diag)
+    circuit.compose(circ, hsb, inplace=True)
 
     for k in range(int(n_qubits//2)):
         circuit.cx(B[k], A[k])
@@ -168,7 +193,7 @@ def initialize_original(state):
     gate_u = unitary(u, 'qsd')
     gate_v = unitary(v.T, 'qsd')
 
-    circuit.compose(gate_u, B, inplace=True) # apply gate U to the first register
-    circuit.compose(gate_v, A, inplace=True) # apply gate V to the second register
+    circuit.compose(gate_u, hsb, inplace=True) # apply gate U to the first register
+    circuit.compose(gate_v, hsa, inplace=True) # apply gate V to the second register
 
     return circuit

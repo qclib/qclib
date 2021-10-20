@@ -12,20 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import qiskit
-from qclib.state_preparation.util.tree_utils import children
-
 """
 https://arxiv.org/abs/2108.10182
 """
 
-def output(angle_tree, q):
+import qiskit
+from qclib.state_preparation.util.tree_utils import children
+
+
+def output(angle_tree, output_qubits):
+    """ Define output qubits"""
     if angle_tree:
-        q.insert(0, angle_tree.qubit) # qiskit little-endian
+        output_qubits.insert(0, angle_tree.qubit) # qiskit little-endian
         if angle_tree.left:
-            output(angle_tree.left, q)
+            output(angle_tree.left, output_qubits)
         else:
-            output(angle_tree.right, q)
+            output(angle_tree.right, output_qubits)
 
 def _add_register(angle_tree, qubits, start_level):
     if angle_tree:
@@ -43,7 +45,7 @@ def add_register(circuit, angle_tree, start_level):
     """
     Organize qubit registers, grouping by "output" and "ancilla" types.
     """
-    
+
     level = 0
     level_nodes = []
     nodes = [angle_tree]
@@ -54,7 +56,10 @@ def add_register(circuit, angle_tree, start_level):
 
     noutput = level # one output qubits per level
     nqubits = sum(level_nodes[:start_level]) # bottom-up qubits
-    nqubits += level_nodes[start_level] * (noutput-start_level) # top-down qubits: (number of sub-states) * (number of qubits per sub-state)
+
+    # top-down qubits: (number of sub-states) * (number of qubits per sub-state)
+    nqubits += level_nodes[start_level] * (noutput-start_level)
+
     nancilla = nqubits - noutput
 
     output_register = qiskit.QuantumRegister(noutput, name='output')

@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from graphviz    import Digraph
-
 """
 https://arxiv.org/abs/2108.10182
 """
+
+
+from graphviz    import Digraph
 
 def is_leaf(tree):
     """
@@ -29,6 +30,7 @@ def is_leaf(tree):
     return False
 
 def remove_leafs(tree):
+    """ remove tree leafs """
     if tree.left:
         if is_leaf(tree.left):
             tree.left = None
@@ -48,8 +50,8 @@ def leftmost(tree):
     """
     if tree.left:
         return tree.left
-    else:
-        return tree.right
+
+    return tree.right
 
 def node_index(tree):
     """
@@ -64,10 +66,10 @@ def root_node(tree, level):
     :param level: level of the subtree (0 for the tree root)
     :return: subtree root at level
     """
-    root = tree 
+    root = tree
     while root.level > level:
         root = root.parent
-        
+
     return root
 
 def children(nodes):
@@ -76,14 +78,14 @@ def children(nodes):
     :param nodes: a list with tree nodes
     :return: a list with nodes childs
     """
-    children = []
+    child = []
     for node in nodes:
         if node.left:
-            children.append(node.left)
+            child.append(node.left)
         if node.right:
-            children.append(node.right)
+            child.append(node.right)
 
-    return children
+    return child
 
 def flatten(tree):
     f = []
@@ -100,10 +102,10 @@ def length(tree):
     :return: the total of nodes in the subtree
     """
     if tree:
-        n = length(tree.left)
-        n += length(tree.right)
-        n += 1
-        return n 
+        n_nodes = length(tree.left)
+        n_nodes += length(tree.right)
+        n_nodes += 1
+        return n_nodes
     return 0
 
 def level_length(tree, level):
@@ -115,11 +117,12 @@ def level_length(tree, level):
     """
     if tree:
         if tree.level < level:
-            n = level_length(tree.left, level)
-            n += level_length(tree.right, level)
-            return n
-        else:
-            return 1
+            n_nodes_level = level_length(tree.left, level)
+            n_nodes_level += level_length(tree.right, level)
+            return n_nodes_level
+
+        return 1
+
     return 0
 
 def height(root):
@@ -128,13 +131,13 @@ def height(root):
     :param root: subtree root node
     :return: the total of levels in the subtree defined by root
     """
-    n = 0
+    n_levels = 0
     left = root
     while left:
-        n += 1
+        n_levels += 1
         left = leftmost(left)
 
-    return n
+    return n_levels
 
 def left_view(root, stop_level):
     """
@@ -147,7 +150,7 @@ def left_view(root, stop_level):
     while left and left.level <= stop_level:
         branch.append(left)
         left = leftmost(left)
-        
+
     return branch
 
 def subtree_level_index(root, tree):
@@ -175,7 +178,7 @@ def subtree_level_nodes(tree, level, level_nodes):
     the first value of tree (subtree root).
     :param tree: current tree node, starts with subtree root node
     :param level: level to search for the nodes
-    :out param level_nodes: a list with the level tree nodes repective to the 
+    :out param level_nodes: a list with the level tree nodes repective to the
                             subtree defined by root, ordered from left to right
     """
     if tree.level < level:
@@ -190,7 +193,7 @@ def tree_visual_representation(tree, dot=None):
     """
     :param tree: A binary tree, with str(tree) defined
     """
-    
+
     if dot is None:
         dot = Digraph()
         dot.node(str(tree))
