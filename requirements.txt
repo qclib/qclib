@@ -1,5 +1,6 @@
 qiskit
 graphviz
 deprecation
+pytest==6.2.5
 pylint==2.8
 pytest-pylint==0.18.0
