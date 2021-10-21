@@ -193,7 +193,7 @@ def verify_trigonometric_interval(value):
 
 
 def _count_ones(pattern):
-    return pattern[0].count("1")
+    return pattern[0].count(1)
 
 
 def random_sparse(nbits, density):
@@ -224,12 +224,10 @@ def _double_sparse_binary(nbits, log_size, p_1, p_0):
     bin_data = []
     while len(bin_data)< 2**log_size:
         lst = np.random.choice(2, nbits, p=[p_1, p_0]).tolist()
-        lst_str = map(lambda s: str(lst), lst)
-        binary =''
-        binary = binary.join(lst_str)
 
-        if binary not in bin_data:
-            bin_data.append(binary)
+        if lst not in bin_data:
+            bin_data.append(lst)
+
     return  bin_data
 
 
@@ -245,7 +243,7 @@ def double_sparse(nbits, log_size, p_1):
     -------
     \\sum_{k} x_k |p_k>, each bit of p_k is equal to 1 with probability p1
     """
-    data = np.random.rand(2 ** log_size)
+    data = np.random.rand(2 ** log_size) + np.random.rand(2 ** log_size)*1j
     length = np.linalg.norm(data)
     data = (1/length) * data
 
@@ -272,7 +270,7 @@ def _compute_matrix_angles(feature, norm):
         phase = np.abs(np.power(feature, 2))
 
         if (norm - phase) < 0:
-            norm = np.around(norm, decimals=4)
+            norm = phase
 
         cos_value = np.sqrt((norm - phase) / norm)
         cos_value = verify_trigonometric_interval(cos_value)
