@@ -1,4 +1,4 @@
 qiskit
 graphviz
 deprecation
-pytest-pylint
+pytest-pylint==0.18.0
