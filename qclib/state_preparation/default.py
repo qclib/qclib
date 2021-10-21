@@ -19,7 +19,8 @@
 """
 
 from qclib.state_preparation.schmidt import initialize as dense_init
-from qclib.state_preparation.pivot import initialize as sparse_init
+from qclib.state_preparation.pivot import PivotStatePreparation
+sparse_init = PivotStatePreparation.initialize
 
 # pylint: disable=maybe-no-member
 

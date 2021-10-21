@@ -4,7 +4,8 @@ from unittest import TestCase
 import numpy as np
 from qclib.state_preparation.cvoqram import cvoqram_initialize
 from qclib.util import double_sparse, get_state
-from qclib.state_preparation.pivot import initialize as pivot_initialize
+from qclib.state_preparation.pivot import PivotStatePreparation
+pivot_initialize = PivotStatePreparation.initialize
 
 
 class TestCvoqram(TestCase):
