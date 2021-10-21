@@ -17,7 +17,7 @@
 from unittest import TestCase
 import numpy as np
 from qclib.state_preparation.default import initialize, sparse_initialize
-from qclib.state_preparation.sparse_isometry import _pivoting
+from qclib.state_preparation.pivot import _pivoting
 from qclib.util import get_state
 
 
