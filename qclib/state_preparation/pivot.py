@@ -52,7 +52,7 @@ class PivotStatePreparation:
         while index_nonzero is not None:
             index_zero = _get_index_zero(n_qubits, non_zero, next_state)
 
-            circ, next_state = _pivoting(index_zero, index_nonzero, target_size, next_state, aux)
+            circ, next_state = self._pivoting(index_zero, index_nonzero, target_size, next_state, aux)
             pivot_circuit.compose(circ, pivot_circuit.qubits, inplace=True)
 
             index_nonzero = _get_index_nz(next_state, n_qubits - target_size)
@@ -84,6 +84,76 @@ class PivotStatePreparation:
                                self.sp_circuit.qubits,
                                inplace=True)
 
+    def _next_state(self, ctrl_state, index_differ, index_zero, remain, state, target_cx):
+        tab = {'0': '1', '1': '0'}
+        new_state = {}
+        for index, _ in state.items():
+
+            if index[index_differ] == ctrl_state:
+
+                n_index = ''
+                for k, _ in enumerate(index):
+                    if k in target_cx:
+                        n_index = n_index + tab[index[k]]
+                    else:
+                        n_index = n_index + index[k]
+
+            else:
+                n_index = index
+
+            if n_index[remain[0]:] == index_zero[remain[0]:]:
+                n_index = n_index[:index_differ] + tab[index[index_differ]] + n_index[index_differ + 1:]
+
+            new_state[n_index] = state[index]
+        return new_state
+
+    def _pivoting(self, index_zero, index_nonzero, target_size, state=None, aux=False):
+
+        n_qubits = len(index_zero)
+        target = list(range(n_qubits - target_size))
+        remain = list(range(n_qubits - target_size, n_qubits))
+
+        memory = qiskit.QuantumRegister(n_qubits)
+
+        anc, circuit = _initialize_circuit(aux, memory, remain)
+
+        index_differ = 0
+
+        for k in target:
+            if index_nonzero[k] != index_zero[k]:
+                index_differ = k
+                ctrl_state = index_nonzero[k]
+                break
+
+        target_cx = []
+        for k in target:
+            if index_differ != k and index_nonzero[k] != index_zero[k]:
+                circuit.cx(index_differ, k, ctrl_state=ctrl_state)
+                target_cx.append(k)
+
+        for k in remain:
+            if index_nonzero[k] != index_zero[k]:
+                circuit.cx(index_differ, k, ctrl_state=ctrl_state)
+                target_cx.append(k)
+
+        for k in remain:
+            if index_zero[k] == '0':
+                circuit.x(k)
+
+        if aux:
+            # apply mcx using mode v-chain
+            mcxvchain(circuit, memory, anc, remain, index_differ)
+        else:
+            circuit.mcx(remain, index_differ)
+
+        for k in remain:
+            if index_zero[k] == '0':
+                circuit.x(k)
+
+        new_state = self._next_state(ctrl_state, index_differ, index_zero, remain, state, target_cx)
+
+        return circuit, new_state
+
 def initialize(state, aux=False):
     """ Create circuit to initialize a sparse quantum state arXiv:2006.00016
 
@@ -110,52 +180,8 @@ def initialize(state, aux=False):
 
 
 
-def _pivoting(index_zero, index_nonzero, target_size, state=None, aux=False):
 
-    n_qubits = len(index_zero)
-    target = list(range(n_qubits - target_size))
-    remain = list(range(n_qubits - target_size, n_qubits))
 
-    memory = qiskit.QuantumRegister(n_qubits)
-
-    anc, circuit = _initialize_circuit(aux, memory, remain)
-
-    index_differ = 0
-
-    for k in target:
-        if index_nonzero[k] != index_zero[k]:
-            index_differ = k
-            ctrl_state = index_nonzero[k]
-            break
-
-    target_cx = []
-    for k in target:
-        if index_differ != k and index_nonzero[k] != index_zero[k]:
-            circuit.cx(index_differ, k, ctrl_state=ctrl_state)
-            target_cx.append(k)
-
-    for k in remain:
-        if index_nonzero[k] != index_zero[k]:
-            circuit.cx(index_differ, k, ctrl_state=ctrl_state)
-            target_cx.append(k)
-
-    for k in remain:
-        if index_zero[k] == '0':
-            circuit.x(k)
-
-    if aux:
-        # apply mcx using mode v-chain
-        mcxvchain(circuit, memory, anc, remain, index_differ)
-    else:
-        circuit.mcx(remain, index_differ)
-
-    for k in remain:
-        if index_zero[k] == '0':
-            circuit.x(k)
-
-    new_state = _next_state(ctrl_state, index_differ, index_zero, remain, state, target_cx)
-
-    return circuit, new_state
 
 
 def _initialize_circuit(aux, memory, remain):
@@ -171,28 +197,7 @@ def _initialize_circuit(aux, memory, remain):
     return anc, circuit
 
 
-def _next_state(ctrl_state, index_differ, index_zero, remain, state, target_cx):
-    tab = {'0': '1', '1': '0'}
-    new_state = {}
-    for index, _ in state.items():
 
-        if index[index_differ] == ctrl_state:
-
-            n_index = ''
-            for k, _ in enumerate(index):
-                if k in target_cx:
-                    n_index = n_index + tab[index[k]]
-                else:
-                    n_index = n_index + index[k]
-
-        else:
-            n_index = index
-
-        if n_index[remain[0]:] == index_zero[remain[0]:]:
-            n_index = n_index[:index_differ] + tab[index[index_differ]] + n_index[index_differ + 1:]
-
-        new_state[n_index] = state[index]
-    return new_state
 
 
 def _get_index_zero(n_qubits, non_zero, state):
