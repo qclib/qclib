@@ -4,4 +4,4 @@ python:
     - "3.8"
 
 script:
-    - pytest --pylint
+    - python -m unittest
