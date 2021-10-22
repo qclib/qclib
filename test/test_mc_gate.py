@@ -86,9 +86,9 @@ class TestLinearToffoli(TestCase):
 
         circuit = qiskit.QuantumCircuit(4)
         mc_gate(gate_x, circuit, [3, 2, 1], 0)
-        circuit = circuit2 + circuit
 
-        state2 = qclib.util.get_state(circuit)
+        circuit2.compose(circuit, circuit2.qubits)
+        state2 = qclib.util.get_state(circuit2)
 
         self.assertTrue(np.allclose(state1, state2))
 
@@ -104,9 +104,9 @@ class TestLinearToffoli(TestCase):
         circuit = qiskit.QuantumCircuit(4)
 
         mc_gate(gate_x, circuit, [0, 1, 2], 3)
-        circuit = circuit2 + circuit
+        circuit2.compose(circuit, circuit2.qubits)
 
-        state2 = qclib.util.get_state(circuit)
+        state2 = qclib.util.get_state(circuit2)
 
         self.assertTrue(np.allclose(state1, state2))
 
@@ -121,7 +121,7 @@ class TestLinearToffoli(TestCase):
         circuit = qiskit.QuantumCircuit(4)
 
         mc_gate(gate_x, circuit, [1, 2, 3], 0)
-        circuit = circuit2 + circuit
+        circuit.compose(circuit2, circuit.qubits)
 
         state2 = qclib.util.get_state(circuit)
 
