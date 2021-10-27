@@ -81,7 +81,7 @@ class TestSchmidt(TestCase):
         circuit = initialize(state_vector)
 
         state = TestSchmidt.get_counts(circuit)
-        
+
         self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
                         rtol=1e-01, atol=0.005))
 

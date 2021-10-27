@@ -16,33 +16,15 @@
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister, execute, Aer
+from qiskit import ClassicalRegister, Aer
 from qclib.state_preparation.dcsp import initialize
+from .util import measurement
 
 backend = Aer.get_backend('qasm_simulator')
 SHOTS = 8192
 
 class TestInitialize(TestCase):
     """ Testing divide-and-conquer state preparation """
-
-    @staticmethod
-    def measurement(circuit, n_qubits, classical_register):
-        """ run circuit """
-        circuit.measure(list(range(n_qubits)), classical_register)
-
-        job = execute(circuit, backend, shots=SHOTS, optimization_level=3)
-
-        counts = job.result().get_counts(circuit)
-
-        counts2 = {}
-        for k in range(2 ** n_qubits):
-            pattern = '{:0{}b}'.format(k, n_qubits)
-            if pattern in counts:
-                counts2[pattern] = counts[pattern]
-            else:
-                counts2[pattern] = 0.0
-
-        return [value/SHOTS for (key, value) in counts2.items()]
 
     @staticmethod
     def dcsp_experiment(state):
@@ -53,7 +35,7 @@ class TestInitialize(TestCase):
         classical_register = ClassicalRegister(n_qubits)
         circuit.add_register(classical_register)
 
-        return TestInitialize.measurement(circuit, n_qubits, classical_register)
+        return measurement(circuit, n_qubits, classical_register, backend, SHOTS)
 
     def test_dcsp(self):
         """ Testing divide-and-conquer state preparation """

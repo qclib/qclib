@@ -87,14 +87,6 @@ def children(nodes):
 
     return child
 
-def flatten(tree):
-    f = []
-    c = [tree]
-    while len(c) > 0:
-        f.extend(c)
-        c = children(c)
-    return f
-
 def length(tree):
     """
     Count the total number of the tree nodes.
