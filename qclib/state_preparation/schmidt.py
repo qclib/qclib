@@ -60,76 +60,93 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
         QuantumCircuit to initialize the state.
     """
 
+    svd_u, singular_values, svd_v = _svd(state_vector)                   # Singular-value
+                                                                         # decomposition.
+    rank, svd_u, svd_v, singular_values = \
+    _low_rank_approximation(low_rank, svd_u, svd_v, singular_values)     # Low-rank approximation.
+                                                                         # Changes svd_u, svd_v and
+                                                                         # singular_values
+                                                                         # dimensions.
+    circuit, reg_a, reg_b = _create_quantum_circuit(state_vector)        # Create the quantum
+                                                                         # circuit.
+    size_sv = len(singular_values)                                       # Phase 1. Encodes the
+    reg_sv = reg_b[:int( np.log2( size_sv ) )]                           # singular values.
+    _encode(singular_values.reshape(size_sv, 1), circuit, reg_sv,
+                                        isometry_scheme, unitary_scheme)
+
+    for j in range(int( np.log2( rank ) )):                              # Phase 2. Entangles only
+        circuit.cx(reg_b[j], reg_a[j])                                   # the necessary qubits,
+                                                                         # according to rank.
+    _encode(svd_u, circuit, reg_b, isometry_scheme, unitary_scheme)      # Phase 3. Encodes unitary
+                                                                         # or isometry U.
+    _encode(svd_v.T, circuit, reg_a, isometry_scheme, unitary_scheme)    # Phase 4. Encodes unitary
+                                                                         # or isometry V^T.
+    return circuit
+
+def _svd(state_vector):
     state = np.copy(state_vector)
 
-    size = len(state)
-    n_qubits = int(np.log2(size))
-
+    n_qubits = int(np.log2(len(state)))
     odd = n_qubits % 2
-
     lines = int(2**(n_qubits//2))
     cols = int(2**(n_qubits//2 + odd))
     state.shape = (lines, cols)
 
     svd_u, singular_values, svd_v = np.linalg.svd(state)
+    singular_values = singular_values / np.linalg.norm(singular_values)
 
-    rank = lines
-    if low_rank > 0 and low_rank < rank:
+    return svd_u, singular_values, svd_v
+
+def _low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
+    rank = svd_u.shape[0]
+    if 0 < low_rank < rank:
         e_rank = sum(j > 10**-16 for j in singular_values) # Effective rank.
         if low_rank < e_rank:
             e_rank = low_rank                              # Low-rank approximation
 
-        rank = int(2**np.ceil(np.log2(e_rank)))         # To use isometries, the rank needs to be
-                                                        # a power of 2.
+        rank = int(2**np.ceil(np.log2(e_rank)))            # To use isometries, the rank needs to be
+                                                           # a power of 2.
+        svd_u = svd_u[:,:rank]                             # svd_u is a unitary if rank=lines or
+                                                           # isometry if rank<lines.
+        svd_v = svd_v[:rank,:]                             # svd_v.T is a unitary if rank=lines=cols
+                                                           # or is always an isometry if lines<cols.
+        singular_values = singular_values[:rank]           # The length of the state vector needs to
+                                                           # be a power of 2.
+        if len(singular_values) == 1:
+            singular_values = np.concatenate((singular_values, [0])) # The length of the state
+                                                                     # vector needs to be a
+                                                                     # power of 2 and >1.
+        singular_values = singular_values / np.linalg.norm(singular_values)
 
-        svd_u = svd_u[:,:rank]                          # Matrix u can be a unitary (k=n) or
-                                                        # isometry (k<n).
-        svd_v = svd_v[:rank,:]                          # If n<m, v.T is always an isometry of
-                                                        # log2(k) to log2(m) (rank<=n).
-                                                        # If n=m, v.T can be a unitary (k=n) or
-                                                        # isometry (k<n).
-        singular_values = singular_values[:rank]        # The length of the state vector needs to
-                                                        # be a power of 2.
-        singular_values[e_rank:] = np.zeros(rank-e_rank) # If k>rank, zeroes out
-                                                                         # the additional elements.
-        if e_rank == 1:
-            singular_values = np.concatenate((singular_values, [0]))     # The length of the state
-                                                                         # vector needs to be a
-                                                                         # power of 2 and >1.
-    singular_values = singular_values / np.linalg.norm(singular_values)
+    return rank, svd_u, svd_v, singular_values
 
+def _create_quantum_circuit(state):
+    n_qubits = int(np.log2(len(state)))
+    odd = n_qubits % 2
     reg_a = QuantumRegister(n_qubits//2 + odd)
     reg_b = QuantumRegister(n_qubits//2)
-
     circuit = QuantumCircuit(reg_a, reg_b)
 
-    if len(singular_values) > 2:
-        circ = initialize(singular_values)
-    else:
-        circ = mottonen(singular_values)
+    return circuit, reg_a, reg_b
 
-    circuit.compose(circ, reg_b[:int( np.log2( len(singular_values) ) )], inplace=True)
+def _encode(data, circuit, reg, isometry_scheme='ccd', unitary_scheme='qsd'):
+    """
+    Encodes data using the most appropriate method.
+    """
+    n_qubits = np.log2(data.shape[0])
+    if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4): # Plesch state preparation.
+        if n_qubits > 1:                    # When n_qubits is even or small, using Plesch
+            gate_u = initialize(data[:,0])  # recursively saves some CNOTs compared to the 1-to-n
+        else:                               # isometry. But it does not change the leading-order
+                                            # term. Using Plesch when n_qubits is odd is more
+                                            # costly than isometry.
+            gate_u = mottonen(data[:,0])    # Ends the "initialize()" recurrence.
+    elif data.shape[0] > data.shape[1]:         # Isometry decomposition.
+        gate_u = decompose_isometry(data, scheme=isometry_scheme)
+    else:                                       # Unitary decomposition.
+        gate_u = decompose_unitary(data, decomposition=unitary_scheme)
 
-    for j in range(int( np.log2( rank ) )):                # Entangles only the necessary qubits,
-        circuit.cx(reg_b[j], reg_a[j])                     # according to rank.
-
-    def _encode(unitary, circuit, reg): # Encodes the data using the most appropriate method:
-        if unitary.shape[1] == 1:                   # State preparation.
-            if unitary.shape[0] > 2:
-                gate_u = initialize(unitary[:,0])
-            else:
-                gate_u = mottonen(unitary[:,0])
-        elif unitary.shape[0] > unitary.shape[1]:   # Isometry decomposition.
-            gate_u = decompose_isometry(unitary, scheme=isometry_scheme)
-        else:                                       # Unitary decomposition.
-            gate_u = decompose_unitary(unitary, decomposition=unitary_scheme)
-
-        circuit.compose(gate_u, reg, inplace=True)  # Apply gate U to the register.
-
-    _encode(svd_u, circuit, reg_b)
-    _encode(svd_v.T, circuit, reg_a)
-
-    return circuit
+    circuit.compose(gate_u, reg, inplace=True)  # Apply gate U to the register.
 
 
 
