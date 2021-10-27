@@ -21,7 +21,6 @@ from qiskit import QuantumCircuit, QuantumRegister
 
 # pylint: disable=maybe-no-member
 
-
 def initialize(state, n_qubits, n_output_values):
     """ State preparation using Ventura and Martinez algorithm quant-ph/9807054
     Algorithm that requires a polynomial number of elementary operations for

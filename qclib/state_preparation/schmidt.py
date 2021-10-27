@@ -26,7 +26,6 @@ from qclib.isometry import decompose as decompose_isometry
 
 # pylint: disable=maybe-no-member
 
-
 def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='qsd'):
     """ State preparation using Schmidt decomposition arXiv:1003.5760
 
@@ -152,7 +151,6 @@ def _initialize_singular_values(circuit, reg_b, singular_values):
     else:
         circ = mottonen(singular_values)
     circuit.compose(circ, reg_b, inplace=True)
-
 
 @deprecation.deprecated(deprecated_in="0.0.7",
                         details="Use the initialize function instead")
