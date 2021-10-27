@@ -81,26 +81,13 @@ def initialize(state, n_qubits, n_output_values):
         circuit.cx(reg_c[1], reg_c[0])
         circuit.x(reg_c[1])
 
-        theta = -2*np.arccos(np.sqrt(idx_p/(idx_p+1))) # This sign is here for the smaller values
-                                                       # of "s" to be represented by negative
-                                                       # amplitudes and the larger ones by positive
-                                                       # amplitudes.
-        lamb = -output_s*2*np.pi/n_output_values # In the paper this negative sign is missing.
-                                                 # Without it the matrix S is not unitary.
-        phi = -lamb
-        circuit.cu(theta, phi, lamb, 0, reg_c[0], reg_c[1])
+        _apply_smatrix(circuit, idx_p, n_output_values, output_s, reg_c)
 
-        if bits_z[0] == 0:
-            circuit.x(reg_x[0])
-        if bits_z[1] == 0:
-            circuit.x(reg_x[1])
+        _flipflop01(bits_z, circuit, reg_x)
 
         circuit.ccx(reg_x[0], reg_x[1], reg_g[0])
 
-        if bits_z[0] == 0:
-            circuit.x(reg_x[0])
-        if bits_z[1] == 0:
-            circuit.x(reg_x[1])
+        _flipflop01(bits_z, circuit, reg_x)
 
         for k in range(2, n_qubits):
             if bits_z[k] == 0:
@@ -122,18 +109,30 @@ def initialize(state, n_qubits, n_output_values):
             if bits_z[k] == 0:
                 circuit.x(reg_x[k])
 
-        if bits_z[0] == 0:
-            circuit.x(reg_x[0])
-        if bits_z[1] == 0:
-            circuit.x(reg_x[1])
+        _flipflop01(bits_z, circuit, reg_x)
 
         circuit.ccx(reg_x[0], reg_x[1], reg_g[0])
 
-        if bits_z[0] == 0:
-            circuit.x(reg_x[0])
-        if bits_z[1] == 0:
-            circuit.x(reg_x[1])
+        _flipflop01(bits_z, circuit, reg_x)
 
     circuit.x(reg_c[1])
 
     return circuit
+
+
+def _apply_smatrix(circuit, idx_p, n_output_values, output_s, reg_c):
+    theta = -2 * np.arccos(np.sqrt(idx_p / (idx_p + 1)))  # This sign is here for the smaller values
+    # of "s" to be represented by negative
+    # amplitudes and the larger ones by positive
+    # amplitudes.
+    lamb = -output_s * 2 * np.pi / n_output_values  # In the paper this negative sign is missing.
+    # Without it the matrix S is not unitary.
+    phi = -lamb
+    circuit.cu(theta, phi, lamb, 0, reg_c[0], reg_c[1])
+
+
+def _flipflop01(bits_z, circuit, reg_x):
+    if bits_z[0] == 0:
+        circuit.x(reg_x[0])
+    if bits_z[1] == 0:
+        circuit.x(reg_x[1])

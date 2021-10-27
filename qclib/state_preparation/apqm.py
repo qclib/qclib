@@ -12,127 +12,93 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+""" https://arxiv.org/abs/2011.07977 """
+
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.util import _compute_matrix_angles
 
 class CVQRAM:
-    """ """
+    """ https://arxiv.org/abs/2011.07977 """
     def __init__(self, nbits, data, mode='v-chain'):
 
         self.initialization(nbits, mode)
-
+        norm = 1
         if mode == 'v-chain':
-            #self.circuit.x(self.u1[0])
-            self.circuit.x(self.u2[0])
+            self.circuit.x(self.qr_u2[0])
         elif mode == 'mct':
-            self.circuit.x(self.u0[1])
+            self.circuit.x(self.qr_u0[1])
 
+        control = range(self.memory.size)
         for binary_string, amplitude in data:
 
-            self._load_binary(binary_string)
-            self._load_superposition(amplitude)
-            self._load_binary(binary_string)
+            self._load_binary(binary_string, mode)
+            self.load_superposition(amplitude, mode, norm, control)
+            self._load_binary(binary_string, mode)
 
     def initialization(self, nbits, mode):
-        self.mode = mode
+        """ Initialize quantum registers"""
+
         self.nbits = nbits
-        self.norm = 1
+
         self.memory = QuantumRegister(self.nbits, name='m')
-        self.control = range(self.memory.size)
 
-        #self.circuit = QuantumCircuit(self.memory, self.u, self.aux)
-        if self.mode=='mct':
-            self.u0 = QuantumRegister(2, name='u0')
-            self.circuit = QuantumCircuit(self.u0 ,self.memory)
-        elif self.mode=='v-chain':
+
+        if mode=='mct':
+            self.qr_u0 = QuantumRegister(2, name='u0')
+            self.circuit = QuantumCircuit(self.qr_u0, self.memory)
+        elif mode=='v-chain':
             self.aux = QuantumRegister(nbits-1, name='anc')
-            self.u1 = QuantumRegister(1, name='u1')
-            self.u2 = QuantumRegister(1, name='u2')
-            self.circuit = QuantumCircuit(self.u1,  self.u2,  self.memory, self.aux,)
+            self.qr_u1 = QuantumRegister(1, name='u1')
+            self.qr_u2 = QuantumRegister(1, name='u2')
+            self.circuit = QuantumCircuit(self.qr_u1, self.qr_u2, self.memory, self.aux, )
 
 
-    # def mcxvchain(self, memory, anc, lst_ctrl, tgt):
-
-    #     self.circuit.rccx(memory[lst_ctrl[0]], memory[lst_ctrl[1]], anc[0])
-    #     for j in range(2, len(lst_ctrl)):
-    #         self.circuit.rccx(memory[lst_ctrl[j]], anc[j - 2], anc[j - 1])
-
-    #     self.circuit.cx(anc[len(lst_ctrl) - 2], tgt)#TODO mudar
-
-    #     for j in reversed(range(2, len(lst_ctrl))):
-    #         self.circuit.rccx(memory[lst_ctrl[j]], anc[j - 2], anc[j - 1])
-    #     self.circuit.rccx(memory[lst_ctrl[0]], memory[lst_ctrl[1]], anc[0])
-
-
-    def _load_binary(self, binary_string):
+    def _load_binary(self, binary_string, mode):
 
         for bit_index, bit in enumerate(binary_string):
 
             if bit == '1':
-                if self.mode=='v-chain':
-                    self.circuit.cx(self.u1[0], self.memory[bit_index])
-                elif self.mode=='mct':
-                    self.circuit.cx(self.u1[1], self.memory[bit_index])
+                if mode=='v-chain':
+                    self.circuit.cx(self.qr_u1[0], self.memory[bit_index])
+                elif mode=='mct':
+                    self.circuit.cx(self.qr_u1[1], self.memory[bit_index])
             elif bit == '0':
                 self.circuit.x(self.memory[bit_index])
 
 
-    # def flip_flop(self):
-    #     for k in self.control:
-    #         self.circuit.cx(self.u[0], self.memory[k])
-
-    # @staticmethod
-    # def select_controls(binary_string):
-    #     control = []
-    #     for k, bit in enumerate(binary_string[::-1]):
-    #         if bit == '1':
-    #             control.append(k)
-    #     return control
-
-    def _load_superposition(self, feature):
+    def load_superposition(self, feature, mode, norm, control):
         """
         Load pattern in superposition
         """
 
-        #alpha, beta, phi = _compute_matrix_angles(feature, self.norm)
-        # gate.u3(0, alpha, beta, phi)
-        alpha, beta, phi = _compute_matrix_angles(feature, self.norm)
-        #U = U3Gate(alpha, beta, phi)
-        # if self.mode == 'noancilla':
-        #     custom = U3Gate(alpha, beta, phi).control(len(self.control))
-        #     self.circuit.append(custom, self.memory[self.control] + [self.u0[0]])
+        alpha, beta, phi = _compute_matrix_angles(feature, norm)
 
-        if self.mode =='v-chain':
+        if mode =='v-chain':
 
-            self.circuit.rccx(self.memory[self.control[0]],
-                              self.memory[self.control[1]], self.aux[0])
+            self.circuit.rccx(self.memory[control[0]],
+                              self.memory[control[1]], self.aux[0])
 
-            for j in range(2, len(self.control)):
-                self.circuit.rccx(self.memory[self.control[j]], self.aux[j - 2], self.aux[j - 1])
+            for j in range(2, len(control)):
+                self.circuit.rccx(self.memory[control[j]], self.aux[j - 2], self.aux[j - 1])
 
-            self.circuit.cx(self.aux[len(self.control) - 2], self.u1[0])
+            self.circuit.cx(self.aux[len(control) - 2], self.qr_u1[0])
 
-            self.circuit.cu3(alpha, beta, phi, self.u1[0], self.u2[0])
+            self.circuit.cu3(alpha, beta, phi, self.qr_u1[0], self.qr_u2[0])
 
-            self.circuit.cx(self.aux[len(self.control) - 2], self.u1[0])
+            self.circuit.cx(self.aux[len(control) - 2], self.qr_u1[0])
 
-            for j in reversed(range(2, len(self.control))):
-                self.circuit.rccx(self.memory[self.control[j]], self.aux[j - 2], self.aux[j - 1])
+            for j in reversed(range(2, len(control))):
+                self.circuit.rccx(self.memory[control[j]], self.aux[j - 2], self.aux[j - 1])
 
-            self.circuit.rccx(self.memory[self.control[0]],
-                              self.memory[self.control[1]], self.aux[0])
+            self.circuit.rccx(self.memory[control[0]],
+                              self.memory[control[1]], self.aux[0])
 
-        if self.mode =='mct':
-            self.circuit.mct(self.memory, self.u0[0])
-            self.circuit.cu3(alpha, beta, phi, self.u0[0], self.u0[1])
-            self.circuit.mct(self.memory, self.u0[0])
-        self.norm = self.norm - np.absolute(np.power(feature, 2))
-        # self.circuit.cu3(alpha, beta, phi, self.aux[0], ancillae[1])
-
-
-
-cvqram = CVQRAM
+        if mode =='mct':
+            self.circuit.mct(self.memory, self.qr_u0[0])
+            self.circuit.cu3(alpha, beta, phi, self.qr_u0[0], self.qr_u0[1])
+            self.circuit.mct(self.memory, self.qr_u0[0])
+        norm = norm - np.absolute(np.power(feature, 2))
 
 def cvqram_initialize(state):
     """
