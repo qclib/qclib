@@ -19,8 +19,7 @@ import numpy as np
 from qclib.state_preparation.ventura import initialize
 from qclib.util import get_state
 
-
-class TestInitialize(TestCase):
+class TestVentura(TestCase):
     """ Testing qclib.state_preparation.ventura.initialize """
     def test_binary_function(self):
         """

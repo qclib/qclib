@@ -28,7 +28,7 @@ from qclib.util import get_state
 backend = Aer.get_backend('qasm_simulator')
 SHOTS = 8192
 
-class TestInitialize(TestCase):
+class TestMottonen(TestCase):
     @staticmethod
     def measurement(circuit, n_qubits, classical_reg):
         circuit.measure(list(range(n_qubits)), classical_reg)
@@ -56,7 +56,7 @@ class TestInitialize(TestCase):
         classical_reg = ClassicalRegister(n_qubits)
         circuit.add_register(classical_reg)
 
-        return TestInitialize.measurement(circuit, n_qubits, classical_reg)
+        return TestMottonen.measurement(circuit, n_qubits, classical_reg)
 
     def test_mottonen_state_real(self):
         state_vector = np.random.rand(32)
@@ -82,7 +82,7 @@ class TestInitialize(TestCase):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        state = TestInitialize.mottonen_experiment(state_vector)
+        state = TestMottonen.mottonen_experiment(state_vector)
 
         self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
                         rtol=1e-01, atol=0.005))
