@@ -21,7 +21,6 @@ from qclib.memory.pqm import initialize as pqm
 from qclib.state_preparation.schmidt import initialize
 from qclib.util import get_counts
 
-
 class TestPQM(TestCase):
     """ Testing qclib.memory.pqm"""
     @staticmethod
