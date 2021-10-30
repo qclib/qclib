@@ -61,16 +61,20 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
         QuantumCircuit to initialize the state.
     """
 
+    # Schmidt decomposition
     svd_u, singular_values, svd_v = _svd(state_vector)
 
     rank, svd_u, svd_v, singular_values = \
     _low_rank_approximation(low_rank, svd_u, svd_v, singular_values)
+    
     circuit, reg_a, reg_b = _create_quantum_circuit(state_vector)
 
-    size_sv = len(singular_values)                                       # Phase 1. Encodes the
-    reg_sv = reg_b[:int( np.log2( size_sv ) )]                           # singular values.
-
+    # Phase 1. Encodes the singular values.
     if rank != 1:
+        size_sv = len(singular_values)
+        ebits = int(np.log2(size_sv))
+        reg_sv = reg_b[:ebits]
+
         _encode(singular_values.reshape(size_sv, 1), circuit, reg_sv,
                                             isometry_scheme, unitary_scheme)
 
