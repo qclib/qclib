@@ -61,12 +61,13 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
         QuantumCircuit to initialize the state.
     """
 
+
     # Schmidt decomposition
     svd_u, singular_values, svd_v = _svd(state_vector)
 
     rank, svd_u, svd_v, singular_values = \
     _low_rank_approximation(low_rank, svd_u, svd_v, singular_values)
-    
+
     circuit, reg_a, reg_b = _create_quantum_circuit(state_vector)
 
     # Phase 1. Encodes the singular values.
@@ -85,12 +86,10 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
     # Phase 3 and 4 encode gates U and V.T
     _encode(svd_u, circuit, reg_b, isometry_scheme, unitary_scheme)
     _encode(svd_v.T, circuit, reg_a, isometry_scheme, unitary_scheme)
-
     return circuit
 
 
 def _svd(state_vector):
-    """ Singular-value decomposition."""
     state = np.copy(state_vector)
 
     n_qubits = int(np.log2(len(state)))
@@ -106,23 +105,28 @@ def _svd(state_vector):
 
 
 def _low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
-    """ Low-rank approximation Changes svd_u, svd_v and singular_values dimensions."""
+    rank = svd_u.shape[0]
+    e_rank = sum(j > 10**-15 for j in singular_values)     # Effective rank.
 
-    rank = sum(j > 10 ** -15 for j in singular_values)
+    if 0 < low_rank < rank or e_rank < rank:               # CCD is not effective when m=n-1.
+                                                           # If CSD is used, this if can be removed.
+        if 0 < low_rank < e_rank:
+            e_rank = low_rank                              # Low-rank approximation
 
-    # Low-rank approximation
-    if 0 < low_rank < rank:
-        if 0 < low_rank < rank:
-            rank = low_rank
+        rank = int(2**np.ceil(np.log2(e_rank)))            # To use isometries, the rank needs to be
+                                                           # a power of 2.
+        svd_u = svd_u[:,:rank]                             # svd_u is a unitary if rank=lines or
+                                                           # isometry if rank<lines.
+        svd_v = svd_v[:rank,:]                             # svd_v.T is a unitary if rank=lines=cols
+                                                           # or is always an isometry if lines<cols.
+        singular_values = singular_values[:rank]           # The length of the state vector needs to
+                                                           # be a power of 2.
+        if len(singular_values) == 1:
+            singular_values = np.concatenate((singular_values, [0])) # The length of the state
+                                                                     # vector needs to be a
+                                                                     # power of 2 and >1.
+        singular_values = singular_values / np.linalg.norm(singular_values)
 
-    # To use isometries, the rank needs to be a power of 2.
-    rank = int(2 ** np.ceil(np.log2(rank)))
-
-    svd_u = svd_u[:, :rank]
-    svd_v = svd_v[:rank, :]
-    singular_values = singular_values[:rank]
-
-    singular_values = singular_values / np.linalg.norm(singular_values)
 
     return rank, svd_u, svd_v, singular_values
 
