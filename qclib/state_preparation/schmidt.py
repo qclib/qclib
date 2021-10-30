@@ -105,8 +105,8 @@ def _svd(state_vector):
 
 
 def _low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
-    rank = svd_u.shape[0]
-    effective_rank = sum(j > 10**-15 for j in singular_values)     # Effective rank.
+    rank = svd_u.shape[0] # max rank
+    effective_rank = sum(j > 10**-15 for j in singular_values)
 
     if 0 < low_rank < rank or effective_rank < rank:
         if 0 < low_rank < effective_rank:
