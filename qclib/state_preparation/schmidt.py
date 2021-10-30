@@ -139,17 +139,19 @@ def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
     """
 
     n_qubits = len(reg)
+    _, svals, _ = _svd(data[:, 0])
+    rank = sum(j > 10 ** -15 for j in svals)
 
-    if data.shape[1] == 1:
+    if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4 or rank==1):
+
         # state preparation
         if n_qubits > 1:
             gate_u = initialize(
                 data[:, 0],
                 isometry_scheme=iso_scheme,
                 unitary_scheme=uni_scheme)
-
         else:
-            gate_u = mottonen(data[:,0])
+            gate_u = mottonen(data[:, 0])
 
     elif data.shape[0] > data.shape[1]:
         gate_u = decompose_isometry(data, scheme=iso_scheme)
