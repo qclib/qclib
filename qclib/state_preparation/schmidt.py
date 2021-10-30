@@ -26,6 +26,7 @@ from qclib.isometry import decompose as decompose_isometry
 
 # pylint: disable=maybe-no-member
 
+
 def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='qsd'):
     """ State preparation using Schmidt decomposition arXiv:1003.5760
 
@@ -73,14 +74,16 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
         _encode(singular_values.reshape(size_sv, 1), circuit, reg_sv,
                                             isometry_scheme, unitary_scheme)
 
-    for j in range(int( np.log2( rank ) )):                              # Phase 2. Entangles only
-        circuit.cx(reg_b[j], reg_a[j])                                   # the necessary qubits,
-                                                                         # according to rank.
-    _encode(svd_u, circuit, reg_b, isometry_scheme, unitary_scheme)      # Phase 3. Encodes unitary
-                                                                         # or isometry U.
-    _encode(svd_v.T, circuit, reg_a, isometry_scheme, unitary_scheme)    # Phase 4. Encodes unitary
-                                                                         # or isometry V^T.
+    # Phase 2. Entangles only the necessary qubits, according to rank.
+    for j in range(int( np.log2( rank ) )):
+        circuit.cx(reg_b[j], reg_a[j])
+
+    # Phase 3 and 4 encode gates U and V.T
+    _encode(svd_u, circuit, reg_b, isometry_scheme, unitary_scheme)
+    _encode(svd_v.T, circuit, reg_a, isometry_scheme, unitary_scheme)
+
     return circuit
+
 
 def _svd(state_vector):
     """ Singular-value decomposition."""
@@ -97,6 +100,7 @@ def _svd(state_vector):
 
     return svd_u, singular_values, svd_v
 
+
 def _low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
     """ Low-rank approximation Changes svd_u, svd_v and singular_values dimensions."""
 
@@ -110,13 +114,14 @@ def _low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
     # To use isometries, the rank needs to be a power of 2.
     rank = int(2 ** np.ceil(np.log2(rank)))
 
-    svd_u = svd_u[:,:rank]
-    svd_v = svd_v[:rank,:]
+    svd_u = svd_u[:, :rank]
+    svd_v = svd_v[:rank, :]
     singular_values = singular_values[:rank]
 
     singular_values = singular_values / np.linalg.norm(singular_values)
 
     return rank, svd_u, svd_v, singular_values
+
 
 def _create_quantum_circuit(state):
     n_qubits = int(np.log2(len(state)))
@@ -126,6 +131,7 @@ def _create_quantum_circuit(state):
     circuit = QuantumCircuit(reg_a, reg_b)
 
     return circuit, reg_a, reg_b
+
 
 def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
     """
