@@ -99,9 +99,11 @@ def _svd(state_vector):
 
 def _low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
     rank = svd_u.shape[0]
-    if 0 < low_rank < rank:
-        e_rank = sum(j > 10**-16 for j in singular_values) # Effective rank.
-        if low_rank < e_rank:
+    e_rank = sum(j > 10**-15 for j in singular_values)     # Effective rank.
+
+    if 0 < low_rank < rank or e_rank < rank:               # CCD is not effective when m=n-1.
+                                                           # If CSD is used, this if can be removed.
+        if 0 < low_rank < e_rank:
             e_rank = low_rank                              # Low-rank approximation
 
         rank = int(2**np.ceil(np.log2(e_rank)))            # To use isometries, the rank needs to be
@@ -129,24 +131,31 @@ def _create_quantum_circuit(state):
 
     return circuit, reg_a, reg_b
 
-def _encode(data, circuit, reg, isometry_scheme='ccd', unitary_scheme='qsd'):
+def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
     """
     Encodes data using the most appropriate method.
     """
-    n_qubits = np.log2(data.shape[0])
-    if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4): # Plesch state preparation.
-        if n_qubits > 1:                    # When n_qubits is even or small, using Plesch
-            gate_u = initialize(data[:,0])  # recursively saves some CNOTs compared to the 1-to-n
-        else:                               # isometry. But it does not change the leading-order
-                                            # term. Using Plesch when n_qubits is odd is more
-                                            # costly than isometry.
-            gate_u = mottonen(data[:,0])    # Ends the "initialize()" recurrence.
-    elif data.shape[0] > data.shape[1]:         # Isometry decomposition.
-        gate_u = decompose_isometry(data, scheme=isometry_scheme)
-    else:                                       # Unitary decomposition.
-        gate_u = decompose_unitary(data, decomposition=unitary_scheme)
+    rank = 0
+    if data.shape[1] == 1:
+        _, svals, _ = _svd(data[:,0])
+        rank = sum(j > 10**-15 for j in svals)
 
-    circuit.compose(gate_u, reg, inplace=True)  # Apply gate U to the register.
+    n_qubits = np.log2(data.shape[0])
+    if data.shape[1] == 1 and (n_qubits % 2 == 0 or
+                               n_qubits < 4 or
+                               rank == 1):      # Plesch state preparation.
+        if n_qubits > 1:                        # When n_qubits is even or small, using Plesch
+            gate_u = initialize(data[:,0],      # recursively saves some CNOTs compared to the
+                     isometry_scheme=iso_scheme,# 1-to-n isometry. But it does not change the
+                     unitary_scheme=uni_scheme) # leading-order term. Using Plesch when n_qubits
+        else:                                   # is odd is more costly than isometry.
+            gate_u = mottonen(data[:,0])        # Ends the "initialize()" recurrence.
+    elif data.shape[0] > data.shape[1]:
+        gate_u = decompose_isometry(data, scheme=iso_scheme)       # Isometry decomposition.
+    else:
+        gate_u = decompose_unitary(data, decomposition=uni_scheme) # Unitary decomposition.
+
+    circuit.compose(gate_u, reg, inplace=True)                     # Apply gate U to the register.
 
 
 
