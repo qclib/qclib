@@ -69,9 +69,9 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
     size_sv = len(singular_values)                                       # Phase 1. Encodes the
     reg_sv = reg_b[:int( np.log2( size_sv ) )]                           # singular values.
 
-
-    _encode(singular_values.reshape(size_sv, 1), circuit, reg_sv,
-                                        isometry_scheme, unitary_scheme)
+    if rank != 1:
+        _encode(singular_values.reshape(size_sv, 1), circuit, reg_sv,
+                                            isometry_scheme, unitary_scheme)
 
     for j in range(int( np.log2( rank ) )):                              # Phase 2. Entangles only
         circuit.cx(reg_b[j], reg_a[j])                                   # the necessary qubits,
@@ -114,9 +114,6 @@ def _low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
     svd_v = svd_v[:rank,:]
     singular_values = singular_values[:rank]
 
-    if len(singular_values) == 1:
-        singular_values = np.concatenate((singular_values, [0]))
-
     singular_values = singular_values / np.linalg.norm(singular_values)
 
     return rank, svd_u, svd_v, singular_values
@@ -134,27 +131,27 @@ def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
     """
     Encodes data using the most appropriate method.
     """
-    rank = 0
+
+    n_qubits = len(reg)
+
     if data.shape[1] == 1:
-        _, svals, _ = _svd(data[:,0])
-        rank = sum(j > 10**-15 for j in svals)
+        # state preparation
+        if n_qubits > 1:
+            gate_u = initialize(
+                data[:, 0],
+                isometry_scheme=iso_scheme,
+                unitary_scheme=uni_scheme)
 
-    n_qubits = np.log2(data.shape[0])
-    if data.shape[1] == 1 and (n_qubits % 2 == 0 or
-                               n_qubits < 4 or
-                               rank == 1):      # Plesch state preparation.
-        if n_qubits > 1:                        # When n_qubits is even or small, using Plesch
-            gate_u = initialize(data[:,0],      # recursively saves some CNOTs compared to the
-                     isometry_scheme=iso_scheme,# 1-to-n isometry. But it does not change the
-                     unitary_scheme=uni_scheme) # leading-order term. Using Plesch when n_qubits
-        else:                                   # is odd is more costly than isometry.
-            gate_u = mottonen(data[:,0])        # Ends the "initialize()" recurrence.
+        else:
+            gate_u = mottonen(data[:,0])
+
     elif data.shape[0] > data.shape[1]:
-        gate_u = decompose_isometry(data, scheme=iso_scheme)       # Isometry decomposition.
+        gate_u = decompose_isometry(data, scheme=iso_scheme)
     else:
-        gate_u = decompose_unitary(data, decomposition=uni_scheme) # Unitary decomposition.
+        gate_u = decompose_unitary(data, decomposition=uni_scheme)
 
-    circuit.compose(gate_u, reg, inplace=True)                     # Apply gate U to the register.
+    # Apply gate U to the register reg
+    circuit.compose(gate_u, reg, inplace=True)
 
 
 
