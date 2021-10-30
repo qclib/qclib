@@ -86,6 +86,7 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
     # Phase 3 and 4 encode gates U and V.T
     _encode(svd_u, circuit, reg_b, isometry_scheme, unitary_scheme)
     _encode(svd_v.T, circuit, reg_a, isometry_scheme, unitary_scheme)
+    
     return circuit
 
 
