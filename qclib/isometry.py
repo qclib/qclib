@@ -259,18 +259,23 @@ def _uc_unitaries(iso, n_qubits, col_index, bit_index):
 
 def _unitary(iso, basis=0): #  Lemma2 of https://arxiv.org/abs/1501.06911
     iden = np.identity(2)
-
     iso_norm = np.linalg.norm(iso, axis=0)[0]
-    psi = iso / iso_norm
 
-    psi_dagger = np.conj(psi.T)
+    if iso_norm != 0.0:
+        psi = iso / iso_norm
 
-    phi = -psi_dagger.dot( iden[:,[1]] ) * iden[:,[0]] + psi_dagger.dot( iden[:,[0]] ) * iden[:,[1]]
-    phi_dagger = np.conj(phi.T)
+        psi_dagger = np.conj(psi.T)
 
-    unitary = np.kron( iden[:,[basis]], psi_dagger ) + np.kron( iden[:,[-(basis+1)]], phi_dagger)
+        phi = -psi_dagger.dot( iden[:,[1]] ) * \
+                    iden[:,[0]] + psi_dagger.dot( iden[:,[0]] ) * iden[:,[1]]
+        phi_dagger = np.conj(phi.T)
 
-    return unitary
+        unitary = np.kron( iden[:,[basis]], psi_dagger ) + \
+                    np.kron( iden[:,[-(basis+1)]], phi_dagger)
+
+        return unitary
+
+    return iden
 
 def _a(col_index, bit_index):
     return col_index // 2**bit_index
