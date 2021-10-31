@@ -133,7 +133,6 @@ def _create_quantum_circuit(state):
 
     return circuit, reg_a, reg_b
 
-
 def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
     """
     Encodes data using the most appropriate method.
