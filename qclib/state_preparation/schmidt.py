@@ -140,8 +140,10 @@ def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
     """
 
     n_qubits = len(reg)
-    _, svals, _ = _svd(data[:, 0])
-    rank = sum(j > 10 ** -15 for j in svals)
+    rank = 0
+    if data.shape[1] == 1:
+        _, svals, _ = _svd(data[:, 0])
+        rank = sum(j > 10 ** -15 for j in svals)
 
     if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4 or rank==1):
 
