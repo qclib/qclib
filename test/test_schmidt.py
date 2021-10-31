@@ -54,7 +54,7 @@ class TestSchmidt(TestCase):
         sum_values = sum(counts.values())
         return [ value/sum_values for (key, value) in counts_with_zeros.items() ]
 
-    def _test_initialize_rank(self, rank, max_mae=10**-17):
+    def _test_initialize_rank(self, rank, max_mae=10**-15):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
