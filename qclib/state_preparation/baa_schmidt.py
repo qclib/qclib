@@ -1,19 +1,57 @@
-import datetime
 import itertools
 import logging
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 
 import numpy as np
 import qiskit
 from numpy import ndarray
-from qiskit.circuit.random import random_circuit
-from qiskit.providers import aer
 
-from qclib.state_preparation.schmidt.models import Node, Split
-from qclib.state_preparation.util.entanglement_measure import calculate_entropy_meyer_wallach, compute_Q_ptrace
+from qclib.state_preparation import schmidt
 
-logging.basicConfig(format='%(asctime)s::' + logging.BASIC_FORMAT, level='ERROR')
 LOG = logging.getLogger(__name__)
+
+
+class Split:
+
+    fidelity_loss: float
+    subsystem: Optional[Tuple[int, ...]]
+
+    def __init__(self, subsystem: Optional[Tuple[int, ...]], fidelity_loss: float):
+        self.subsystem = subsystem
+        self.fidelity_loss = fidelity_loss
+
+    def __str__(self):
+        return f'{type(self).__name__}|{self.subsystem}|'
+
+    def __repr__(self):
+        return str(self)
+
+
+class Node:
+    split_program: Tuple[Split, ...]
+    vectors: List[ndarray]
+    cnot_saving: int
+    fidelity_loss: float
+
+    def __init__(self, split_program: Tuple[Split, ...], vectors: List[np.ndarray], fidelity_loss: float, cnot_saving: int):
+        self.fidelity_loss = fidelity_loss
+        self.cnot_saving = cnot_saving
+        self.vectors = vectors
+        self.split_program = split_program
+
+    def __getitem__(self, item):
+        data = [self.split_program, self.vectors, self.fidelity_loss, self.cnot_saving]
+        return data[item]
+
+    def __iter__(self):
+        data = [self.split_program, self.vectors, self.fidelity_loss, self.cnot_saving]
+        return iter(data)
+
+    def __str__(self):
+        return f'Node{(self.split_program, self.fidelity_loss, self.cnot_saving, self.vectors)}'
+
+    def __repr__(self):
+        return str(self)
 
 
 def sp_cnots(n) -> int:
@@ -95,7 +133,6 @@ def get_nodes_from_activations(vectors: List[np.ndarray], subsystem_list: List[L
                 vector_2 = Vh.T[:, 0]
                 new_vectors.append(vector_1)
                 new_vectors.append(vector_2)
-                # k = to_qubits(min(vector_1.shape[0], vector_2.shape[0]))
                 cnots_phase_3 = sp_cnots(to_qubits(vector_1.shape[0]))
                 cnots_phase_4 = sp_cnots(to_qubits(vector_2.shape[0]))
                 cnots_originally = sp_cnots(to_qubits(vector.shape[0]))
@@ -140,45 +177,62 @@ def search_best_node(vectors: List[ndarray], running_cnot_saving: int, running_f
 
 
 def adaptive_approximation(vector: np.ndarray, max_fidelity_loss: float) -> Optional[Node]:
-    LOG.debug('Creating Graph')
-    # fidelity_loss, product_state = get_fidelity_loss(vector, return_product_state=True)
-
-    # if fidelity_loss <= max_fidelity_loss:
-    #     LOG.debug(f'Product State is within limits {fidelity_loss} <= {max_fidelity_loss}.')
-    #     return product_state
-
     best_node: Optional[Node] = search_best_node([vector], 0, 0.0, max_fidelity_loss)
     LOG.debug(f'Best Node: {best_node}')
     return best_node
 
 
-if __name__ == "__main__":
-    exp_time_start = datetime.datetime.now()
-    LOG.setLevel('INFO')
-    num_qubits = 4
-    mw_limit_lower = 0.5
-    mw_limit_upper = 0.6
-    for _ in range(10):
-        mw = -1.0
-        while mw < mw_limit_lower or mw > mw_limit_upper:
-            qc: qiskit.QuantumCircuit = random_circuit(num_qubits, 2*num_qubits)
-            job: aer.AerJob = qiskit.execute(qc, backend=aer.StatevectorSimulator())
-            vector = job.result().get_statevector()
-            mw = compute_Q_ptrace(vector)
-            assert abs(mw - calculate_entropy_meyer_wallach(vector)) < 1e-3
+def initialize(state_vector, max_fidelity_loss=0.0, isometry_scheme='ccd', unitary_scheme='qsd'):
+    """ State preparation using the bounded approximation algorithm via Schmidt decomposition arXiv:1003.5760
 
-        LOG.debug(f"The Circuit\n{qc.draw(fold=-1)}")
-        LOG.debug(f"Vector: {np.linalg.norm(vector)}\n {vector}")
-        LOG.debug(f"Meyer-Wallach: {mw}.")
+        For instance, to initialize the state a|0> + b|1>
+            $ state = [a, b]
+            $ circuit = initialize(state)
 
-        start = datetime.datetime.now()
-        max_fidelity_loss = 0.1
-        node = adaptive_approximation(vector, max_fidelity_loss)
-        end = datetime.datetime.now()
+        Parameters
+        ----------
+        state_vector: list of float or array-like
+            A unit vector representing a quantum state.
+            Values are amplitudes.
 
-        if node is None:
-            LOG.info(f'[{max_fidelity_loss}] No approximation could be found (MW: {mw}). ({end - start})')
+        max_fidelity_loss: float
+            ``state`` allowed (fidelity) error for approximation (0 <= ``max_fidelity_loss`` <= 1).
+            If ``max_fidelity_loss`` is not in the valid range, it will be ignored.
+
+        isometry_scheme: string
+            Scheme used to decompose isometries.
+            Possible values are ``'knill'`` and ``'ccd'`` (column-by-column decomposition).
+            Default is ``isometry_scheme='ccd'``.
+
+        unitary_scheme: string
+            Scheme used to decompose unitaries.
+            Possible values are ``'csd'`` (cosine-sine decomposition) and ``'qsd'`` (quantum
+            Shannon decomposition).
+            Default is ``unitary_scheme='qsd'``.
+
+        Returns
+        -------
+        circuit: QuantumCircuit
+            QuantumCircuit to initialize the state.
+        """
+    if max_fidelity_loss > 1 or max_fidelity_loss < 0:
+        max_fidelity_loss = 0.0
+
+    node_option: Optional[Node] = adaptive_approximation(state_vector, max_fidelity_loss)
+    if node_option is None:
+        return schmidt.initialize(state_vector, low_rank=-1, isometry_scheme=isometry_scheme, unitary_scheme=unitary_scheme)
+
+    num_qubits = to_qubits(len(state_vector))
+    qc = qiskit.QuantumCircuit(num_qubits)
+    offset = 0
+    for vec in node_option.vectors:
+        vec_num_qubits = to_qubits(len(vec))
+        if vec_num_qubits == 1:
+            qc_vec = qiskit.QuantumCircuit(1)
+            qc_vec.initialize(vec)
         else:
-            moettoenen_sp = sum([2**n for n in range(1, num_qubits)])
-            LOG.info(f'[{max_fidelity_loss}] With fidelity loss {node.fidelity_loss} (MW: {mw}) we can '
-                     f'save {node.cnot_saving} of {sp_cnots(num_qubits)} (Moettonen:{moettoenen_sp}) CNOT-gates. ({end - start})')
+            qc_vec = schmidt.initialize(vec, low_rank=-1, isometry_scheme=isometry_scheme, unitary_scheme=unitary_scheme)
+        affected_qubits = list(range(offset, offset + vec_num_qubits))
+        qc = qc.compose(qc_vec, affected_qubits)
+        offset += vec_num_qubits
+    return qc
