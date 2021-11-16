@@ -64,8 +64,10 @@ class TestBaaSchmidt(TestCase):
 
         state = get_state(circuit)
 
+        expected_state = state
         node = adaptive_approximation(state_vector, fidelity_loss)
-        expected_state = TestBaaSchmidt.calculate_state(node.vectors)
+        if node is not None:
+            expected_state = TestBaaSchmidt.calculate_state(node.vectors)
 
         self.assertTrue(np.allclose(expected_state, state))
 
