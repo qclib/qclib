@@ -1,4 +1,3 @@
 qiskit
 graphviz
 deprecation
-qutip
