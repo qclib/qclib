@@ -1,69 +1,95 @@
-import datetime
-import logging
+# Copyright 2021 qclib project.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Tests for the baa_schmidt.py module.
+"""
+
+from unittest import TestCase
 from typing import List
-
 import numpy as np
-import qiskit
-from qiskit.circuit.random import random_circuit
-from qiskit.providers import aer
+from qiskit import ClassicalRegister, execute, Aer
+from qclib.util import get_state
+from qclib.state_preparation.baa_schmidt import initialize
+from qclib.state_preparation.util.baa import adaptive_approximation
 
-from qclib.state_preparation import schmidt
-from qclib.state_preparation.baa_schmidt import adaptive_approximation, initialize
-from qclib.state_preparation.util.entanglement_measure import calculate_entropy_meyer_wallach, compute_Q_ptrace
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
 
-logging.basicConfig(format='%(asctime)s::' + logging.BASIC_FORMAT, level='ERROR')
-LOG = logging.getLogger(__name__)
+class TestBaaSchmidt(TestCase):
+    @staticmethod
+    def calculate_state(vectors: List[np.ndarray]):
+        state = np.ones(1)
+        for vec in vectors:
+            state = np.kron(vec, state)
+        return state
 
+    @staticmethod
+    def get_counts(circuit):
+        n_qubits = circuit.num_qubits
+        classical_reg = ClassicalRegister(n_qubits)
+        circuit.add_register(classical_reg)
+        circuit.measure(list(range(n_qubits)), classical_reg)
 
-def calculate_state(vectors: List[np.ndarray]):
-    state = np.ones(1)
-    for p in vectors:
-        state = np.kron(p, state)
-    return state
+        backend = Aer.get_backend('qasm_simulator')
+        counts = execute(circuit, backend, shots=8192).result().get_counts()
 
+        counts_with_zeros = {}
+        for i in range(2**n_qubits):
+            pattern = '{:0{}b}'.format(i, n_qubits)
+            if pattern in counts:
+                counts_with_zeros[pattern] = counts[pattern]
+            else:
+                counts_with_zeros[pattern] = 0.0
 
-# TODO: do tests!!!
-if __name__ == "__main__":
-    exp_time_start = datetime.datetime.now()
-    LOG.setLevel('INFO')
-    num_qubits = 4
-    mw_limit_lower = 0.1
-    mw_limit_upper = 0.3
-    for _ in range(10):
-        mw = -1.0
-        while mw < mw_limit_lower or mw > mw_limit_upper:
-            qc: qiskit.QuantumCircuit = random_circuit(num_qubits, 2*num_qubits)
-            job: aer.AerJob = qiskit.execute(qc, backend=aer.StatevectorSimulator())
-            vector = job.result().get_statevector()
-            mw = compute_Q_ptrace(vector)
-            assert abs(mw - calculate_entropy_meyer_wallach(vector)) < 1e-3
+        sum_values = sum(counts.values())
+        return [ value/sum_values for (key, value) in counts_with_zeros.items() ]
 
-        LOG.debug(f"The Circuit\n{qc.draw(fold=-1)}")
-        LOG.debug(f"Vector: {np.linalg.norm(vector)}\n {vector}")
-        LOG.debug(f"Meyer-Wallach: {mw}.")
+    def _test_initialize_loss(self, fidelity_loss):
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
 
-        start = datetime.datetime.now()
-        max_fidelity_loss = 0.1
-        node = adaptive_approximation(vector, max_fidelity_loss)
-        end = datetime.datetime.now()
+        circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss)
 
-        expected_state = calculate_state(node.vectors)
-        expected_overlap = np.abs(np.vdot(vector, expected_state)) ** 2
+        state = get_state(circuit)
 
-        qc = initialize(vector, max_fidelity_loss)
-        qc_benchmark = schmidt.initialize(vector)
-        qc_basis = qiskit.transpile(qc, basis_gates=['u', 'cx'])
-        qc_benchmark = qiskit.transpile(qc_benchmark, basis_gates=['u', 'cx'])
+        node = adaptive_approximation(state_vector, fidelity_loss)
+        expected_state = TestBaaSchmidt.calculate_state(node.vectors)
 
-        needed_cnots = qc_basis.num_nonlocal_gates()
-        needed_cnots_benchmark = qc_benchmark.num_nonlocal_gates()
+        self.assertTrue(np.allclose(expected_state, state))
 
-        LOG.info(f'State Preparation (MW: {mw}) has now {needed_cnots} from {needed_cnots_benchmark} CNOT-gates '
-                 f'with max fidelity loss {max_fidelity_loss}. ({end - start})')
-        pass
-        # if node is None:
-        #     LOG.info(f'[{max_fidelity_loss}] No approximation could be found (MW: {mw}). ({end - start})')
-        # else:
-        #     moettoenen_sp = sum([2**n for n in range(1, num_qubits)])
-        #     LOG.info(f'[{max_fidelity_loss}] With fidelity loss {node.fidelity_loss} (MW: {mw}) we can '
-        #              f'save {node.cnot_saving} of {sp_cnots(num_qubits)} (Moettonen:{moettoenen_sp}) CNOT-gates. ({end - start})')
+    def test_initialize_loss(self):
+        for loss in range(1, 10):
+            self._test_initialize_loss(loss/10)
+
+    def test_initialize_no_loss(self):
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = initialize(state_vector)
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))
+
+    def test_measurement_no_loss(self):
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = initialize(state_vector)
+
+        state = TestBaaSchmidt.get_counts(circuit)
+
+        self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
+                        rtol=1e-01, atol=0.005))
