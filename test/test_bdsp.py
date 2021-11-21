@@ -16,11 +16,12 @@
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister, Aer
+from qiskit import ClassicalRegister
+from qiskit.providers.aer.backends import AerSimulator
 from qclib.state_preparation.bdsp import initialize
 from .util import measurement
 
-backend = Aer.get_backend('qasm_simulator')
+backend = AerSimulator()
 SHOTS = 8192
 
 

@@ -18,14 +18,15 @@ Tests for the mottonen.py module.
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister, execute, Aer
+from qiskit import ClassicalRegister, execute
+from qiskit.providers.aer.backends import AerSimulator
 from qclib.state_preparation.mottonen import initialize
 from qclib.util import get_state
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 
-backend = Aer.get_backend('qasm_simulator')
+backend = AerSimulator()
 SHOTS = 8192
 
 class TestMottonen(TestCase):
