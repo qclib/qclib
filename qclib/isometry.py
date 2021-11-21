@@ -27,7 +27,7 @@ from qiskit.extensions.quantum_initializer.uc import UCGate
 
 # pylint: disable=maybe-no-member
 
-def decompose(isometry, scheme='ccd'):
+def decompose(isometry, scheme='ccd', low_rank=0, max_fidelity_loss=0.0):
     """
     Decompose an isometry from m to n qubits.
     In particular, it decomposes unitaries on n qubits (m=n) or prepare a
@@ -38,6 +38,17 @@ def decompose(isometry, scheme='ccd'):
             complex 2^n×2^m array with orthonormal columns.
         scheme (str): method to decompose the isometry ('knill', 'ccd', 'csd').
             Default is scheme='ccd'.
+        low_rank (int):
+            ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
+            If ``low_rank`` is not in the valid range, it will be ignored.
+            This parameter limits the rank of the Schmidt decomposition. If the Schmidt rank
+            of the state decomposition is greater than ``low_rank``, a low-rank approximation
+            is applied.
+            If the parameters ``low_rank`` and ``max_fidelity_loss`` are used simultaneously,
+            the fidelity of the final state may be less than 1-``max_fidelity_error`` .
+        max_fidelity_loss (float):
+            ``state`` allowed (fidelity) error for approximation (0 <= ``max_fidelity_loss`` <= 1).
+            If ``max_fidelity_loss`` is not in the valid range, it will be ignored.
     Returns:
         QuantumCircuit: a quantum circuit with the isometry attached.
     Raises:
@@ -64,7 +75,7 @@ def decompose(isometry, scheme='ccd'):
     if scheme == 'ccd':
         return _ccd(iso, log_lines, log_cols)
 
-    return _knill(iso, log_lines, log_cols)
+    return _knill(iso, log_lines, log_cols, low_rank, max_fidelity_loss)
 
 
 
@@ -100,7 +111,7 @@ def _is_isometry(iso, log_cols):
 
 
 
-def _knill(iso, log_lines, log_cols):
+def _knill(iso, log_lines, log_cols, low_rank=0, max_fidelity_loss=0.0):
     if log_lines < 2:
         raise ValueError(
             "Knill decomposition does not work on a 1 qubit isometry (N=2)."
@@ -131,21 +142,21 @@ def _knill(iso, log_lines, log_cols):
     reg = QuantumRegister(log_lines)
     circuit = QuantumCircuit(reg)
 
-    from qclib.state_preparation.schmidt import initialize as schmidt # pylint: disable=import-outside-toplevel
+    from qclib.state_preparation.baa_schmidt import initialize as schmidt # pylint: disable=import-outside-toplevel
 
     for i in range(2**log_lines):                            # The eigenvalues are not necessarily
                                                              # ordered.
         if np.abs(arg[i]) > 10**-15:
             state = eigvec[:,i]
 
-            circuit.compose( schmidt(state).inverse(), reg, inplace=True )
-
+            circuit.compose( schmidt(state, low_rank, max_fidelity_loss).inverse(),
+                                                                    reg, inplace=True )
             circuit.x(list(range(log_lines)))
             circuit.mcp(arg[i], list(range(log_lines-1)), log_lines-1)
             circuit.x(list(range(log_lines)))
 
-            circuit.compose( schmidt(state)          , reg, inplace=True )
-
+            circuit.compose( schmidt(state, low_rank, max_fidelity_loss),
+                                                                    reg, inplace=True )
     return circuit
 
 
@@ -277,11 +288,12 @@ def _unitary(iso, basis=0): #  Lemma2 of https://arxiv.org/abs/1501.06911
 
     return iden
 
-def _a(col_index, bit_index):
-    return col_index // 2**bit_index
-
-def _b(col_index, bit_index):
-    return col_index - (_a(col_index, bit_index) * 2**bit_index)
+def _a(col_index, bit_index):              # col_index >> bit_index.
+    return col_index // 2**bit_index       # Returns int representing n-bit_index most
+                                           # significant bits.
+def _b(col_index, bit_index):              # col_index ^ ((col_index >> bit_index) << bit_index)
+    return col_index - (_a(col_index, bit_index) * 2**bit_index) # Returns int representing
+                                                                 # bit_index less significant bits.
 
 def _k_s(col_index, bit_index):
     return int((col_index & 2**bit_index) / 2**bit_index) # Returns the bit value at bit_index
