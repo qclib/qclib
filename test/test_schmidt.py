@@ -18,7 +18,8 @@ Tests for the schmidt.py module.
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister, execute, Aer
+from qiskit import ClassicalRegister, execute, transpile
+from qiskit.providers.aer.backends import AerSimulator
 from qclib.state_preparation.schmidt import initialize
 from qclib.util import get_state
 
@@ -40,7 +41,7 @@ class TestSchmidt(TestCase):
         circuit.add_register(classical_reg)
         circuit.measure(list(range(n_qubits)), classical_reg)
 
-        backend = Aer.get_backend('qasm_simulator')
+        backend = AerSimulator()
         counts = execute(circuit, backend, shots=8192).result().get_counts()
 
         counts_with_zeros = {}
@@ -106,3 +107,17 @@ class TestSchmidt(TestCase):
 
     def test_initialize_rank_1(self):
         self._test_initialize_rank(1, max_mae=0.0825)
+
+    def test_cnot_count_rank_1(self):
+        # Builds a rank 1 state.
+        state_vector = [1]
+        for _ in range(5):
+            vec = np.random.rand(2) + np.random.rand(2) * 1j
+            vec = vec / np.linalg.norm(vec)
+            state_vector = np.kron(state_vector, vec)
+
+        circuit = initialize(state_vector)
+        transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=3)
+
+        # The cnots count must be zero (i.e. not present in the dictionary).
+        self.assertTrue('cx' not in transpiled_circuit.count_ops())
