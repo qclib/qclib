@@ -17,14 +17,14 @@ Bounded Approximation version of Plesch's algorithm.
 https://arxiv.org/abs/2111.03132
 """
 
-from typing import Optional
 import numpy as np
 from qiskit import QuantumCircuit
-from qclib.state_preparation.util.baa import adaptive_approximation, Node
 from qclib.state_preparation import schmidt
+from qclib.state_preparation.util.baa import adaptive_approximation
 
-def initialize(state_vector, low_rank=0, max_fidelity_loss=0.0,
-                    isometry_scheme='ccd', unitary_scheme='qsd'):
+def initialize(state_vector, max_fidelity_loss=0.0,
+                        isometry_scheme='ccd', unitary_scheme='qsd',
+                        strategy='brute_force', max_combination_size=0):
     """
     State preparation using the bounded approximation algorithm via Schmidt
     decomposition arXiv:1003.5760
@@ -38,12 +38,6 @@ def initialize(state_vector, low_rank=0, max_fidelity_loss=0.0,
     state_vector: list of float or array-like
         A unit vector representing a quantum state.
         Values are amplitudes.
-
-    low_rank: int
-        ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
-        If ``low_rank`` is not in the valid range, it will be ignored.
-        If the parameters ``low_rank`` and ``max_fidelity_loss`` are used simultaneously,
-        the fidelity of the final state may be less than 1-``max_fidelity_error`` .
 
     max_fidelity_loss: float
         ``state`` allowed (fidelity) error for approximation (0 <= ``max_fidelity_loss`` <= 1).
@@ -60,6 +54,20 @@ def initialize(state_vector, low_rank=0, max_fidelity_loss=0.0,
         Shannon decomposition).
         Default is ``unitary_scheme='qsd'``.
 
+    strategy: string
+        Method to search for the best approximation (``'brute_force'`` or ``'greedy'``).
+        For states larger than 2**8, the greedy strategy should preferably be used.
+        Default is ``strategy='brute_force'``.
+
+    max_combination_size: int
+        Maximum size of the combination ``C(n_qubits, max_combination_size)``
+        between the qubits of an entangled subsystem of length ``n_qubits`` to
+        produce the possible bipartitions
+        (1 <= ``max_combination_size`` <= ``n_qubits``//2).
+        For example, if ``max_combination_size``==1, there will be ``n_qubits``
+        bipartitions between 1 and ``n_qubits``-1 qubits.
+        The default value is 0 (the size will be maximum for each level).
+
     Returns
     -------
     circuit: QuantumCircuit
@@ -69,24 +77,18 @@ def initialize(state_vector, low_rank=0, max_fidelity_loss=0.0,
     if max_fidelity_loss < 0 or max_fidelity_loss > 1:
         max_fidelity_loss = 0.0
 
-    node_option: Optional[Node] = adaptive_approximation(state_vector, max_fidelity_loss)
-    if node_option is None:
-        return schmidt.initialize(state_vector, low_rank=low_rank, isometry_scheme=isometry_scheme,
-                                                                   unitary_scheme=unitary_scheme)
+    if max_fidelity_loss == 0.0:
+        return schmidt.initialize(state_vector, isometry_scheme=isometry_scheme,
+                                                unitary_scheme=unitary_scheme)
+
+    node = adaptive_approximation(state_vector, max_fidelity_loss, strategy, max_combination_size)
 
     n_qubits = int(np.ceil(np.log2(len(state_vector))))
     circuit = QuantumCircuit(n_qubits)
-    offset = 0
-    for vec in node_option.vectors:
-        vec_n_qubits = int(np.ceil(np.log2(len(vec))))
-        if vec_n_qubits == 1:
-            qc_vec = QuantumCircuit(1)
-            qc_vec.initialize(vec) # pylint: disable=no-member
-        else:
-            qc_vec = schmidt.initialize(vec, low_rank=low_rank, isometry_scheme=isometry_scheme,
-                                                                unitary_scheme=unitary_scheme)
-        affected_qubits = list(range(offset, offset + vec_n_qubits))
-        circuit = circuit.compose(qc_vec, affected_qubits)
-        offset += vec_n_qubits
 
-    return circuit
+    for i, vec in enumerate(node.vectors):
+        qc_vec = schmidt.initialize(vec, isometry_scheme=isometry_scheme,
+                                         unitary_scheme=unitary_scheme)
+        circuit.compose(qc_vec, node.qubits[i][::-1], inplace=True) # qiskit little-endian.
+
+    return circuit.reverse_bits() # qiskit little-endian.
