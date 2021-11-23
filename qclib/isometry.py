@@ -27,7 +27,7 @@ from qiskit.extensions.quantum_initializer.uc import UCGate
 
 # pylint: disable=maybe-no-member
 
-def decompose(isometry, scheme='ccd', low_rank=0, max_fidelity_loss=0.0):
+def decompose(isometry, scheme='ccd', max_fidelity_loss=0.0):
     """
     Decompose an isometry from m to n qubits.
     In particular, it decomposes unitaries on n qubits (m=n) or prepare a
@@ -38,14 +38,6 @@ def decompose(isometry, scheme='ccd', low_rank=0, max_fidelity_loss=0.0):
             complex 2^n×2^m array with orthonormal columns.
         scheme (str): method to decompose the isometry ('knill', 'ccd', 'csd').
             Default is scheme='ccd'.
-        low_rank (int):
-            ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
-            If ``low_rank`` is not in the valid range, it will be ignored.
-            This parameter limits the rank of the Schmidt decomposition. If the Schmidt rank
-            of the state decomposition is greater than ``low_rank``, a low-rank approximation
-            is applied.
-            If the parameters ``low_rank`` and ``max_fidelity_loss`` are used simultaneously,
-            the fidelity of the final state may be less than 1-``max_fidelity_error`` .
         max_fidelity_loss (float):
             ``state`` allowed (fidelity) error for approximation (0 <= ``max_fidelity_loss`` <= 1).
             If ``max_fidelity_loss`` is not in the valid range, it will be ignored.
@@ -75,7 +67,7 @@ def decompose(isometry, scheme='ccd', low_rank=0, max_fidelity_loss=0.0):
     if scheme == 'ccd':
         return _ccd(iso, log_lines, log_cols)
 
-    return _knill(iso, log_lines, log_cols, low_rank, max_fidelity_loss)
+    return _knill(iso, log_lines, log_cols, max_fidelity_loss)
 
 
 
@@ -111,7 +103,7 @@ def _is_isometry(iso, log_cols):
 
 
 
-def _knill(iso, log_lines, log_cols, low_rank=0, max_fidelity_loss=0.0):
+def _knill(iso, log_lines, log_cols, max_fidelity_loss=0.0):
     if log_lines < 2:
         raise ValueError(
             "Knill decomposition does not work on a 1 qubit isometry (N=2)."
@@ -149,14 +141,14 @@ def _knill(iso, log_lines, log_cols, low_rank=0, max_fidelity_loss=0.0):
         if np.abs(arg[i]) > 10**-15:
             state = eigvec[:,i]
 
-            circuit.compose( schmidt(state, low_rank, max_fidelity_loss).inverse(),
-                                                                    reg, inplace=True )
+            circuit.compose( schmidt(state, max_fidelity_loss).inverse(),
+                                                            reg, inplace=True )
             circuit.x(list(range(log_lines)))
             circuit.mcp(arg[i], list(range(log_lines-1)), log_lines-1)
             circuit.x(list(range(log_lines)))
 
-            circuit.compose( schmidt(state, low_rank, max_fidelity_loss),
-                                                                    reg, inplace=True )
+            circuit.compose( schmidt(state, max_fidelity_loss),
+                                                            reg, inplace=True )
     return circuit
 
 
