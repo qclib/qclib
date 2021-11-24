@@ -17,6 +17,7 @@ Tests for the baa_schmidt.py module.
 """
 
 from unittest import TestCase
+import time
 import numpy as np
 from qiskit import ClassicalRegister, execute
 from qiskit.providers.aer.backends import AerSimulator
@@ -67,25 +68,25 @@ class TestBaaSchmidt(TestCase):
 
         overlap = TestBaaSchmidt.overlap(state_vector, state)
 
-        #print('overlap', overlap)
+        #print(fidelity_loss, 'overlap', overlap, strategy)
         #print(np.abs(state_vector-state))
         #print(state)
 
-        self.assertTrue(round(overlap,2)>=1-fidelity_loss)
+        self.assertTrue(overlap>=1-fidelity_loss)
 
     def test_initialize_loss_brute_force(self):
-        for loss in range(1, 10):
-            self._test_initialize_loss(loss/10, n_qubits=5, strategy='brute_force')
+        for loss in range(10, 20):
+            self._test_initialize_loss(loss/100, n_qubits=5, strategy='brute_force')
 
     def test_initialize_loss_greedy(self):
-        for loss in range(1, 10):
-            self._test_initialize_loss(loss/10, n_qubits=5, strategy='greedy')
+        for loss in range(10, 20):
+            self._test_initialize_loss(loss/100, n_qubits=8, strategy='greedy')
 
     def test_initialize_loss_fixed_n3(self):
         state_vector = [-0.33*1j,0,-0.44-0.44*1j,0.24+0.23*1j,0,0,0,0.62-0.01*1j]
         state_vector = state_vector/np.linalg.norm(state_vector)
         for loss in [0.1, 0.28, 0.9]:
-            self._test_initialize_loss(loss, state_vector=state_vector)
+            self._test_initialize_loss(loss, state_vector=state_vector, strategy='brute_force')
             self._test_initialize_loss(loss, state_vector=state_vector, strategy='greedy')
 
     def test_initialize_loss_fixed_n4(self):
@@ -96,8 +97,9 @@ class TestBaaSchmidt(TestCase):
                         0.2016483 +0.298073j  , 0.07520782+0.0639856j , 0.01026576+0.07669651j,
                         0.31755857+0.09279232j]
         state_vector = state_vector/np.linalg.norm(state_vector)
-        self._test_initialize_loss(0.2, state_vector=state_vector)
-        self._test_initialize_loss(0.2, state_vector=state_vector, strategy='greedy')
+        for loss in [0.1, 0.15, 0.18, 0.2]:
+            self._test_initialize_loss(loss, state_vector=state_vector, strategy='brute_force')
+            self._test_initialize_loss(loss, state_vector=state_vector, strategy='greedy')
 
     def test_initialize_loss_fixed_n5(self):
         state_vector = [0.17777766+0.10171662j, 0.19896424+0.10670792j, 0.07982054+0.19653055j,
@@ -112,8 +114,9 @@ class TestBaaSchmidt(TestCase):
                         0.1163249 +0.160533j  , 0.14177201+0.10456823j, 0.03156739+0.04567818j,
                         0.02078566+0.02023752j, 0.18967059+0.03469463j]
         state_vector = state_vector/np.linalg.norm(state_vector)
-        self._test_initialize_loss(0.2, state_vector=state_vector)
-        self._test_initialize_loss(0.2, state_vector=state_vector, strategy='greedy')
+        for loss in [0.1, 0.12, 0.14, 0.16, 0.2]:
+            self._test_initialize_loss(loss, state_vector=state_vector, strategy='brute_force')
+            self._test_initialize_loss(loss, state_vector=state_vector, strategy='greedy')
 
     def test_initialize_no_loss(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
@@ -135,3 +138,36 @@ class TestBaaSchmidt(TestCase):
 
         self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
                         rtol=1e-01, atol=0.005))
+
+    def test_initialize_timing(self):
+        start = time.time()
+        self._test_initialize_loss(1.0, n_qubits=6, strategy='brute_force')
+        brute_force = time.time() - start
+
+        start = time.time()
+        self._test_initialize_loss(1.0, n_qubits=6, strategy='greedy')
+        greedy = time.time() - start
+
+        self.assertTrue(brute_force > greedy)
+
+    def test_compare_strategies(self):
+        overlaps1 = []
+        overlaps2 = []
+        for n_qubits in range(3,7):
+            state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+            state_vector = state_vector / np.linalg.norm(state_vector)
+            for loss in range(10, 20):
+                circuit = initialize(state_vector, max_fidelity_loss=loss/100,
+                                                        strategy='brute_force')
+                state = get_state(circuit)
+                overlap1 = TestBaaSchmidt.overlap(state_vector, state)
+
+                circuit = initialize(state_vector, max_fidelity_loss=loss/100,
+                                                        strategy='greedy')
+                state = get_state(circuit)
+                overlap2 = TestBaaSchmidt.overlap(state_vector, state)
+
+                overlaps1.append(overlap1)
+                overlaps2.append(overlap2)
+
+        self.assertTrue(np.allclose(overlaps1, overlaps2, rtol=0.1, atol=0.0))
