@@ -77,10 +77,6 @@ def initialize(state_vector, max_fidelity_loss=0.0,
     if max_fidelity_loss < 0 or max_fidelity_loss > 1:
         max_fidelity_loss = 0.0
 
-    if max_fidelity_loss == 0.0:
-        return schmidt.initialize(state_vector, isometry_scheme=isometry_scheme,
-                                                unitary_scheme=unitary_scheme)
-
     node = adaptive_approximation(state_vector, max_fidelity_loss, strategy, max_combination_size)
 
     n_qubits = int(np.ceil(np.log2(len(state_vector))))
@@ -88,7 +84,7 @@ def initialize(state_vector, max_fidelity_loss=0.0,
 
     for i, vec in enumerate(node.vectors):
         qc_vec = schmidt.initialize(vec, isometry_scheme=isometry_scheme,
-                                         unitary_scheme=unitary_scheme)
+                                        unitary_scheme=unitary_scheme)
         circuit.compose(qc_vec, node.qubits[i][::-1], inplace=True) # qiskit little-endian.
 
     return circuit.reverse_bits() # qiskit little-endian.
