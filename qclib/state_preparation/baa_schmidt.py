@@ -24,7 +24,7 @@ from qclib.state_preparation.util.baa import adaptive_approximation
 
 def initialize(state_vector, max_fidelity_loss=0.0,
                         isometry_scheme='ccd', unitary_scheme='qsd',
-                        strategy='brute_force', max_combination_size=0):
+                        strategy='greedy', max_combination_size=0):
     """
     State preparation using the bounded approximation algorithm via Schmidt
     decomposition arXiv:1003.5760
@@ -57,7 +57,7 @@ def initialize(state_vector, max_fidelity_loss=0.0,
     strategy: string
         Method to search for the best approximation (``'brute_force'`` or ``'greedy'``).
         For states larger than 2**8, the greedy strategy should preferably be used.
-        Default is ``strategy='brute_force'``.
+        Default is ``strategy='greedy'``.
 
     max_combination_size: int
         Maximum size of the combination ``C(n_qubits, max_combination_size)``
@@ -77,10 +77,6 @@ def initialize(state_vector, max_fidelity_loss=0.0,
     if max_fidelity_loss < 0 or max_fidelity_loss > 1:
         max_fidelity_loss = 0.0
 
-    if max_fidelity_loss == 0.0:
-        return schmidt.initialize(state_vector, isometry_scheme=isometry_scheme,
-                                                unitary_scheme=unitary_scheme)
-
     node = adaptive_approximation(state_vector, max_fidelity_loss, strategy, max_combination_size)
 
     n_qubits = int(np.ceil(np.log2(len(state_vector))))
@@ -88,7 +84,7 @@ def initialize(state_vector, max_fidelity_loss=0.0,
 
     for i, vec in enumerate(node.vectors):
         qc_vec = schmidt.initialize(vec, isometry_scheme=isometry_scheme,
-                                         unitary_scheme=unitary_scheme)
+                                        unitary_scheme=unitary_scheme)
         circuit.compose(qc_vec, node.qubits[i][::-1], inplace=True) # qiskit little-endian.
 
     return circuit.reverse_bits() # qiskit little-endian.
