@@ -68,11 +68,7 @@ class TestBaaSchmidt(TestCase):
 
         overlap = TestBaaSchmidt.overlap(state_vector, state)
 
-        #print(fidelity_loss, 'overlap', overlap, strategy)
-        #print(np.abs(state_vector-state))
-        #print(state)
-
-        self.assertTrue(overlap>=1-fidelity_loss)
+        self.assertTrue(round(overlap,8)>=round(1-fidelity_loss,8))
 
     def test_initialize_loss_brute_force(self):
         for loss in range(10, 20):
