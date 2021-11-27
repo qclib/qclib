@@ -95,7 +95,7 @@ class Node:
                f'total_fidelity_loss:{self.total_fidelity_loss}\n' + \
                f'len(subsystems):{len(self.qubits)}\n'
 
-def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', max_k=0):
+def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', max_k=0, use_low_rank=False):
     # Ignore the completely disentangled qubits.
     entangled_qubits_list  = [i for i in node.qubits if len(i) > 1]
     entangled_vectors_list = [i for i in node.vectors if len(i) > 2]
@@ -141,7 +141,7 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
 
 
 
-def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle):
+def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle, max_fidelity_loss, use_low_rank):
     local_qubits_to_disentangle = []
     # Maintains the relative position between the qubits of the two subsystems.
     for qubit_to_disentangle in qubits_to_disentangle:
@@ -150,10 +150,16 @@ def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle):
     sep_matrix = _separation_matrix(state_vector, local_qubits_to_disentangle)
     svd_u, svd_s, svd_v = np.linalg.svd(sep_matrix, full_matrices=False)
 
-    subsystem1_vector = svd_u[:, 0]
-    subsystem2_vector = svd_v.T[:, 0]
-
-    node_fidelity_loss = 1 - (svd_s ** 2)[0] # svd_s first coefficient.
+    # Find the best k-approx
+    k = np.argmax(1 - np.cumsum(svd_s ** 2) < max_fidelity_loss)
+    if k == 0 or k + 1 == svd_s.shape[0] or not use_low_rank:
+        subsystem1_vector = svd_u[:, 0]
+        subsystem2_vector = svd_v.T[:, 0]
+        node_fidelity_loss = 1 - (svd_s ** 2)[0]  # svd_s first coefficient.
+    else:
+        node_fidelity_loss = np.round(1 - sum((svd_s ** 2)[0:k+1]), decimals=13)
+        subsystem1_vector = svd_u[:, 0:k+1]
+        subsystem2_vector = svd_v.T[:, 0:k+1]
 
     return node_fidelity_loss, subsystem1_vector, subsystem2_vector
 
