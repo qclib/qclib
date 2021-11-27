@@ -87,6 +87,7 @@ class Node:
 
     vectors: List[List[complex]]
     qubits: List[List[int]]
+    k_approximation: List[int]
 
     nodes: List['Node']
 
@@ -166,15 +167,17 @@ def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle, max_
 
     return node_fidelity_loss, subsystem1_vector, subsystem2_vector
 
-def _create_node(node, index, qubits_to_disentangle, node_fidelity_loss,
-                                                subsystem1_vector, subsystem2_vector):
+
+def _create_node(node, index, qubits_to_disentangle, node_fidelity_loss, subsystem1_vector, subsystem2_vector):
     total_fidelity_loss = 1 - (1 - node_fidelity_loss) * (1 - node.total_fidelity_loss)
 
     vectors = node.vectors.copy()
-    qubits  = node.qubits.copy()
+    qubits = node.qubits.copy()
+    k_approximation  = node.k_approximation.copy()
 
     entangled_vector = vectors.pop(index)
     entangled_qubits = qubits.pop(index)
+    k_approximation.pop(index)
 
     subsystem1_qubits = list(set(entangled_qubits).difference(set(qubits_to_disentangle)))
     subsystem2_qubits = qubits_to_disentangle
@@ -184,14 +187,30 @@ def _create_node(node, index, qubits_to_disentangle, node_fidelity_loss,
 
     total_saved_cnots = node.total_saved_cnots + node_saved_cnots
 
-    vectors.append(subsystem1_vector)
-    qubits.append(subsystem1_qubits)
+    subsystem1_vector_rank = subsystem1_vector.shape[1] if len(subsystem1_vector.shape) == 2 else 1
+    subsystem2_vector_rank = subsystem2_vector.shape[1] if len(subsystem2_vector.shape) == 2 else 1
 
-    vectors.append(subsystem2_vector)
-    qubits.append(subsystem2_qubits)
+    if subsystem1_vector_rank == subsystem2_vector_rank == 1:
+        vectors.append(subsystem1_vector)
+        qubits.append(subsystem1_qubits)
+        subsystem1_k_approximation = 1 if subsystem1_vector.shape[0] == 2 else 0
+        k_approximation.append(subsystem1_k_approximation)
 
-    return Node(node_saved_cnots, total_saved_cnots, node_fidelity_loss,
-                                total_fidelity_loss, vectors, qubits, [])
+        vectors.append(subsystem2_vector)
+        qubits.append(subsystem2_qubits)
+        subsystem2_k_approximation = 1 if subsystem2_vector.shape[0] == 2 else 0
+        k_approximation.append(subsystem2_k_approximation)
+
+    else:
+        vectors.append(entangled_vector)
+        qubits.append(entangled_qubits)
+        k_approximation.append(subsystem1_vector.shape[1])
+
+    return Node(
+        node_saved_cnots, total_saved_cnots, node_fidelity_loss, total_fidelity_loss, vectors, qubits,
+        k_approximation, []
+    )
+
 
 def _search_leafs(node, leafs):
     # It returns the leaves of the tree. These nodes are the ones with
