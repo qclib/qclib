@@ -248,9 +248,12 @@ def _separation_matrix(vector, subsystem2):
     return sep_matrix
 
 def _count_saved_cnots(state_vector, entangled_vector, disentangled_vector):
-    cnots_phase_3 = _cnots(_to_qubits(entangled_vector.shape[0]))
-    cnots_phase_4 = _cnots(_to_qubits(disentangled_vector.shape[0]))
-    cnots_originally = _cnots(_to_qubits(state_vector.shape[0]))
+    entangled_vector_rank = entangled_vector.shape[1] if len(entangled_vector.shape) == 2 else 0
+    disentangled_vector_rank = disentangled_vector.shape[1] if len(disentangled_vector.shape) == 2 else 0
+
+    cnots_phase_3 = _cnots_(_to_qubits(entangled_vector.shape[0]), entangled_vector_rank)
+    cnots_phase_4 = _cnots_(_to_qubits(disentangled_vector.shape[0]), disentangled_vector_rank)
+    cnots_originally = _cnots_(_to_qubits(state_vector.shape[0]))
 
     return cnots_originally - cnots_phase_3 - cnots_phase_4
 
@@ -268,6 +271,41 @@ def _cnots(n_qubits):
     k = (n_qubits-1)/2
     return int(2 ** k - k - 1 + k + 23/48*2**(2*k) - 3/2 * 2**(k) + 4/3 +
                                     23/48*2**(2*k + 2) - 3/2 * 2**(k + 1) + 4/3)
+
+def _cnots_(n_qubits, rank=0):
+    if n_qubits % 2 == 0:
+        k = n_qubits // 2
+        m = _to_qubits(rank) if rank > 1 else k
+        if m < k:
+        # Isometries
+            phase_1 = 2 ** m - m - 1
+            phase_2 = m
+            phase_3 = 2**(m+k) - 1/24 * 2**k
+            phase_4 = 2**(m+k) - 1/24 * 2**k
+        else:
+            # Unitaries
+            phase_1 = 2 ** m - m - 1
+            phase_2 = m
+            phase_3 = 23 / 48 * 2 ** (2 * k) - 3 / 2 * 2 ** k + 4 / 3
+            phase_4 = 23 / 48 * 2 ** (2 * k) - 3 / 2 * 2 ** k + 4 / 3
+    else:
+        k = (n_qubits - 1) // 2
+        m = _to_qubits(rank) if rank > 1 else k
+        if m < k:
+            # Isometries
+            phase_1 = 2 ** m - m - 1
+            phase_2 = m
+            phase_3 = 2**(m+k) - 1/24 * 2**k
+            phase_4 = 2**(m+k+1) - 1/24 * 2**(k+1)
+        else:
+            # Unitaries
+            phase_1 = 2 ** m - m - 1
+            phase_2 = m
+            phase_3 = 23 / 48 * 2 ** (2 * k) - 3 / 2 * 2 ** k + 4 / 3
+            phase_4 = 23 / 48 * 2 ** (2 * (k + 1)) - 3 / 2 * 2 ** (k + 1) + 4 / 3
+
+    return int(np.floor(phase_1 + phase_2 + phase_3 + phase_4))
+
 
 def _to_qubits(n_state_vector):
     return int(np.ceil(np.log2(n_state_vector)))
