@@ -60,8 +60,8 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='brute_forc
     qubits = [list(range(n_qubits))]
     vectors = [state_vector]
 
-    root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, [])
-    _build_approximation_tree(root_node, max_fidelity_loss, strategy, max_combination_size)
+    root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, [0], [])
+    _build_approximation_tree(root_node, max_fidelity_loss, strategy, max_combination_size, use_low_rank)
 
     leafs = []
     _search_leafs(root_node, leafs)
