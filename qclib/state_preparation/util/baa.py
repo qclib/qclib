@@ -25,8 +25,8 @@ import numpy as np
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 
-def adaptive_approximation(state_vector, max_fidelity_loss,
-                            strategy='brute_force', max_combination_size=0):
+def adaptive_approximation(state_vector, max_fidelity_loss, strategy='brute_force',
+                           max_combination_size=0, use_low_rank=False):
     """
     It reduces the entanglement of the given state, producing an approximation
     to reduce the complexity of the quantum circuit needed to prepare it.
@@ -48,6 +48,10 @@ def adaptive_approximation(state_vector, max_fidelity_loss,
             For example, if ``max_combination_size``==1, there will be ``n_qubits``
             bipartitions between 1 and ``n_qubits``-1 qubits.
             The default value is 0 (the size will be maximum for each level).
+        use_low_rank (bool):
+            If set to True, non-rank-1 approximations are also considered. This is fine tuning for high-entanglement
+            states and is slower.
+            The default value is False
 
     Returns:
         Node: a node with the data required to build the quantum circuit.
