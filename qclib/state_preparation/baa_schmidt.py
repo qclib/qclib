@@ -24,7 +24,7 @@ from qclib.state_preparation.util.baa import adaptive_approximation
 
 def initialize(state_vector, max_fidelity_loss=0.0,
                         isometry_scheme='ccd', unitary_scheme='qsd',
-                        strategy='brute_force', max_combination_size=0):
+                        strategy='brute_force', max_combination_size=0, use_low_rank=False):
     """
     State preparation using the bounded approximation algorithm via Schmidt
     decomposition arXiv:1003.5760
@@ -67,6 +67,10 @@ def initialize(state_vector, max_fidelity_loss=0.0,
         For example, if ``max_combination_size``==1, there will be ``n_qubits``
         bipartitions between 1 and ``n_qubits``-1 qubits.
         The default value is 0 (the size will be maximum for each level).
+    use_low_rank (bool):
+        If set to True, non-rank-1 approximations are also considered. This is fine tuning for high-entanglement
+        states and is slower.
+        The default value is False
 
     Returns
     -------
@@ -81,7 +85,7 @@ def initialize(state_vector, max_fidelity_loss=0.0,
         return schmidt.initialize(state_vector, isometry_scheme=isometry_scheme,
                                                 unitary_scheme=unitary_scheme)
 
-    node = adaptive_approximation(state_vector, max_fidelity_loss, strategy, max_combination_size)
+    node = adaptive_approximation(state_vector, max_fidelity_loss, strategy, max_combination_size, use_low_rank=use_low_rank)
 
     n_qubits = int(np.ceil(np.log2(len(state_vector))))
     circuit = QuantumCircuit(n_qubits)
