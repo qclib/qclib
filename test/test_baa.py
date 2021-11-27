@@ -1,0 +1,183 @@
+# Copyright 2021 qclib project.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Tests for the baa.py module.
+"""
+
+from unittest import TestCase
+
+import numpy as np
+import pandas as pd
+import qiskit
+from qiskit.circuit.random import random_circuit
+from qiskit.providers import aer
+
+from qclib.state_preparation.baa_schmidt import initialize
+from qclib.state_preparation.util.baa import adaptive_approximation, _cnots_, geometric_entanglement
+from qclib.util import get_state
+# pylint: disable=missing-function-docstring
+# pylint: disable=missing-class-docstring
+from test.test_baa_schmidt import TestBaaSchmidt
+
+
+def get_iota(j: int, n: int, b: int, basis_state: int):
+    assert b in [0, 1]
+    full_mask = 2**n - 1
+
+    mask_j = 1 << j
+    value = (mask_j & basis_state) >> j
+
+    low_mask = full_mask >> (n - j)
+    high_mask = full_mask & (full_mask << (j + 1))
+    new_basis_state = ((basis_state & high_mask) >> 1) + (basis_state & low_mask)
+
+    return value == b, new_basis_state
+
+
+def generalized_cross_product(u: np.ndarray, v: np.ndarray):
+    entries = []
+    for j in range(u.shape[0]):
+        for i in range(j):
+            entry = np.abs(u[i] * v[j] - u[j] * v[i])**2
+            entries.append(entry)
+    return np.sum(entries)
+
+
+def calculate_entropy_meyer_wallach(vector: np.ndarray):
+    num_qb = int(np.ceil(np.log2(vector.shape[0])))
+    meyer_wallach_entry = np.zeros(shape=(num_qb, 1))
+    for j in range(num_qb):
+        psi_0 = np.zeros(shape=(vector.shape[0]//2, 1), dtype=np.complex)  # np.zeros(shape=())
+        psi_1 = np.zeros(shape=(vector.shape[0]//2, 1), dtype=np.complex)  # np.zeros(shape=())
+        for basis_state, entry in enumerate(vector):
+            delta_0, new_basis_state_0 = get_iota(j, num_qb, 0, basis_state)
+            delta_1, new_basis_state_1 = get_iota(j, num_qb, 1, basis_state)
+
+            if delta_0:
+                psi_0[new_basis_state_0] = entry
+            if delta_1:
+                psi_1[new_basis_state_1] = entry
+
+        entry = generalized_cross_product(psi_0, psi_1)
+        meyer_wallach_entry[j] = entry
+
+    return np.sum(meyer_wallach_entry) * (4/num_qb)
+
+
+class TestBaa(TestCase):
+
+    @staticmethod
+    def get_vector_mw(mw_lower: float, mw_upper: float, num_qubits: int):
+        mw = -1.0
+        while mw_lower > mw or mw > mw_upper:
+            qc: qiskit.QuantumCircuit = random_circuit(num_qubits, 10 * num_qubits)
+            job: aer.AerJob = qiskit.execute(qc, backend=aer.StatevectorSimulator())
+            vector = job.result().get_statevector()
+            mw = calculate_entropy_meyer_wallach(vector)
+            print('.', end='')
+        print(end='\n')
+        return vector, mw
+
+    @staticmethod
+    def get_vector_ge(ge_lower: float, ge_upper: float, num_qubits: int):
+        mw = -1.0
+        multiplier = 1
+        iteration = 0
+        entanglements = []
+        while ge_lower > mw or mw > ge_upper:
+            qc: qiskit.QuantumCircuit = random_circuit(num_qubits, multiplier * num_qubits)
+            job: aer.AerJob = qiskit.execute(qc, backend=aer.StatevectorSimulator())
+            vector = job.result().get_statevector()
+            mw = geometric_entanglement(vector)
+            iteration += 1
+            if iteration > 100:
+                multiplier += 1
+                iteration = 0
+                print(f'{multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
+                entanglements = []
+            else:
+                entanglements.append(mw)
+                print('.', end='', flush=True)
+        print(f'Final {multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
+        return vector, mw
+
+    def initialize_loss(self, fidelity_loss, state_vector=None, n_qubits=5, strategy='brute_force', use_low_rank=False):
+
+        if state_vector is None:
+            state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+            state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss, strategy=strategy, use_low_rank=use_low_rank)
+        state = get_state(circuit)
+        overlap = TestBaaSchmidt.overlap(state_vector, state)
+        self.assertTrue(f'Overlap must be 1 ({overlap})', round(overlap, 2) >= 1-fidelity_loss)
+
+        basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=0)
+        cnots = len([d[0] for d in basis_circuit.data if d[0].name == 'cx'])
+
+        return cnots
+
+    def execute_experiment(self, exp_idx,  num_qubits, entanglement_bounds, max_fidelity_loss):
+
+        # State Generation
+        state_vector, entganglement = TestBaa.get_vector_ge(*entanglement_bounds, num_qubits)
+        mw = calculate_entropy_meyer_wallach(state_vector)
+        cnots = _cnots_(num_qubits, 0)
+        print(f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. State preparation needs {cnots}.")
+
+        # Processing
+        print("No Low Rank Processing....")
+        node_no_low_rank = adaptive_approximation(state_vector, max_fidelity_loss, use_low_rank=False)
+        print("With Low Rank Processing....")
+        node_with_low_rank = adaptive_approximation(state_vector, max_fidelity_loss, use_low_rank=True)
+
+        # Result
+        data_no_low_rank = list(
+            zip(node_no_low_rank.k_approximation, [list(v.shape) for v in node_no_low_rank.vectors])
+        )
+        data_with_low_rank = list(
+            zip(node_with_low_rank.k_approximation, [list(v.shape) for v in node_with_low_rank.vectors])
+        )
+
+        # BEnchmark against real Algorithm
+        real_cnots_no_approx = self.initialize_loss(state_vector=state_vector, fidelity_loss=0.0, use_low_rank=False)
+        real_cnots_no_low_rank = self.initialize_loss(state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=False)
+        real_cnots_with_low_rank = self.initialize_loss(state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=True)
+
+        # Experiment transcription
+        df = pd.DataFrame(data=[
+            [exp_idx, False, num_qubits, cnots, entganglement, mw, max_fidelity_loss, node_no_low_rank.total_saved_cnots,
+             node_no_low_rank.total_fidelity_loss, data_no_low_rank, real_cnots_no_low_rank, real_cnots_no_approx],
+            [exp_idx, True, num_qubits, cnots, entganglement, mw, max_fidelity_loss, node_with_low_rank.total_saved_cnots,
+             node_with_low_rank.total_fidelity_loss, data_with_low_rank, real_cnots_with_low_rank, real_cnots_no_approx]
+        ], columns=[
+            ['id', 'with_low_rank', 'num_qubits', 'cnots', 'entganglement', 'entganglement (MW)', 'max_fidelity_loss',
+             'total_saved_cnots', 'total_fidelity_loss', 'data', 'real_cnots', 'real_cnots_no_approx']
+        ])
+        return df
+
+    def test(self):
+        num_qubits = 7
+        entanglement_bounds = (0.7, 1.0)
+        max_fidelity_loss = 0.1
+        result = []
+
+        for i in range(10):
+            df = self.execute_experiment(i, num_qubits, entanglement_bounds, max_fidelity_loss)
+            result.append(df)
+
+        df = pd.concat(result, ignore_index=True)
+        print(df.to_string(), flush=True)
+
