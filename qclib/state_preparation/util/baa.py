@@ -71,7 +71,9 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='brute_forc
     return best_node
 
 
-
+def geometric_entanglement(state_vector):
+    node = adaptive_approximation(state_vector, 1.0, strategy='greedy', max_combination_size=1, use_low_rank=False)
+    return node.total_fidelity_loss
 
 
 @dataclass
