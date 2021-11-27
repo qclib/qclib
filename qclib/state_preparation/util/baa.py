@@ -110,8 +110,9 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
             # Disentangles each possible bipartion from entangled_qubits.
             for qubits_to_disentangle in combinations(entangled_qubits, k):
                 # Computes the two state vectors after disentangling "qubits_to_disentangle".
-                node_fidelity_loss, subsystem1, subsystem2 = \
-                    _compute_schmidt(entangled_vector, entangled_qubits, qubits_to_disentangle)
+                node_fidelity_loss, subsystem1, subsystem2 = _compute_schmidt(
+                    entangled_vector, entangled_qubits, qubits_to_disentangle, max_fidelity_loss, use_low_rank
+                )
 
                 total_fidelity_loss = 1 - (1 - node_fidelity_loss) * \
                                           (1 - node.total_fidelity_loss)
