@@ -61,6 +61,10 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
         QuantumCircuit to initialize the state.
     """
 
+    if state_vector.shape[0] == 2:
+        circuit = QuantumCircuit(1)
+        circuit.initialize(state_vector)
+        return circuit
 
     # Schmidt decomposition
     svd_u, singular_values, svd_v = _svd(state_vector)
