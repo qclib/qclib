@@ -26,7 +26,6 @@ from qclib.isometry import decompose as decompose_isometry
 
 # pylint: disable=maybe-no-member
 
-
 def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='qsd'):
     """ State preparation using Schmidt decomposition arXiv:1003.5760
 
@@ -43,6 +42,9 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
     low_rank: int
         ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
         If ``low_rank`` is not in the valid range, it will be ignored.
+        This parameter limits the rank of the Schmidt decomposition. If the Schmidt rank
+        of the state decomposition is greater than ``low_rank``, a low-rank approximation
+        is applied.
 
     isometry_scheme: string
         Scheme used to decompose isometries.
@@ -61,6 +63,8 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
         QuantumCircuit to initialize the state.
     """
 
+    if len(state_vector) < 4:
+        return mottonen(state_vector)
 
     # Schmidt decomposition
     svd_u, singular_values, svd_v = _svd(state_vector)
@@ -68,25 +72,26 @@ def initialize(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
     rank, svd_u, svd_v, singular_values = \
     _low_rank_approximation(low_rank, svd_u, svd_v, singular_values)
 
+    # Schmidt measure of entanglement
+    ebits = int(np.log2(rank))
+
     circuit, reg_a, reg_b = _create_quantum_circuit(state_vector)
 
     # Phase 1. Encodes the singular values.
-    if rank != 1:
-        size_sv = len(singular_values)
-        ebits = int(np.log2(size_sv))
+    if ebits > 0:
         reg_sv = reg_b[:ebits]
 
-        _encode(singular_values.reshape(size_sv, 1), circuit, reg_sv,
+        _encode(singular_values.reshape(rank, 1), circuit, reg_sv,
                                             isometry_scheme, unitary_scheme)
 
     # Phase 2. Entangles only the necessary qubits, according to rank.
-    for j in range(int( np.log2( rank ) )):
+    for j in range(ebits):
         circuit.cx(reg_b[j], reg_a[j])
 
     # Phase 3 and 4 encode gates U and V.T
     _encode(svd_u, circuit, reg_b, isometry_scheme, unitary_scheme)
     _encode(svd_v.T, circuit, reg_a, isometry_scheme, unitary_scheme)
-    
+
     return circuit
 
 
@@ -142,19 +147,14 @@ def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
     rank = 0
     if data.shape[1] == 1:
         _, svals, _ = _svd(data[:, 0])
-        rank = sum(j > 10 ** -15 for j in svals)
+        rank = sum(j > 10**-15 for j in svals)
 
     if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4 or rank==1):
-
         # state preparation
-        if n_qubits > 1:
-            gate_u = initialize(
-                data[:, 0],
-                isometry_scheme=iso_scheme,
-                unitary_scheme=uni_scheme)
-        else:
-            gate_u = mottonen(data[:, 0])
-
+        gate_u = initialize(
+            data[:, 0],
+            isometry_scheme=iso_scheme,
+            unitary_scheme=uni_scheme)
     elif data.shape[0] > data.shape[1]:
         gate_u = decompose_isometry(data, scheme=iso_scheme)
     else:
