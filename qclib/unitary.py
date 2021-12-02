@@ -23,7 +23,6 @@ import scipy as sp
 import qiskit
 import numpy as np
 
-
 def _unitary(gate_list, n_qubits, decomposition='csd'):
 
     if len(gate_list[0]) == 2:
@@ -76,6 +75,7 @@ def _qsd(gate1, gate2):
     n_qubits = int(np.log2(len(gate1))) + 1
 
     list_d, gate_v, gate_w = _compute_gates(gate1, gate2)
+
     left_gate = unitary(gate_w, 'qsd')
     right_gate = unitary(gate_v, 'qsd')
 
@@ -87,12 +87,26 @@ def _qsd(gate1, gate2):
     circuit = circuit.compose(right_gate, qubits[0:-1])
     return circuit
 
+def _unitary_condition(matrix):
+    return np.conj(matrix.T).dot(matrix)
+
+def _is_unitary(matrix):
+    return np.allclose(_unitary_condition(matrix), np.identity(matrix.shape[0]))
+
+def _closest_unitary(matrix):
+    svd_u,_,svd_v = np.linalg.svd(matrix)
+    return svd_u.dot(svd_v)
 
 def _compute_gates(gate1, gate2):
 
     d_square, gate_v = np.linalg.eig(gate1 @ gate2.conj().T)
-    list_d = np.sqrt(d_square)
+    list_d = np.sqrt(d_square, dtype=np.complex)
     gate_d = np.diag(list_d)
+
+    if not _is_unitary(gate_v):
+        # degeneracy
+        gate_v = _closest_unitary(gate_v)
+
     gate_w = gate_d @ gate_v.conj().T @ gate2
 
     return list_d, gate_v, gate_w
