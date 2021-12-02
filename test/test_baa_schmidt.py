@@ -124,6 +124,17 @@ class TestBaaSchmidt(TestCase):
 
         self.assertTrue(np.allclose(state_vector, state))
 
+    def test_initialize_ame(self):
+        state_vector = [1, 1, 1, 1,1,-1,-1, 1, 1,-1,-1, 1, 1, 1,1,1,
+                        1, 1,-1,-1,1,-1, 1,-1,-1, 1,-1, 1,-1,-1,1,1]
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = initialize(state_vector)
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))
+
     def test_measurement_no_loss(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
