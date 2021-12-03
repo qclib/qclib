@@ -87,7 +87,6 @@ class TestUnitary(TestCase):
 
     def test_compute_gates_fixed(self):
         """ test auxiliar funciont compute gates"""
-        # Matrices gate1 and gate2 are not unitary.
         gate1 = np.array(
                 [[ 1.39499204e-01-1.02062065e-01j, -3.73248642e-01-6.00570938e-01j,
                    5.83554297e-01-1.84683236e-01j, -2.69576508e-01+1.51024165e-01j],
