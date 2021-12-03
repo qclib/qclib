@@ -253,10 +253,10 @@ def _separation_matrix(vector, subsystem2):
 
     return sep_matrix
 
-def _count_saved_cnots(state_vector, entangled_vector, disentangled_vector):
-    cnots_phase_3 = _cnots(_to_qubits(entangled_vector.shape[0]))
-    cnots_phase_4 = _cnots(_to_qubits(disentangled_vector.shape[0]))
-    cnots_originally = _cnots(_to_qubits(state_vector.shape[0]))
+def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
+    cnots_phase_3 = _cnots(_to_qubits(subsystem1_vector.shape[0]))
+    cnots_phase_4 = _cnots(_to_qubits(subsystem2_vector.shape[0]))
+    cnots_originally = _cnots(_to_qubits(entangled_vector.shape[0]))
 
     return cnots_originally - cnots_phase_3 - cnots_phase_4
 
