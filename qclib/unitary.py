@@ -87,11 +87,10 @@ def _qsd(gate1, gate2):
     circuit = circuit.compose(right_gate, qubits[0:-1])
     return circuit
 
-def _unitary_condition(matrix):
-    return np.conj(matrix.T).dot(matrix)
 
 def _is_unitary(matrix):
-    return np.allclose(_unitary_condition(matrix), np.identity(matrix.shape[0]))
+    is_identity = np.conj(matrix.T).dot(matrix)
+    return np.allclose(is_identity, np.identity(matrix.shape[0]))
 
 def _closest_unitary(matrix):
     svd_u,_,svd_v = np.linalg.svd(matrix)
