@@ -75,6 +75,17 @@ class TestSchmidt(TestCase):
 
         self.assertTrue(np.allclose(state_vector, state))
 
+    def test_initialize_ame(self):
+        state_vector = [1, 1, 1, 1,1,-1,-1, 1, 1,-1,-1, 1, 1, 1,1,1,
+                        1, 1,-1,-1,1,-1, 1,-1,-1, 1,-1, 1,-1,-1,1,1]
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = initialize(state_vector)
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))
+
     def test_measurement_full_rank(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
