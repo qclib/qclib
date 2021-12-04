@@ -125,6 +125,7 @@ class TestBaaSchmidt(TestCase):
         self.assertTrue(np.allclose(state_vector, state))
 
     def test_initialize_ame(self):
+        """ Test initialization of a absolutely maximally entangled state"""
         state_vector = [1, 1, 1, 1,1,-1,-1, 1, 1,-1,-1, 1, 1, 1,1,1,
                         1, 1,-1,-1,1,-1, 1,-1,-1, 1,-1, 1,-1,-1,1,1]
         state_vector = state_vector / np.linalg.norm(state_vector)
