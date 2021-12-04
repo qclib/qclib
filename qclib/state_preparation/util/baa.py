@@ -261,19 +261,23 @@ def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
     return cnots_originally - cnots_phase_3 - cnots_phase_4
 
 def _cnots(n_qubits):
-    if n_qubits == 1:
-        return 0
-    if n_qubits == 2:
-        return 2
-    if n_qubits == 3:
-        return 4
+    if n_qubits < 4:
+        cnot_counting = [0, 2, 4]
+        return cnot_counting[n_qubits-1]
+
+    # The expressions below are valid for k >= 2 (n_qubits >= 4).
+    # These are the expressions for the unitary decomposition QSD l=2 without
+    # the optimizations. With the optimizations, they need to be replaced.
+    # In some cases, the actual CNOT count of the Schmidt state preparation
+    # may be a bit larger. It happens because we do not yet have an efficient
+    # implementation for (n-1)-to-n isometries (like Cosine-Sine decomposition).
     if n_qubits % 2 == 0:
         k = n_qubits/2
-        return int(2 ** k - k - 1 + k + 23/24*2**(2*k) - 3/2 * 2**(k+1) + 8/3)
+        return int(2 ** k - 1 + 9/8*2**(2*k) - 3/2 * 2**(k+1))
 
     k = (n_qubits-1)/2
-    return int(2 ** k - k - 1 + k + 23/48*2**(2*k) - 3/2 * 2**(k) + 4/3 +
-                                    23/48*2**(2*k + 2) - 3/2 * 2**(k + 1) + 4/3)
+    return int(2 ** k - 1 + 9/16*2**(2*k) - 3/2 * 2**(k) +
+                            9/16*2**(2*k + 2) - 3/2 * 2**(k + 1))
 
 def _to_qubits(n_state_vector):
     return int(np.ceil(np.log2(n_state_vector)))
