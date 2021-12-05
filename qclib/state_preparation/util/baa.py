@@ -154,36 +154,38 @@ def _all_combinations(entangled_qubits, max_k):
     return chain.from_iterable(combinations(entangled_qubits, k) for k in range(1, max_k+1))
 
 
-def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
+def _greedy_combinations(entangled_vector, entangled_qubits, max_k, max_fidelity_loss, use_low_rank):
     """
     Combinations with a qubit-by-qubit analysis.
     Returns only one representative of the bipartitions of size k (1<=k<=max_k).
     The increment in the partition size is done by choosing the qubit that has
     the lowest fidelity-loss when removed from the remaining entangled subsystem.
     """
-    node = Node( 0, 0, 0.0, 0.0, [entangled_vector], [entangled_qubits], [] )
+    node = Node(0, 0, 0.0, 0.0, [entangled_vector], [entangled_qubits, []], [0], [])
+    best_nodes = []
     for _ in range(max_k):
-        current_vector = node.vectors[-1] # Last item is the current entangled state.
-        current_qubits = node.qubits[-1]
+        left_qubits = node.qubits[0]
+        right_qubits = node.qubits[1] if len(node.qubits) > 1 else []
 
         nodes = []
         # Disentangles one qubit at a time.
-        for qubit_to_disentangle in current_qubits:
+        for qubit_to_disentangle in left_qubits:
+            disentangled_qubits = right_qubits + [qubit_to_disentangle]
             node_fidelity_loss, subsystem1, subsystem2 = \
-                _compute_schmidt(current_vector, current_qubits, [qubit_to_disentangle])
-
-            new_node = _create_node(node, -1, [qubit_to_disentangle],
-                                                node_fidelity_loss, subsystem1, subsystem2)
+                _compute_schmidt(entangled_vector, entangled_qubits, disentangled_qubits, max_fidelity_loss, use_low_rank)
+            cnots = _count_saved_cnots(entangled_vector, subsystem1, subsystem2)
+            new_node = Node(
+                cnots, cnots, node_fidelity_loss, node_fidelity_loss,
+                [entangled_vector], [list(set(entangled_qubits) - set(disentangled_qubits))] + [disentangled_qubits],
+                [0], []
+            )
             nodes.append(new_node)
         # Search for the node with lowest fidelity-loss.
         node = _search_best(nodes)
+        best_nodes.append(node)
 
-    # Build the partitions by incrementing the number of selected qubits.
-    # Returns only one partition for each length k.
-    # All disentangled qubits are in the slice "node.qubits[0:max_k]", in the order in which
-    # they were selected. Each partition needs to be ordered to ensure that the correct
-    # construction of the circuit.
-    return tuple( sorted( chain(*node.qubits[:k]) ) for k in range(1, max_k+1) )
+    combs = [tuple(n.qubits[-1]) for n in best_nodes]
+    return combs
 
 
 def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle, max_fidelity_loss, use_low_rank):
