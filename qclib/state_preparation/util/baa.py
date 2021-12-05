@@ -101,11 +101,9 @@ class Node:
 
 def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', max_k=0, use_low_rank=False):
     # Ignore the completely disentangled qubits.
-    entangled_qubits_list  = [i for i in node.qubits if len(i) > 1]
-    entangled_vectors_list = [i for i in node.vectors if len(i) > 2]
+    data = [(q, k, v) for q, v, k in zip(node.qubits, node.vectors, node.k_approximation) if k == 0]
 
-    for i, entangled_qubits in enumerate(entangled_qubits_list):
-        entangled_vector = entangled_vectors_list[i]
+    for entangled_qubits, entangled_rank, entangled_vector in data:
 
         if not 1 <= max_k <= len(entangled_qubits)//2:
             max_k = len(entangled_qubits)//2
