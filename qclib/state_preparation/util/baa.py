@@ -285,65 +285,169 @@ def _separation_matrix(vector, subsystem2):
 
     return sep_matrix
 
-def _count_saved_cnots(state_vector, entangled_vector, disentangled_vector):
-    entangled_vector_rank = entangled_vector.shape[1] if len(entangled_vector.shape) == 2 else 0
-    disentangled_vector_rank = disentangled_vector.shape[1] if len(disentangled_vector.shape) == 2 else 0
 
-    cnots_phase_3 = _cnots_(_to_qubits(entangled_vector.shape[0]), entangled_vector_rank)
-    cnots_phase_4 = _cnots_(_to_qubits(disentangled_vector.shape[0]), disentangled_vector_rank)
-    cnots_originally = _cnots_(_to_qubits(state_vector.shape[0]))
+def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
+    cnots_phase_3 = _cnots(_to_qubits(subsystem1_vector.shape[0]))
+    cnots_phase_4 = _cnots(_to_qubits(subsystem2_vector.shape[0]))
+    cnots_originally = _cnots(_to_qubits(entangled_vector.shape[0]))
 
     return cnots_originally - cnots_phase_3 - cnots_phase_4
 
+
+def _count_saved_cnots_alternative(state_vector, entangled_vector, disentangled_vector):
+    state_vector_qubits = _to_qubits(state_vector.shape[0])
+    entangled_vector_qubits = _to_qubits(entangled_vector.shape[0])
+    disentangled_vector_qubits = _to_qubits(disentangled_vector.shape[0])
+    entangled_vector_rank = entangled_vector.shape[1] if len(entangled_vector.shape) == 2 else 0
+    disentangled_vector_rank = disentangled_vector.shape[1] if len(disentangled_vector.shape) == 2 else 0
+    assert entangled_vector_rank == disentangled_vector_rank
+
+    cnots_needed = _cnots_decomposition(entangled_vector_qubits, disentangled_vector_qubits, entangled_vector_rank)
+    cnots_originally = _cnots_decomposition(
+        state_vector_qubits//2,
+        state_vector_qubits//2 + (0 if state_vector_qubits % 2 == 0 else 1),
+        2**(state_vector_qubits//2)
+    )
+
+    return cnots_originally - cnots_needed
+
+
+def _cnot_state_preparation(n_qubits):
+    # Moettoenen
+    return 2**n_qubits - n_qubits - 1
+
+
+def _cnot_isometries(n_qubits, m_qubits):
+    assert m_qubits > 0
+    assert m_qubits < n_qubits
+    # Iten, R., Colbeck, R., Kukuljan, I., Home, J. & Christandl, M. Quantum circuits for isometries.
+    # Phys Rev A 93, 032318 (2016).
+    # if n_qubits == 2:
+    #     # Appendix B.1.
+    #     return 2
+    # if n_qubits == 3:
+    #     # Appendix B.2.
+    #     return 9 if m_qubits == 1 else 14
+    # if n_qubits == 4:
+    #     # Appendix B.3.
+    #     if m_qubits == 1:
+    #         return 22
+    #     if m_qubits == 2:
+    #         return 3
+    #     if m_qubits == 3:
+    #         return 2 ** (m_qubits + n_qubits) - 1 / 24 * 2 ** n_qubits  # FIXME: Need info
+    # if 4 < n_qubits < 8:
+    #     return int(
+    #         2 ** (m_qubits + n_qubits) - 1 / 24 * 2 ** n_qubits  # FIXME: Need info
+    #     )
+    # else:
+    # return int(
+    #     2 ** (m_qubits + n_qubits) - 1 / 24 * 2 ** n_qubits
+    #     + 2**m_qubits * (28 * n_qubits**2 + m_qubits * (44 - 14*n_qubits) - 117 * n_qubits + 88)
+    #     - 28 * n_qubits**2 + m_qubits * (28 * n_qubits - 88) + 117 * n_qubits - 87
+    # )
+    return int(
+        2 ** (n_qubits + m_qubits) - 1/24 * 2 ** n_qubits + n_qubits**2 * 2 ** m_qubits
+    )
+
+
+def _cnot_unitaries(n_qubits):
+    return int(
+        23/48 * 2 ** (2 * n_qubits) - 3/2 * 2**n_qubits + 4/3
+    )
+
+
 def _cnots(n_qubits):
-    if n_qubits == 1:
-        return 0
-    if n_qubits == 2:
-        return 2
-    if n_qubits == 3:
-        return 4
+    if n_qubits < 4:
+        cnot_counting = [0, 2, 4]
+        return cnot_counting[n_qubits-1]
+
+    # The expressions below are valid for k >= 2 (n_qubits >= 4).
+    # These are the expressions for the unitary decomposition QSD l=2 without
+    # the optimizations. With the optimizations, they need to be replaced.
+    # In some cases, the actual CNOT count of the Schmidt state preparation
+    # may be a bit larger. It happens because we do not yet have an efficient
+    # implementation for (n-1)-to-n isometries (like Cosine-Sine decomposition).
     if n_qubits % 2 == 0:
         k = n_qubits/2
-        return int(2 ** k - k - 1 + k + 23/24*2**(2*k) - 3/2 * 2**(k+1) + 8/3)
+        return int(2 ** k - 1 + 9/8*2**(2*k) - 3/2 * 2**(k+1))
 
     k = (n_qubits-1)/2
-    return int(2 ** k - k - 1 + k + 23/48*2**(2*k) - 3/2 * 2**(k) + 4/3 +
-                                    23/48*2**(2*k + 2) - 3/2 * 2**(k + 1) + 4/3)
+    return int(2 ** k - 1 + 9/16*2**(2*k) - 3/2 * 2**(k) +
+                            9/16*2**(2*k + 2) - 3/2 * 2**(k + 1))
+
+
+def _cnots_decomposition(sub_system_1_qubits, sub_system_2_qubits, rank=0):
+    k = min(sub_system_1_qubits, sub_system_2_qubits)
+    m = _to_qubits(rank) if rank > 1 else 0
+    if m == 0:
+        # State Preparation
+        phase_1 = 0
+        phase_2 = 0
+        phase_3 = _cnot_state_preparation(sub_system_1_qubits)
+        phase_4 = _cnot_state_preparation(sub_system_2_qubits)
+    elif m < k:
+        # Isometries
+        phase_1 = _cnot_state_preparation(m)
+        phase_2 = m
+        # This is a nasty hack, but I don't seem to have control over the difference of isometries and unitaries.
+        phase_3 = min(_cnot_isometries(sub_system_1_qubits, m), _cnot_unitaries(sub_system_1_qubits))
+        phase_4 = min(_cnot_isometries(sub_system_2_qubits, m), _cnot_unitaries(sub_system_2_qubits))
+    else:
+        # Unitaries
+        phase_1 = _cnot_state_preparation(k)
+        phase_2 = k
+        phase_3 = _cnot_unitaries(sub_system_1_qubits)
+        phase_4 = _cnot_unitaries(sub_system_2_qubits)
+    return int(np.ceil(phase_1 + phase_2 + phase_3 + phase_4))
+
 
 def _cnots_(n_qubits, rank=0):
     if n_qubits % 2 == 0:
         k = n_qubits // 2
         m = _to_qubits(rank) if rank > 1 else k
-        if m < k:
-        # Isometries
-            phase_1 = 2 ** m - m - 1
+        if m == 0:
+            # State Preparation
+            phase_1 = 0
+            phase_2 = 0
+            phase_3 = _cnot_state_preparation(k)
+            phase_4 = _cnot_state_preparation(k)
+        elif m < k:
+            # Isometries
+            phase_1 = _cnot_state_preparation(m)
             phase_2 = m
-            phase_3 = 2**(m+k) - 1/24 * 2**k
-            phase_4 = 2**(m+k) - 1/24 * 2**k
+            phase_3 = _cnot_isometries(k, m)
+            phase_4 = _cnot_isometries(k, m)
         else:
             # Unitaries
-            phase_1 = 2 ** m - m - 1
-            phase_2 = m
-            phase_3 = 23 / 48 * 2 ** (2 * k) - 3 / 2 * 2 ** k + 4 / 3
-            phase_4 = 23 / 48 * 2 ** (2 * k) - 3 / 2 * 2 ** k + 4 / 3
+            phase_1 = _cnot_state_preparation(k)
+            phase_2 = k
+            phase_3 = _cnot_unitaries(k)
+            phase_4 = _cnot_unitaries(k)
     else:
         k = (n_qubits - 1) // 2
         m = _to_qubits(rank) if rank > 1 else k
-        if m < k:
+        if m == 0:
+            # State Preparation
+            phase_1 = 0
+            phase_2 = 0
+            phase_3 = _cnot_state_preparation(k)
+            phase_4 = _cnot_state_preparation(k+1)
+        elif m < k:
             # Isometries
-            phase_1 = 2 ** m - m - 1
+            phase_1 = _cnot_state_preparation(m)
             phase_2 = m
-            phase_3 = 2**(m+k) - 1/24 * 2**k
-            phase_4 = 2**(m+k+1) - 1/24 * 2**(k+1)
+            phase_3 = _cnot_isometries(k, m)
+            phase_4 = _cnot_isometries(k + 1, m)
         else:
             # Unitaries
-            phase_1 = 2 ** m - m - 1
-            phase_2 = m
-            phase_3 = 23 / 48 * 2 ** (2 * k) - 3 / 2 * 2 ** k + 4 / 3
-            phase_4 = 23 / 48 * 2 ** (2 * (k + 1)) - 3 / 2 * 2 ** (k + 1) + 4 / 3
+            phase_1 = _cnot_state_preparation(k)
+            phase_2 = k
+            phase_3 = _cnot_unitaries(k)
+            phase_4 = _cnot_unitaries(k + 1)
 
-    return int(np.floor(phase_1 + phase_2 + phase_3 + phase_4))
+    return int(np.ceil(phase_1 + phase_2 + phase_3 + phase_4))
 
 
 def _to_qubits(n_state_vector):
-    return int(np.ceil(np.log2(n_state_vector)))
+    return int(np.ceil(np.log2(n_state_vector))) if n_state_vector > 0 else 0
