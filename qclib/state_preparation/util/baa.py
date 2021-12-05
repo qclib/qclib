@@ -116,11 +116,11 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
         # Disentangles each bipartion from entangled_qubits combinations.
         for register_to_disentangle in combs:
             # Computes the two state vectors after disentangling "register_to_disentangle".
-            node_fidelity_loss, subsystem1, subsystem2 = \
-                _compute_schmidt(entangled_vector, entangled_qubits, register_to_disentangle)
-
-            total_fidelity_loss = 1 - (1 - node_fidelity_loss) * \
-                                        (1 - node.total_fidelity_loss)
+            possible_fidelity_loss = max(max_fidelity_loss - node.total_fidelity_loss, 0)
+            node_fidelity_loss, subsystem1, subsystem2 = _compute_schmidt(
+                entangled_vector, entangled_qubits, register_to_disentangle, possible_fidelity_loss, use_low_rank
+            )
+            total_fidelity_loss = 1 - (1 - node_fidelity_loss) * (1 - node.total_fidelity_loss)
 
             # Recursion should not continue in this branch if "total_fidelity_loss" has
             # reached "max_fidelity_loss". The leaf corresponds to the node of best
