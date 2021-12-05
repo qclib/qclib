@@ -29,7 +29,7 @@ from qclib.state_preparation.baa_schmidt import initialize
 
 class TestBaaSchmidt(TestCase):
     @staticmethod
-    def overlap(state1, state2):
+    def fidelity(state1, state2):
         bra = np.conj(state1)
         ket = state2
 
@@ -66,9 +66,9 @@ class TestBaaSchmidt(TestCase):
 
         state = get_state(circuit)
 
-        overlap = TestBaaSchmidt.overlap(state_vector, state)
+        fidelity = TestBaaSchmidt.fidelity(state_vector, state)
 
-        self.assertTrue(round(overlap,8)>=round(1-fidelity_loss,8))
+        self.assertTrue(round(fidelity,2)>=round(1-fidelity_loss,2))
 
     def test_initialize_loss_brute_force(self):
         for loss in range(10, 20):
@@ -124,6 +124,18 @@ class TestBaaSchmidt(TestCase):
 
         self.assertTrue(np.allclose(state_vector, state))
 
+    def test_initialize_ame(self):
+        """ Test initialization of a absolutely maximally entangled state"""
+        state_vector = [1, 1, 1, 1,1,-1,-1, 1, 1,-1,-1, 1, 1, 1,1,1,
+                        1, 1,-1,-1,1,-1, 1,-1,-1, 1,-1, 1,-1,-1,1,1]
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = initialize(state_vector)
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))
+
     def test_measurement_no_loss(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
@@ -147,8 +159,8 @@ class TestBaaSchmidt(TestCase):
         self.assertTrue(brute_force > greedy)
 
     def test_compare_strategies(self):
-        overlaps1 = []
-        overlaps2 = []
+        fidelities1 = []
+        fidelities2 = []
         for n_qubits in range(3,7):
             state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
             state_vector = state_vector / np.linalg.norm(state_vector)
@@ -156,14 +168,14 @@ class TestBaaSchmidt(TestCase):
                 circuit = initialize(state_vector, max_fidelity_loss=loss/100,
                                                         strategy='brute_force')
                 state = get_state(circuit)
-                overlap1 = TestBaaSchmidt.overlap(state_vector, state)
+                fidelity1 = TestBaaSchmidt.fidelity(state_vector, state)
 
                 circuit = initialize(state_vector, max_fidelity_loss=loss/100,
                                                         strategy='greedy')
                 state = get_state(circuit)
-                overlap2 = TestBaaSchmidt.overlap(state_vector, state)
+                fidelity2 = TestBaaSchmidt.fidelity(state_vector, state)
 
-                overlaps1.append(overlap1)
-                overlaps2.append(overlap2)
+                fidelities1.append(fidelity1)
+                fidelities2.append(fidelity2)
 
-        self.assertTrue(np.allclose(overlaps1, overlaps2, rtol=0.1, atol=0.0))
+        self.assertTrue(np.allclose(fidelities1, fidelities2, rtol=0.1, atol=0.0))
