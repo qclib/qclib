@@ -148,8 +148,7 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
 
 
 def _all_combinations(entangled_qubits, max_k):
-    return chain.from_iterable(combinations(entangled_qubits, k)
-                                            for k in range(1, max_k+1))
+    return chain.from_iterable(combinations(entangled_qubits, k) for k in range(1, max_k+1))
 
 
 def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
