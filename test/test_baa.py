@@ -166,12 +166,12 @@ class TestBaa(TestCase):
     def test(self):
         num_qubits = 7
         entanglement_bounds = (0.7, 1.0)
-        max_fidelity_loss = 0.1
         result = []
 
-        for i in range(10):
-            df = self.execute_experiment(i, num_qubits, entanglement_bounds, max_fidelity_loss)
-            result.append(df)
+        for max_fidelity_loss in np.linspace(0.1, 0.1, 1):
+            for i in range(10):
+                df = self.execute_experiment(i, num_qubits, entanglement_bounds, max_fidelity_loss)
+                result.append(df)
 
         df = pd.concat(result, ignore_index=True)
         print(df.to_string(), flush=True)
