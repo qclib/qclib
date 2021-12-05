@@ -15,7 +15,7 @@
 """
 Tests for the baa.py module.
 """
-
+import datetime
 from unittest import TestCase
 
 import numpy as np
@@ -138,34 +138,33 @@ class TestBaa(TestCase):
         cnots = _cnots(num_qubits)
         print(f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. State preparation needs {cnots}.")
 
-        # Processing
-        print("No Low Rank Processing....")
-        node_no_low_rank = adaptive_approximation(state_vector, max_fidelity_loss, use_low_rank=False)
-        print("With Low Rank Processing....")
-        node_with_low_rank = adaptive_approximation(state_vector, max_fidelity_loss, use_low_rank=True)
-
-        # Result
-        data_no_low_rank = list(
-            zip(node_no_low_rank.k_approximation, [list(v.shape) for v in node_no_low_rank.vectors])
-        )
-        data_with_low_rank = list(
-            zip(node_with_low_rank.k_approximation, [list(v.shape) for v in node_with_low_rank.vectors])
-        )
-
-        # BEnchmark against real Algorithm
-        real_cnots_no_approx = self.initialize_loss(state_vector=state_vector, fidelity_loss=0.0, use_low_rank=False)
-        real_cnots_no_low_rank = self.initialize_loss(state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=False)
-        real_cnots_with_low_rank = self.initialize_loss(state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=True)
+        # Benchmark against real Algorithm
+        real_cnots_benchmark, real_depth_benchmark = self.initialize_loss(state_vector=state_vector, fidelity_loss=0.0, use_low_rank=False)
+        data_result = []
+        for use_low_rank in [False, True]:
+            for strategy in ['brute_force', 'greedy']:
+                print(f"{strategy.upper()} {'With' if use_low_rank else 'No'} Low Rank Processing....")
+                node = adaptive_approximation(state_vector, max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy)
+                # Result
+                data = list(
+                    zip(node.k_approximation, [list(v.shape) for v in node.vectors])
+                )
+                start_time = datetime.datetime.now()
+                real_cnots, real_depth = self.initialize_loss(state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy)
+                end_time = datetime.datetime.now()
+                duration = (end_time - start_time).total_seconds()
+                data = [
+                    exp_idx, use_low_rank, strategy, num_qubits, depth, cnots, entganglement, mw,
+                    max_fidelity_loss, node.total_saved_cnots, node.total_fidelity_loss, data,
+                    real_cnots, real_cnots_benchmark, real_depth, real_depth_benchmark, duration
+                ]
+                data_result.append(data)
 
         # Experiment transcription
-        df = pd.DataFrame(data=[
-            [exp_idx, False, num_qubits, cnots, entganglement, mw, max_fidelity_loss, node_no_low_rank.total_saved_cnots,
-             node_no_low_rank.total_fidelity_loss, data_no_low_rank, real_cnots_no_low_rank, real_cnots_no_approx],
-            [exp_idx, True, num_qubits, cnots, entganglement, mw, max_fidelity_loss, node_with_low_rank.total_saved_cnots,
-             node_with_low_rank.total_fidelity_loss, data_with_low_rank, real_cnots_with_low_rank, real_cnots_no_approx]
-        ], columns=[
-            ['id', 'with_low_rank', 'num_qubits', 'cnots', 'entganglement', 'entganglement (MW)', 'max_fidelity_loss',
-             'total_saved_cnots', 'total_fidelity_loss', 'data', 'real_cnots', 'real_cnots_no_approx']
+        df = pd.DataFrame(data=data_result, columns=[
+            'id', 'with_low_rank', 'strategy', 'num_qubits', 'depth', 'cnots', 'entganglement', 'entganglement (MW)',
+            'max_fidelity_loss', 'total_saved_cnots', 'total_fidelity_loss', 'data', 'real_cnots',
+            'real_cnots_no_approx', 'real_depth', 'real_depth_no_approx', 'duration'
         ])
         return df
 
