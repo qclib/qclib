@@ -111,7 +111,7 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
             max_k = len(entangled_qubits)//2
 
         if strategy == 'greedy':
-            combs = _greedy_combinations(entangled_vector, entangled_qubits, max_k)
+            combs = _greedy_combinations(entangled_vector, entangled_qubits, max_k, max_fidelity_loss, use_low_rank)
         else:
             combs = _all_combinations(entangled_qubits, max_k)
 
