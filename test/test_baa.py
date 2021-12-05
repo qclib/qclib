@@ -25,8 +25,7 @@ from qiskit.circuit.random import random_circuit
 from qiskit.providers import aer
 
 from qclib.state_preparation.baa_schmidt import initialize
-from qclib.state_preparation.util.baa import adaptive_approximation, _cnots_, geometric_entanglement, _to_qubits, \
-    _cnots
+from qclib.state_preparation.util.baa import adaptive_approximation, geometric_entanglement, _cnots
 from qclib.util import get_state
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
@@ -88,8 +87,9 @@ class TestBaa(TestCase):
         vector = np.ndarray(shape=(0,))
         while e_lower > entanglement or entanglement > e_upper:
             qc: qiskit.QuantumCircuit = random_circuit(num_qubits, multiplier * num_qubits)
+            qc.save_statevector('label')
             job: aer.AerJob = qiskit.execute(qc, backend=aer.AerSimulator(method="statevector"))
-            vector = job.result().get_statevector()
+            vector = job.result().data()['label']
             if measure == 'geometric':
                 entanglement = geometric_entanglement(vector)
             elif measure == 'meyer_wallach':
@@ -116,7 +116,7 @@ class TestBaa(TestCase):
 
         circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss, strategy=strategy, use_low_rank=use_low_rank)
         state = get_state(circuit)
-        overlap = TestBaaSchmidt.overlap(state_vector, state)
+        overlap = TestBaaSchmidt.fidelity(state_vector, state)
         self.assertTrue(f'Overlap must be 1 ({overlap})', round(overlap, 2) >= 1-fidelity_loss)
 
         basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=3)
@@ -130,11 +130,7 @@ class TestBaa(TestCase):
         # State Generation
         state_vector, entganglement, depth = TestBaa.get_vector(*entanglement_bounds, num_qubits, 1)
         mw = calculate_entropy_meyer_wallach(state_vector)
-        # cnots = _cnots_decomposition(
-        #     num_qubits // 2,
-        #     num_qubits // 2 + (0 if num_qubits % 2 == 0 else 1),
-        #     num_qubits // 2
-        # )
+        ge = geometric_entanglement(state_vector)
         cnots = _cnots(num_qubits)
         print(f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. State preparation needs {cnots}.")
 
@@ -154,7 +150,7 @@ class TestBaa(TestCase):
                 end_time = datetime.datetime.now()
                 duration = (end_time - start_time).total_seconds()
                 data = [
-                    exp_idx, use_low_rank, strategy, num_qubits, depth, cnots, entganglement, mw,
+                    exp_idx, use_low_rank, strategy, num_qubits, depth, cnots, ge, mw,
                     max_fidelity_loss, node.total_saved_cnots, node.total_fidelity_loss, data,
                     real_cnots, real_cnots_benchmark, real_depth, real_depth_benchmark, duration
                 ]
