@@ -18,10 +18,11 @@ https://arxiv.org/abs/2111.03132
 """
 
 from dataclasses import dataclass
-from itertools import combinations
 from itertools import combinations, chain
-from typing import List
+from typing import List, Union
+
 import numpy as np
+
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
@@ -88,7 +89,7 @@ class Node:
     node_fidelity_loss: float
     total_fidelity_loss: float
 
-    vectors: List[List[complex]]
+    vectors: List[Union[List[complex], np.ndarray]]
     qubits: List[List[int]]
     k_approximation: List[int]
 
@@ -98,6 +99,7 @@ class Node:
         return f'total_saved_cnots:{self.total_saved_cnots}\n' + \
                f'total_fidelity_loss:{self.total_fidelity_loss}\n' + \
                f'len(subsystems):{len(self.qubits)}'
+
 
 def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', max_k=0, use_low_rank=False):
     # Ignore the completely disentangled qubits.
@@ -211,7 +213,7 @@ def _create_node(node, index, qubits_to_disentangle, node_fidelity_loss, subsyst
 
     vectors = node.vectors.copy()
     qubits = node.qubits.copy()
-    k_approximation  = node.k_approximation.copy()
+    k_approximation = node.k_approximation.copy()
 
     entangled_vector = vectors.pop(index)
     entangled_qubits = qubits.pop(index)
@@ -259,6 +261,7 @@ def _search_leafs(node, leafs):
         for child in node.nodes:
             _search_leafs(child, leafs)
 
+
 def _search_best(nodes):
     # Nodes with the greatest reduction in the number of CNOTs.
     # There may be several with the same number.
@@ -269,8 +272,9 @@ def _search_best(nodes):
     # the highest reduction in the number of CNOTs.
     return min(max_saved_cnots_nodes, key=lambda n: n.total_fidelity_loss)
 
+
 def _separation_matrix(vector, subsystem2):
-    n_qubits =  int(np.ceil(np.log2(vector.shape[0])))
+    n_qubits = int(np.ceil(np.log2(vector.shape[0])))
     subsystem1 = list(set(range(n_qubits)).difference(set(subsystem2)))
 
     new_shape = (2 ** len(subsystem1), 2 ** len(subsystem2))
