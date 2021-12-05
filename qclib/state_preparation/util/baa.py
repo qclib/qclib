@@ -133,6 +133,7 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
                                             node_fidelity_loss, subsystem1, subsystem2)
                 # Create one node for each bipartition.
                 node.nodes.append(new_node)
+                del new_node
 
     if len(node.nodes) > 0:  # If it is not the end of the recursion,
         node.vectors.clear() # clear vectors and qubits to save memory.
