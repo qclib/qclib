@@ -79,28 +79,22 @@ def calculate_entropy_meyer_wallach(vector: np.ndarray):
 class TestBaa(TestCase):
 
     @staticmethod
-    def get_vector_mw(mw_lower: float, mw_upper: float, num_qubits: int):
-        mw = -1.0
-        while mw_lower > mw or mw > mw_upper:
-            qc: qiskit.QuantumCircuit = random_circuit(num_qubits, 10 * num_qubits)
-            job: aer.AerJob = qiskit.execute(qc, backend=aer.StatevectorSimulator())
-            vector = job.result().get_statevector()
-            mw = calculate_entropy_meyer_wallach(vector)
-            print('.', end='')
-        print(end='\n')
-        return vector, mw
-
-    @staticmethod
-    def get_vector_ge(ge_lower: float, ge_upper: float, num_qubits: int):
-        mw = -1.0
-        multiplier = 1
+    def get_vector(e_lower: float, e_upper: float, num_qubits: int, start_depth_multiplier=1, measure='meyer_wallach'):
+        entanglement = -1.0
+        multiplier = start_depth_multiplier
         iteration = 0
         entanglements = []
-        while ge_lower > mw or mw > ge_upper:
+        vector = np.ndarray(shape=(0,))
+        while e_lower > entanglement or entanglement > e_upper:
             qc: qiskit.QuantumCircuit = random_circuit(num_qubits, multiplier * num_qubits)
-            job: aer.AerJob = qiskit.execute(qc, backend=aer.StatevectorSimulator())
+            job: aer.AerJob = qiskit.execute(qc, backend=aer.AerSimulator(method="statevector"))
             vector = job.result().get_statevector()
-            mw = geometric_entanglement(vector)
+            if measure == 'geometric':
+                entanglement = geometric_entanglement(vector)
+            elif measure == 'meyer_wallach':
+                entanglement = calculate_entropy_meyer_wallach(vector)
+            else:
+                raise ValueError(f'Entanglement Measure {measure} unknown.')
             iteration += 1
             if iteration > 100:
                 multiplier += 1
@@ -108,10 +102,10 @@ class TestBaa(TestCase):
                 print(f'{multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
                 entanglements = []
             else:
-                entanglements.append(mw)
+                entanglements.append(entanglement)
                 print('.', end='', flush=True)
         print(f'Final {multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
-        return vector, mw
+        return vector, entanglement, multiplier * num_qubits
 
     def initialize_loss(self, fidelity_loss, state_vector=None, n_qubits=5, strategy='brute_force', use_low_rank=False):
 
