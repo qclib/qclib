@@ -81,7 +81,7 @@ def initialize(state_vector, max_fidelity_loss=0.0,
     if max_fidelity_loss < 0 or max_fidelity_loss > 1:
         max_fidelity_loss = 0.0
 
-    node = adaptive_approximation(state_vector, max_fidelity_loss, strategy, max_combination_size)
+    node = adaptive_approximation(state_vector, max_fidelity_loss, strategy, max_combination_size, use_low_rank)
 
     n_qubits = int(np.ceil(np.log2(len(state_vector))))
     circuit = QuantumCircuit(n_qubits)
