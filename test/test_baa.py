@@ -59,8 +59,8 @@ def calculate_entropy_meyer_wallach(vector: np.ndarray):
     num_qb = int(np.ceil(np.log2(vector.shape[0])))
     meyer_wallach_entry = np.zeros(shape=(num_qb, 1))
     for j in range(num_qb):
-        psi_0 = np.zeros(shape=(vector.shape[0]//2, 1), dtype=np.complex)  # np.zeros(shape=())
-        psi_1 = np.zeros(shape=(vector.shape[0]//2, 1), dtype=np.complex)  # np.zeros(shape=())
+        psi_0 = np.zeros(shape=(vector.shape[0]//2, 1), dtype=complex)  # np.zeros(shape=())
+        psi_1 = np.zeros(shape=(vector.shape[0]//2, 1), dtype=complex)  # np.zeros(shape=())
         for basis_state, entry in enumerate(vector):
             delta_0, new_basis_state_0 = get_iota(j, num_qb, 0, basis_state)
             delta_1, new_basis_state_1 = get_iota(j, num_qb, 1, basis_state)
