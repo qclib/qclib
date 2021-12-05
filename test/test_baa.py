@@ -128,7 +128,7 @@ class TestBaa(TestCase):
     def execute_experiment(self, exp_idx,  num_qubits, entanglement_bounds, max_fidelity_loss):
 
         # State Generation
-        state_vector, entganglement = TestBaa.get_vector_ge(*entanglement_bounds, num_qubits)
+        state_vector, entganglement, depth = TestBaa.get_vector(*entanglement_bounds, num_qubits, 1)
         mw = calculate_entropy_meyer_wallach(state_vector)
         # cnots = _cnots_decomposition(
         #     num_qubits // 2,
