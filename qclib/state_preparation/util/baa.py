@@ -143,8 +143,8 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
     for new_node in node.nodes:
         # call _build_approximation_tree recurrently for each new node.
         # except that the vectors are matrices. In this case we are done.
-        if all([v.shape != entangled_vector.shape for v in new_node.vectors]):
-            _build_approximation_tree(new_node, max_fidelity_loss, strategy, max_k)
+        if any(np.asarray(new_node.k_approximation) < 1):
+            _build_approximation_tree(new_node, max_fidelity_loss, strategy, max_k, use_low_rank=use_low_rank)
 
 
 def _all_combinations(entangled_qubits, max_k):
