@@ -118,10 +118,11 @@ class TestBaa(TestCase):
         overlap = TestBaaSchmidt.overlap(state_vector, state)
         self.assertTrue(f'Overlap must be 1 ({overlap})', round(overlap, 2) >= 1-fidelity_loss)
 
-        basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=0)
+        basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=3)
         cnots = len([d[0] for d in basis_circuit.data if d[0].name == 'cx'])
+        depth = basis_circuit.depth()
 
-        return cnots
+        return cnots, depth
 
     def execute_experiment(self, exp_idx,  num_qubits, entanglement_bounds, max_fidelity_loss):
 
