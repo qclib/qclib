@@ -199,7 +199,7 @@ def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle, max_
         subsystem2_vector = svd_v.T[:, 0]
         node_fidelity_loss = 1 - (svd_s ** 2)[0]  # svd_s first coefficient.
     else:
-        node_fidelity_loss = np.round(1 - sum((svd_s ** 2)[0:k+1]), decimals=13)
+        node_fidelity_loss = 1 - sum((svd_s ** 2)[0:k+1])
         subsystem1_vector = svd_u[:, 0:k+1]
         subsystem2_vector = svd_v.T[:, 0:k+1]
 
