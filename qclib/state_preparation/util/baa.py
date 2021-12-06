@@ -303,7 +303,7 @@ def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle, max_
     node_fidelity_loss, subsystem1, subsystem2 = _compute_schmidt_jit(
         state_vector, entangled_qubits, qubits_to_disentangle, max_fidelity_loss, use_low_rank
     )
-    node_fidelity_loss = node_fidelity_loss.real[0]
+    node_fidelity_loss = node_fidelity_loss.flatten().real[0]
     subsystem1 = subsystem1.flatten() if subsystem1.shape[1] == 1 else subsystem1
     subsystem2 = subsystem2.flatten() if subsystem2.shape[1] == 1 else subsystem2
     return node_fidelity_loss, subsystem1, subsystem2
