@@ -16,6 +16,7 @@
 Tests for the baa.py module.
 """
 import datetime
+from multiprocessing import Pool
 from unittest import TestCase
 
 import numpy as np
@@ -115,7 +116,8 @@ class TestBaa(TestCase):
             print(f'Final {multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
         return vector, entanglement, multiplier * num_qubits
 
-    def initialize_loss(self, fidelity_loss, state_vector=None, n_qubits=5, strategy='brute_force', use_low_rank=False):
+    @staticmethod
+    def initialize_loss(fidelity_loss, state_vector=None, n_qubits=5, strategy='brute_force', use_low_rank=False):
 
         if state_vector is None:
             state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
@@ -124,7 +126,7 @@ class TestBaa(TestCase):
         circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss, strategy=strategy, use_low_rank=use_low_rank)
         state = get_state(circuit)
         overlap = TestBaaSchmidt.fidelity(state_vector, state)
-        self.assertTrue(f'Overlap must be 1 ({overlap})', round(overlap, 2) >= 1-fidelity_loss)
+        assert f'Overlap must be 1 ({overlap})', round(overlap, 2) >= 1-fidelity_loss
 
         try:
             basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=3)
@@ -136,7 +138,8 @@ class TestBaa(TestCase):
 
         return cnots, depth
 
-    def execute_experiment(self, exp_idx,  num_qubits, entanglement_bounds, max_fidelity_loss):
+    @staticmethod
+    def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_loss):
 
         # State Generation
         state_vector, entganglement, depth = TestBaa.get_vector(*entanglement_bounds, num_qubits, 1)
@@ -182,12 +185,15 @@ class TestBaa(TestCase):
     def test(self):
         num_qubits = 7
         entanglement_bounds = (0.7, 1.0)
-        result = []
 
-        for max_fidelity_loss in np.linspace(0.1, 0.1, 1):
-            for i in range(10):
-                df = self.execute_experiment(i, num_qubits, entanglement_bounds, max_fidelity_loss)
-                result.append(df)
+        data = [(i, num_qubits, entanglement_bounds, max_fidelity_loss)
+                for max_fidelity_loss in np.linspace(0.1, 1.0, 10)
+                for i in range(100)]
+        if use_parallel:
+            with Pool() as pool:
+                result = pool.starmap(TestBaa.execute_experiment, data)
+        else:
+            result = [TestBaa.execute_experiment(*d) for d in data]
 
         df = pd.concat(result, ignore_index=True)
         print(df.to_string(), flush=True)
