@@ -58,7 +58,8 @@ def adaptive_approximation(state_vector, max_fidelity_loss,
     Returns:
         Node: a node with the data required to build the quantum circuit.
     """
-    n_qubits = int(np.log2(len(state_vector)))
+    state_vector = np.asarray(state_vector).reshape(-1, 1)
+    n_qubits = int(np.log2(state_vector.shape[0]))
     qubits = [list(range(n_qubits))]
     vectors = [state_vector]
 
