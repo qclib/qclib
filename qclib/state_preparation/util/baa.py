@@ -188,29 +188,6 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k, max_fidelity
     return combs
 
 
-def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle, max_fidelity_loss, use_low_rank):
-    local_qubits_to_disentangle = []
-    # Maintains the relative position between the qubits of the two subsystems.
-    for qubit_to_disentangle in qubits_to_disentangle:
-        local_qubits_to_disentangle.append(sum(i < qubit_to_disentangle for i in entangled_qubits))
-
-    sep_matrix = _separation_matrix(state_vector, local_qubits_to_disentangle)
-    svd_u, svd_s, svd_v = np.linalg.svd(sep_matrix, full_matrices=False)
-
-    # Find the best k-approx
-    k = np.argmax(1 - np.cumsum(svd_s ** 2) < max_fidelity_loss)
-    if k == 0 or k + 1 == svd_s.shape[0] or not use_low_rank:
-        subsystem1_vector = svd_u[:, 0]
-        subsystem2_vector = svd_v.T[:, 0]
-        node_fidelity_loss = 1 - (svd_s ** 2)[0]  # svd_s first coefficient.
-    else:
-        node_fidelity_loss = 1 - sum((svd_s ** 2)[0:k+1])
-        subsystem1_vector = svd_u[:, 0:k+1]
-        subsystem2_vector = svd_v.T[:, 0:k+1]
-
-    return node_fidelity_loss, subsystem1_vector, subsystem2_vector
-
-
 def _create_node(node, index, qubits_to_disentangle, node_fidelity_loss, subsystem1_vector, subsystem2_vector):
     total_fidelity_loss = 1 - (1 - node_fidelity_loss) * (1 - node.total_fidelity_loss)
 
@@ -316,6 +293,51 @@ def _separation_matrix(vector, subsystem2):
     return sep_matrix
 
 
+def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle, max_fidelity_loss, use_low_rank):
+    # The following type casts and information are necessary because we use numba JIT compilation
+    qubits_to_disentangle = np.asarray(qubits_to_disentangle, dtype=np.int64)
+    entangled_qubits = np.asarray(entangled_qubits, dtype=np.int64)
+    max_fidelity_loss = np.float64(max_fidelity_loss)
+    state_vector = state_vector.reshape(-1, 1) if len(state_vector.shape) == 1 else state_vector
+    node_fidelity_loss, subsystem1, subsystem2 = _compute_schmidt_jit(
+        state_vector, entangled_qubits, qubits_to_disentangle, max_fidelity_loss, use_low_rank
+    )
+    node_fidelity_loss = node_fidelity_loss.real[0]
+    subsystem1 = subsystem1.flatten() if subsystem1.shape[1] == 1 else subsystem1
+    subsystem2 = subsystem2.flatten() if subsystem2.shape[1] == 1 else subsystem2
+    return node_fidelity_loss, subsystem1, subsystem2
+
+
+@numba.jit('Tuple((complex128[:,:], complex128[:,:], complex128[:,:]))(complex128[:,:], int64[:], int64[:], float64, boolean)')
+def _compute_schmidt_jit(state_vector, entangled_qubits: np.ndarray, qubits_to_disentangle, max_fidelity_loss, use_low_rank) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+    # Maintains the relative position between the qubits of the two subsystems.
+    # 1) the first statement is 'isin' which identifies those entries that are to disentangle
+    # 2) where identifies the indices where where to disentangle
+    # The return of where is a tuple, so we take the first element. The array must be of type int64!
+    selected_qb = np.array([item in qubits_to_disentangle for item in entangled_qubits])
+    local_qubits_to_disentangle = np.where(selected_qb)[0].astype(np.int64)
+
+    # Create the matrix representation of the bi-partition
+    sep_matrix = _separation_matrix(state_vector, local_qubits_to_disentangle)
+    svd_u, svd_s, svd_v = np.linalg.svd(sep_matrix, full_matrices=False)
+
+    # Find the best k-approx
+    k = np.argmax(1 - np.cumsum(svd_s ** 2) < max_fidelity_loss)
+    if k == 0 or k + 1 == svd_s.shape[0] or not use_low_rank:
+        subsystem1_vector = svd_u[:, 0:1]
+        subsystem2_vector = svd_v.T[:, 0:1]
+        node_fidelity_loss = 1 - (svd_s ** 2)[0]  # svd_s first coefficient.
+    else:
+        node_fidelity_loss = 1 - sum((svd_s ** 2)[0:k+1])
+        subsystem1_vector = svd_u[:, 0:k+1]
+        subsystem2_vector = svd_v.T[:, 0:k+1]
+
+    result = np.asarray([[node_fidelity_loss]], dtype=np.complex128), subsystem1_vector, subsystem2_vector
+    return result
+
+
+@numba.jit()
 def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
     cnots_phase_3 = _cnots(_to_qubits(subsystem1_vector.shape[0]))
     cnots_phase_4 = _cnots(_to_qubits(subsystem2_vector.shape[0]))
