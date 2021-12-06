@@ -387,6 +387,7 @@ def _cnot_unitaries(n_qubits):
     )
 
 
+@numba.jit()
 def _cnots(n_qubits):
     if n_qubits < 4:
         cnot_counting = [0, 2, 4]
@@ -479,5 +480,6 @@ def _cnots_(n_qubits, rank=0):
     return int(np.ceil(phase_1 + phase_2 + phase_3 + phase_4))
 
 
+@numba.jit()
 def _to_qubits(n_state_vector):
     return int(np.ceil(np.log2(n_state_vector))) if n_state_vector > 0 else 0
