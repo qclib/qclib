@@ -32,6 +32,9 @@ from qclib.util import get_state
 from test.test_baa_schmidt import TestBaaSchmidt
 
 
+use_parallel = True
+
+
 def get_iota(j: int, n: int, b: int, basis_state: int):
     assert b in [0, 1]
     full_mask = 2**n - 1
@@ -100,12 +103,15 @@ class TestBaa(TestCase):
             if iteration > 100:
                 multiplier += 1
                 iteration = 0
-                print(f'{multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
+                if not use_parallel:
+                    print(f'{multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
                 entanglements = []
             else:
                 entanglements.append(entanglement)
-                print('.', end='', flush=True)
-        print(f'Final {multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
+                if not use_parallel:
+                    print('.', end='', flush=True)
+        if not use_parallel:
+            print(f'Final {multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
         return vector, entanglement, multiplier * num_qubits
 
     def initialize_loss(self, fidelity_loss, state_vector=None, n_qubits=5, strategy='brute_force', use_low_rank=False):
@@ -132,14 +138,16 @@ class TestBaa(TestCase):
         mw = calculate_entropy_meyer_wallach(state_vector)
         ge = geometric_entanglement(state_vector)
         cnots = _cnots(num_qubits)
-        print(f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. State preparation needs {cnots}.")
+        if not use_parallel:
+            print(f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. State preparation needs {cnots}.")
 
         # Benchmark against real Algorithm
         real_cnots_benchmark, real_depth_benchmark = self.initialize_loss(state_vector=state_vector, fidelity_loss=0.0, use_low_rank=False)
         data_result = []
         for use_low_rank in [False, True]:
             for strategy in ['brute_force', 'greedy']:
-                print(f"{strategy.upper()} {'With' if use_low_rank else 'No'} Low Rank Processing....")
+                if not use_parallel:
+                    print(f"{strategy.upper()} {'With' if use_low_rank else 'No'} Low Rank Processing....")
                 node = adaptive_approximation(state_vector, max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy)
                 # Result
                 data = list(
@@ -162,6 +170,8 @@ class TestBaa(TestCase):
             'max_fidelity_loss', 'total_saved_cnots', 'total_fidelity_loss', 'data', 'real_cnots',
             'real_cnots_no_approx', 'real_depth', 'real_depth_no_approx', 'duration'
         ])
+        if use_parallel:
+            print(f"Done {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_loss}")
         return df
 
     def test(self):
