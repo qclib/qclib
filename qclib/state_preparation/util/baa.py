@@ -19,8 +19,9 @@ https://arxiv.org/abs/2111.03132
 
 from dataclasses import dataclass
 from itertools import combinations, chain
-from typing import List, Union
+from typing import List, Union, Tuple
 
+import numba
 import numpy as np
 
 # pylint: disable=missing-function-docstring
@@ -275,19 +276,42 @@ def _search_best(nodes):
     return min(max_saved_cnots_nodes, key=lambda n: n.total_fidelity_loss)
 
 
+@numba.jit()
+def idx_subsystem(idx: int, subsystem: np.ndarray):
+    # The subsystem is a 1d array with numbers that represent the binary position in the binary representation
+    # of idx. We need to build only the numbers from those binary positions.
+    # We will give along the way an example
+    # idx = 26 ==> 011010
+    # subsystem = [1, 2, 4]
+    # Thus we have X11X1X => 111 => 7
+    subsystem_ordered: np.ndarray = subsystem.copy()
+    subsystem_ordered.sort()
+    subsystem_ordered = subsystem_ordered[::-1]
+
+    bit_mask = 1 << subsystem_ordered       # => [010000, 001000, 000010] = [16, 8, 2]
+    filtered = idx & bit_mask               #    [011010, 011010, 011010] => [010000, 001000, 000010] = [16, 8, 2]
+    matches = filtered == bit_mask          #                             => [True,   True,  True  ]
+    matches_int = matches.astype(np.float64)  #                             => [1,      1,     1     ]
+
+    new_system = 2 ** np.arange(0, subsystem_ordered.shape[0], dtype=np.float64)[::-1]  # 2 ** [2, 1, 0] = [4, 2, 1]
+
+    subsystem_idx = matches_int.dot(new_system)  # => [1,1, 1].[4, 2, 1] = 4 + 2 +  4 = 7
+    return int(subsystem_idx)
+
+
+@numba.jit("complex128[:, :](complex128[:, :], int64[:])")
 def _separation_matrix(vector, subsystem2):
     n_qubits = int(np.ceil(np.log2(vector.shape[0])))
-    subsystem1 = list(set(range(n_qubits)).difference(set(subsystem2)))
+    subsystem1 = np.asarray(list(set(range(n_qubits)).difference(set(subsystem2))))
 
-    new_shape = (2 ** len(subsystem1), 2 ** len(subsystem2))
+    new_shape = (2 ** subsystem1.shape[0], 2 ** subsystem2.shape[0])
 
-    sep_matrix = np.zeros(shape=new_shape, dtype=complex)
+    sep_matrix = np.zeros(shape=new_shape, dtype=np.complex128)
 
-    for j, amp in enumerate(vector):
-        current = f'{j:b}'.zfill(n_qubits)
-        idx2 = ''.join([c for i, c in enumerate(current) if i in subsystem2])
-        idx1 = ''.join([c for i, c in enumerate(current) if i in subsystem1])
-        sep_matrix[int(idx1, 2), int(idx2, 2)] = amp
+    for j, amp in enumerate(vector.flatten()):
+        idx2_ = idx_subsystem(j, subsystem2)
+        idx1_ = idx_subsystem(j, subsystem1)
+        sep_matrix[idx1_, idx2_] = amp
 
     return sep_matrix
 
