@@ -150,7 +150,9 @@ class TestBaa(TestCase):
             print(f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. State preparation needs {cnots}.")
 
         # Benchmark against real Algorithm
-        real_cnots_benchmark, real_depth_benchmark = self.initialize_loss(state_vector=state_vector, fidelity_loss=0.0, use_low_rank=False)
+        real_cnots_benchmark, real_depth_benchmark = TestBaa.initialize_loss(
+            state_vector=state_vector, fidelity_loss=0.0, use_low_rank=False
+        )
         data_result = []
         for use_low_rank in [False, True]:
             for strategy in ['brute_force', 'greedy']:
@@ -162,7 +164,9 @@ class TestBaa(TestCase):
                     zip(node.k_approximation, [list(v.shape) for v in node.vectors])
                 )
                 start_time = datetime.datetime.now()
-                real_cnots, real_depth = self.initialize_loss(state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy)
+                real_cnots, real_depth = TestBaa.initialize_loss(
+                    state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy
+                )
                 end_time = datetime.datetime.now()
                 duration = (end_time - start_time).total_seconds()
                 data = [
