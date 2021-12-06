@@ -21,6 +21,7 @@ from unittest import TestCase
 import numpy as np
 import pandas as pd
 import qiskit
+from qiskit import QiskitError
 from qiskit.circuit.random import random_circuit
 from qiskit.providers import aer
 
@@ -125,9 +126,13 @@ class TestBaa(TestCase):
         overlap = TestBaaSchmidt.fidelity(state_vector, state)
         self.assertTrue(f'Overlap must be 1 ({overlap})', round(overlap, 2) >= 1-fidelity_loss)
 
-        basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=3)
-        cnots = len([d[0] for d in basis_circuit.data if d[0].name == 'cx'])
-        depth = basis_circuit.depth()
+        try:
+            basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=3)
+            cnots = len([d[0] for d in basis_circuit.data if d[0].name == 'cx'])
+            depth = basis_circuit.depth()
+        except QiskitError as ex:
+            print(ex)
+            return -1, -1
 
         return cnots, depth
 
