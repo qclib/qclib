@@ -201,4 +201,6 @@ class TestBaa(TestCase):
 
         df = pd.concat(result, ignore_index=True)
         print(df.to_string(), flush=True)
-
+        timestamp_sec = int(datetime.datetime.now().timestamp())
+        df.to_pickle(f'./{timestamp_sec}.test_baa.pickle')
+        df.to_csv(f'./{timestamp_sec}.test_baa.csv')
