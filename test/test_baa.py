@@ -92,9 +92,7 @@ class TestBaa(TestCase):
         vector = np.ndarray(shape=(0,))
         while e_lower > entanglement or entanglement > e_upper:
             qc: qiskit.QuantumCircuit = random_circuit(num_qubits, multiplier * num_qubits)
-            qc.save_statevector('label')
-            job: aer.AerJob = qiskit.execute(qc, backend=aer.AerSimulator(method="statevector"))
-            vector = job.result().data()['label']
+            vector = get_state(qc)
             if measure == 'geometric':
                 entanglement = geometric_entanglement(vector)
             elif measure == 'meyer_wallach':
