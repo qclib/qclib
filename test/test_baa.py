@@ -139,7 +139,7 @@ class TestBaa(TestCase):
         return cnots, depth
 
     @staticmethod
-    def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_loss):
+    def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses, return_state=False):
 
         # State Generation
         state_vector, entganglement, depth = TestBaa.get_vector(*entanglement_bounds, num_qubits, 1)
@@ -154,27 +154,28 @@ class TestBaa(TestCase):
             state_vector=state_vector, fidelity_loss=0.0, use_low_rank=False
         )
         data_result = []
-        for use_low_rank in [False, True]:
-            for strategy in ['brute_force', 'greedy']:
-                if not use_parallel:
-                    print(f"{strategy.upper()} {'With' if use_low_rank else 'No'} Low Rank Processing....")
-                node = adaptive_approximation(state_vector, max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy)
-                # Result
-                data = list(
-                    zip(node.k_approximation, [list(v.shape) for v in node.vectors])
-                )
-                start_time = datetime.datetime.now()
-                real_cnots, real_depth = TestBaa.initialize_loss(
-                    state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy
-                )
-                end_time = datetime.datetime.now()
-                duration = (end_time - start_time).total_seconds()
-                data = [
-                    exp_idx, use_low_rank, strategy, num_qubits, depth, cnots, ge, mw,
-                    max_fidelity_loss, node.total_saved_cnots, node.total_fidelity_loss, data,
-                    real_cnots, real_cnots_benchmark, real_depth, real_depth_benchmark, duration
-                ]
-                data_result.append(data)
+        for max_fidelity_loss in max_fidelity_losses:
+            for use_low_rank in [False, True]:
+                for strategy in ['brute_force', 'greedy']:
+                    if not use_parallel:
+                        print(f"{strategy.upper()} {'With' if use_low_rank else 'No'} Low Rank Processing....")
+                    node = adaptive_approximation(state_vector, max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy)
+                    # Result
+                    data = list(
+                        zip(node.k_approximation, [list(v.shape) for v in node.vectors])
+                    )
+                    start_time = datetime.datetime.now()
+                    real_cnots, real_depth = TestBaa.initialize_loss(
+                        state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy
+                    )
+                    end_time = datetime.datetime.now()
+                    duration = (end_time - start_time).total_seconds()
+                    data = [
+                        exp_idx, use_low_rank, strategy, num_qubits, depth, cnots, ge, mw,
+                        max_fidelity_loss, node.total_saved_cnots, node.total_fidelity_loss, data,
+                        real_cnots, real_cnots_benchmark, real_depth, real_depth_benchmark, duration
+                    ]
+                    data_result.append(data)
 
         # Experiment transcription
         df = pd.DataFrame(data=data_result, columns=[
@@ -183,16 +184,18 @@ class TestBaa(TestCase):
             'real_cnots_no_approx', 'real_depth', 'real_depth_no_approx', 'duration'
         ])
         if use_parallel:
-            print(f"Done {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_loss}")
-        return df
+            print(f"Done {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
+        if return_state:
+            return df, state_vector
+        else:
+            return df
 
     def test(self):
         num_qubits = 7
         entanglement_bounds = (0.7, 1.0)
+        max_fidelity_loss = np.linspace(0.1, 1.0, 10)
 
-        data = [(i, num_qubits, entanglement_bounds, max_fidelity_loss)
-                for max_fidelity_loss in np.linspace(0.1, 1.0, 10)
-                for i in range(100)]
+        data = [(i, num_qubits, entanglement_bounds, max_fidelity_loss) for i in range(100)]
         if use_parallel:
             with Pool() as pool:
                 result = pool.starmap(TestBaa.execute_experiment, data)
