@@ -22,12 +22,12 @@ defined at https://arxiv.org/abs/1501.06911.
 import numpy as np
 import scipy
 import qiskit.quantum_info as qi
-from qiskit import QuantumCircuit, QuantumRegister
+from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.extensions.quantum_initializer.uc import UCGate
 
 # pylint: disable=maybe-no-member
 
-def decompose(isometry, scheme='ccd', max_fidelity_loss=0.0):
+def decompose(isometry, scheme='ccd'):
     """
     Decompose an isometry from m to n qubits.
     In particular, it decomposes unitaries on n qubits (m=n) or prepare a
@@ -38,9 +38,6 @@ def decompose(isometry, scheme='ccd', max_fidelity_loss=0.0):
             complex 2^n×2^m array with orthonormal columns.
         scheme (str): method to decompose the isometry ('knill', 'ccd', 'csd').
             Default is scheme='ccd'.
-        max_fidelity_loss (float):
-            ``state`` allowed (fidelity) error for approximation (0 <= ``max_fidelity_loss`` <= 1).
-            If ``max_fidelity_loss`` is not in the valid range, it will be ignored.
     Returns:
         QuantumCircuit: a quantum circuit with the isometry attached.
     Raises:
@@ -67,7 +64,7 @@ def decompose(isometry, scheme='ccd', max_fidelity_loss=0.0):
     if scheme == 'ccd':
         return _ccd(iso, log_lines, log_cols)
 
-    return _knill(iso, log_lines, log_cols, max_fidelity_loss)
+    return _knill(iso, log_lines, log_cols)
 
 
 
@@ -103,12 +100,38 @@ def _is_isometry(iso, log_cols):
 
 
 
-def _knill(iso, log_lines, log_cols, max_fidelity_loss=0.0):
+def _knill(iso, log_lines, log_cols):
     if log_lines < 2:
         raise ValueError(
             "Knill decomposition does not work on a 1 qubit isometry (N=2)."
         )
 
+    unitary = _extend_to_unitary(iso, log_lines, log_cols)
+
+    eigval, eigvec = np.linalg.eig(unitary)
+    arg = np.angle(eigval)
+
+    reg = QuantumRegister(log_lines)
+    circuit = QuantumCircuit(reg)
+
+    from qclib.state_preparation.schmidt import initialize as schmidt # pylint: disable=import-outside-toplevel
+
+    for i in range(2**log_lines):                            # The eigenvalues are not necessarily
+                                                             # ordered.
+        if np.abs(arg[i]) > 10**-15:
+            state = eigvec[:,i]
+
+            circuit.compose( schmidt(state).inverse(), reg, inplace=True )
+
+            circuit.x(list(range(log_lines)))
+            circuit.mcp(arg[i], list(range(log_lines-1)), log_lines-1)
+            circuit.x(list(range(log_lines)))
+
+            circuit.compose( schmidt(state), reg, inplace=True )
+
+    return circuit
+
+def _extend_to_unitary(iso, log_lines, log_cols):
     if log_lines == log_cols:      # The isometry v is already unitary.
         unitary = iso
     else:                          # The isometry v is extended to a unitary maximizing
@@ -127,29 +150,7 @@ def _knill(iso, log_lines, log_cols, max_fidelity_loss=0.0):
                                                              # because it nullified the
                                                              # transposition of the conjugate
                                                              # complex above (which was removed).
-
-    eigval, eigvec = np.linalg.eig(unitary)
-    arg = np.angle(eigval)
-
-    reg = QuantumRegister(log_lines)
-    circuit = QuantumCircuit(reg)
-
-    from qclib.state_preparation.baa_schmidt import initialize as schmidt # pylint: disable=import-outside-toplevel
-
-    for i in range(2**log_lines):                            # The eigenvalues are not necessarily
-                                                             # ordered.
-        if np.abs(arg[i]) > 10**-15:
-            state = eigvec[:,i]
-
-            circuit.compose( schmidt(state, max_fidelity_loss).inverse(),
-                                                            reg, inplace=True )
-            circuit.x(list(range(log_lines)))
-            circuit.mcp(arg[i], list(range(log_lines-1)), log_lines-1)
-            circuit.x(list(range(log_lines)))
-
-            circuit.compose( schmidt(state, max_fidelity_loss),
-                                                            reg, inplace=True )
-    return circuit
+    return unitary
 
 
 
@@ -290,3 +291,98 @@ def _b(col_index, bit_index):              # col_index ^ ((col_index >> bit_inde
 def _k_s(col_index, bit_index):
     return int((col_index & 2**bit_index) / 2**bit_index) # Returns the bit value at bit_index
                                                           # of col_index (k in the paper).
+
+
+
+# CNOT count
+
+
+
+def cnot_count(isometry, scheme='ccd', method='estimate'):
+    """
+    Count the number of CNOTs to decompose the isometry.
+    """
+    if method == 'estimate':
+        return _cnot_count_estimate(isometry, scheme)
+
+    # Exact count
+    circuit = decompose(isometry, scheme)
+    transpiled_circuit = transpile(circuit, basis_gates=['u1','u2','u3','cx'],
+                                                            optimization_level=0)
+    count_ops = transpiled_circuit.count_ops()
+    if 'cx' in count_ops:
+        return count_ops['cx']
+
+    return 0
+
+def _cnot_count_estimate(isometry, scheme='ccd'):
+    """
+    Estimate the number of CNOTs to decompose the isometry.
+    """
+    iso = isometry.astype(complex)
+    if len(iso.shape) == 1:
+        iso = iso.reshape(iso.shape[0], 1)
+
+    log_lines = int(np.log2(iso.shape[0]))
+    log_cols = int(np.log2(iso.shape[1]))
+
+    if scheme == 'knill':
+        return _cnot_count_estimate_knill(isometry, log_lines, log_cols)
+
+    # CCD
+    return _cnot_count_estimate_ccd(log_lines, log_cols)
+
+def _cnot_count_estimate_knill(iso, log_lines, log_cols):
+    """
+    Estimate the number of CNOTs to decompose the isometry using Knill.
+    """
+    unitary = _extend_to_unitary(iso, log_lines, log_cols)
+
+    eigval, eigvec = np.linalg.eig(unitary)
+    arg = np.angle(eigval)
+
+    from qclib.state_preparation.schmidt import cnot_count as schmidt_cnot_count # pylint: disable=import-outside-toplevel
+
+    cnots = 0
+    for i in range(2**log_lines):
+        if np.abs(arg[i]) > 10**-15:
+            state = eigvec[:,i]
+
+            # Two times Schmidt state preparation
+            cnots += 2 * schmidt_cnot_count(state)
+
+            # MCP
+            if log_lines == 2:
+                cnots += 1
+            elif log_lines > 2:
+                cnots += 16*log_lines**2 - 60*log_lines + 42
+
+    return cnots
+
+def _cnot_count_estimate_ccd(log_lines, log_cols):
+    """
+    Estimate the number of CNOTs to decompose the isometry using CCD.
+    """
+    cnots = 0
+    for k in range(2**log_cols):
+        k_bin = '{:0{}b}'.format(k, log_lines)
+        # G_K
+        for i in range(log_lines):
+            target = log_lines - i - 1
+            control = list(range(target))
+            ancilla = list(range(target+1, log_lines))
+
+            if _k_s(k, i) == 0 and _b(k, i+1) != 0:
+                # MCG implemented as a UCG up to a diagonal
+                n_qubits = sum([k_bin[q] == '1' for q in control+ancilla]) + 1
+                cnots += 2**(n_qubits - 1) - 1
+
+            # UCG up to a diagonal
+            n_qubits = len(control) + 1
+            cnots += 2**(n_qubits - 1) - 1
+
+    # Diagonal
+    if log_cols > 0:
+        cnots += 2**log_cols - 2
+
+    return cnots

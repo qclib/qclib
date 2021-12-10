@@ -49,7 +49,15 @@ def create_angles_tree(state_tree):
     amp = 0.0
     if state_tree.amplitude != 0.0:
         amp = state_tree.right.amplitude / state_tree.amplitude
-    angle_y = 2 * np.arcsin( np.abs(amp) )
+
+    # Avoid out-of-domain value due to numerical error.
+    if np.abs(amp) < -1.0:
+        angle_y = -np.pi
+    elif np.abs(amp) > 1.0:
+        angle_y = np.pi
+    else:
+        angle_y = 2 * np.arcsin( np.abs(amp) )
+
     angle_z = 2 * np.angle(amp)
 
     node = NodeAngleTree(state_tree.index, state_tree.level, angle_y, angle_z, None, None)
