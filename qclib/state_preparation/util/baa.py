@@ -280,6 +280,11 @@ def _max_subsystem_size(node):
 
 
 @numba.jit()
+def _to_qubits(n_state_vector):
+    return int(np.ceil(np.log2(n_state_vector))) if n_state_vector > 0 else 0
+
+
+@numba.jit()
 def idx_subsystem(idx: int, subsystem: np.ndarray):
     # The subsystem is a 1d array with numbers that represent the binary position in the binary representation
     # of idx. We need to build only the numbers from those binary positions.
@@ -317,10 +322,6 @@ def _separation_matrix(vector, subsystem2):
         sep_matrix[idx1_, idx2_] = amp
 
     return sep_matrix
-
-
-def _to_qubits(n_state_vector):
-    return int(np.ceil(np.log2(n_state_vector))) if n_state_vector > 0 else 0
 
 
 def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle, max_fidelity_loss, use_low_rank):
@@ -367,7 +368,6 @@ def _compute_schmidt_jit(state_vector, entangled_qubits: np.ndarray, qubits_to_d
     return result
 
 
-@numba.jit()
 def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
     method = 'estimate'
     if len(subsystem1_vector.shape) > 1 and subsystem1_vector.shape[1] == subsystem2_vector.shape[1] > 1:
