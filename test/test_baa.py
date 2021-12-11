@@ -24,13 +24,11 @@ import pandas as pd
 import qiskit
 from qiskit import QiskitError
 from qiskit.circuit.random import random_circuit
-from qiskit.providers import aer
 
 from qclib.state_preparation.baa_schmidt import initialize
+from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots
 from qclib.state_preparation.util.baa import adaptive_approximation, geometric_entanglement
 from qclib.util import get_state
-from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots
-
 from test.test_baa_schmidt import TestBaaSchmidt
 
 # pylint: disable=missing-function-docstring
