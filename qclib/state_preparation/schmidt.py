@@ -21,8 +21,8 @@ import numpy as np
 import deprecation
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.state_preparation.mottonen import initialize as mottonen
-from qclib.unitary import unitary as decompose_unitary
-from qclib.isometry import decompose as decompose_isometry
+from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
+from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
 
 # pylint: disable=maybe-no-member
 
@@ -165,6 +165,64 @@ def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
 
 
 
+# CNOT count
+
+
+
+def cnot_count(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='qsd',
+                                                                method='estimate'):
+    """
+    Estimate the number of CNOTs to build the state preparation circuit.
+    """
+    if len(state_vector) < 4:
+        return 0
+
+    cnots = 0
+
+    # Schmidt decomposition
+    svd_u, singular_values, svd_v = _svd(state_vector)
+
+    rank, svd_u, svd_v, singular_values = \
+    _low_rank_approximation(low_rank, svd_u, svd_v, singular_values)
+
+    # Schmidt measure of entanglement
+    ebits = int(np.log2(rank))
+
+    # Phase 1.
+    if ebits > 0:
+        cnots += _cnots(singular_values.reshape(rank, 1), isometry_scheme,
+                                                          unitary_scheme, method)
+    # Phase 2.
+    cnots += ebits
+
+    # Phases 3 and 4.
+    cnots += _cnots(svd_u, isometry_scheme, unitary_scheme, method)
+    cnots += _cnots(svd_v.T, isometry_scheme, unitary_scheme, method)
+
+    return cnots
+
+def _cnots(data, iso_scheme='ccd', uni_scheme='qsd', method='estimate'):
+    n_qubits = int(np.log2(data.shape[0]))
+
+    rank = 0
+    if data.shape[1] == 1:
+        _, svals, _ = _svd(data[:, 0])
+        rank = sum(j > 10**-15 for j in svals)
+
+    if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4 or rank==1):
+        return cnot_count(data[:, 0], isometry_scheme=iso_scheme,
+                                       unitary_scheme=uni_scheme, method=method)
+    if data.shape[0] > data.shape[1]:
+        return cnots_isometry(data, scheme=iso_scheme, method=method)
+
+    return cnots_unitary(data, decomposition=uni_scheme, method=method)
+
+
+
+# Deprecated
+
+
+
 @deprecation.deprecated(deprecated_in="0.0.7",
                         details="Use the initialize function instead")
 def initialize_original(state_vector):
@@ -172,7 +230,6 @@ def initialize_original(state_vector):
         This function implements the original algorithm as defined in arXiv:1003.5760.
         It is kept here for didactic reasons.
         The ``initialize`` function should preferably be used.
-        This function is used in isometry.py.
 
     For instance, to initialize the state a|0> + b|1>
         $ state = [a, b]

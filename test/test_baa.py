@@ -27,11 +27,14 @@ from qiskit.circuit.random import random_circuit
 from qiskit.providers import aer
 
 from qclib.state_preparation.baa_schmidt import initialize
-from qclib.state_preparation.util.baa import adaptive_approximation, geometric_entanglement, _cnots
+from qclib.state_preparation.util.baa import adaptive_approximation, geometric_entanglement
 from qclib.util import get_state
+from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots
+
+from test.test_baa_schmidt import TestBaaSchmidt
+
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
-from test.test_baa_schmidt import TestBaaSchmidt
 
 
 use_parallel = True
@@ -143,7 +146,7 @@ class TestBaa(TestCase):
         state_vector, entganglement, depth = TestBaa.get_vector(*entanglement_bounds, num_qubits, 1)
         mw = calculate_entropy_meyer_wallach(state_vector)
         ge = geometric_entanglement(state_vector)
-        cnots = _cnots(num_qubits)
+        cnots = schmidt_cnots(state_vector)
         if not use_parallel:
             print(f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. State preparation needs {cnots}.")
 
