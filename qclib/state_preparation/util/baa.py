@@ -23,6 +23,7 @@ from typing import List, Union, Tuple
 
 import numba
 import numpy as np
+import tensorly as tl
 from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots
 
 # pylint: disable=missing-function-docstring
@@ -60,7 +61,8 @@ def adaptive_approximation(state_vector, max_fidelity_loss,
     Returns:
         Node: a node with the data required to build the quantum circuit.
     """
-    n_qubits = int(np.log2(len(state_vector)))
+    state_vector = np.asarray(state_vector).reshape(-1, 1)
+    n_qubits = _to_qubits(state_vector.shape[0])
     qubits = [list(range(n_qubits))]
     vectors = [state_vector]
 
@@ -76,9 +78,22 @@ def adaptive_approximation(state_vector, max_fidelity_loss,
 
 
 def geometric_entanglement(state_vector):
-    node = adaptive_approximation(state_vector, 10.0, strategy='greedy', max_combination_size=1, use_low_rank=False)
-    return node.total_fidelity_loss
+    # node = adaptive_approximation(state_vector, 10.0, strategy='greedy', max_combination_size=1, use_low_rank=False)
+    # return node.total_fidelity_loss
+    from tensorly.tucker_tensor import TuckerTensor
+    from tensorly.decomposition import tucker
 
+    shape = tuple([2] * _to_qubits(state_vector.shape[0]))
+    rank = [1] * _to_qubits(state_vector.shape[0])
+    tensor = tl.tensor(state_vector).reshape(shape)
+    results = []
+    # The Tucker decomposition is actually a randomized algorithm. We take three shots and take the min of it.
+    for _ in range(3):
+        decomp_tensor: TuckerTensor = tucker(tensor, rank=rank, verbose=False, svd='numpy_svd', init='random')
+        fidelity = 1 - np.linalg.norm(decomp_tensor.core) ** 2
+        results.append(fidelity)
+
+    return min(results)
 
 @dataclass
 class Node:
