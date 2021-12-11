@@ -27,6 +27,7 @@ from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 
+
 def adaptive_approximation(state_vector, max_fidelity_loss,
                             strategy='greedy', max_combination_size=0, use_low_rank=False):
     """
@@ -280,6 +281,7 @@ def _search_best(nodes):
     # the highest reduction in the number of CNOTs.
     return min(min_depth_nodes, key=lambda n: n.total_fidelity_loss)
 
+
 def _max_subsystem_size(node):
     return len(max(node.qubits, key=len))
 
@@ -303,6 +305,7 @@ def _separation_matrix(vector, subsystem2):
 
 def _to_qubits(n_state_vector):
     return int(np.ceil(np.log2(n_state_vector))) if n_state_vector > 0 else 0
+
 
 def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
     method = 'estimate'
