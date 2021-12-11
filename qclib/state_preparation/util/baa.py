@@ -22,6 +22,7 @@ from itertools import combinations, chain
 from typing import List, Union
 
 import numpy as np
+from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
@@ -270,13 +271,21 @@ def _search_best(nodes):
     max_total_saved_cnots = max(nodes, key=lambda n: n.total_saved_cnots).total_saved_cnots
     max_saved_cnots_nodes = [node for node in nodes
                                 if node.total_saved_cnots == max_total_saved_cnots]
+    # Nodes with the minimum depth (wich depends on the size of the node's largest subsystem).
+    # Shallower circuits with the same number of CNOTs means more parallelism.
+    min_depth = _max_subsystem_size(min(max_saved_cnots_nodes, key=_max_subsystem_size))
+    min_depth_nodes = [node for node in max_saved_cnots_nodes
+                                if _max_subsystem_size(node) == min_depth]
     # Node with the lowest fidelity loss among the nodes with
     # the highest reduction in the number of CNOTs.
-    return min(max_saved_cnots_nodes, key=lambda n: n.total_fidelity_loss)
+    return min(min_depth_nodes, key=lambda n: n.total_fidelity_loss)
+
+def _max_subsystem_size(node):
+    return len(max(node.qubits, key=len))
 
 
 def _separation_matrix(vector, subsystem2):
-    n_qubits = int(np.ceil(np.log2(vector.shape[0])))
+    n_qubits =  _to_qubits(vector.shape[0])
     subsystem1 = list(set(range(n_qubits)).difference(set(subsystem2)))
 
     new_shape = (2 ** len(subsystem1), 2 ** len(subsystem2))
@@ -292,168 +301,13 @@ def _separation_matrix(vector, subsystem2):
     return sep_matrix
 
 
-def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
-    cnots_phase_3 = _cnots(_to_qubits(subsystem1_vector.shape[0]))
-    cnots_phase_4 = _cnots(_to_qubits(subsystem2_vector.shape[0]))
-    cnots_originally = _cnots(_to_qubits(entangled_vector.shape[0]))
-
-    return cnots_originally - cnots_phase_3 - cnots_phase_4
-
-
-def _count_saved_cnots_alternative(state_vector, entangled_vector, disentangled_vector):
-    state_vector_qubits = _to_qubits(state_vector.shape[0])
-    entangled_vector_qubits = _to_qubits(entangled_vector.shape[0])
-    disentangled_vector_qubits = _to_qubits(disentangled_vector.shape[0])
-    entangled_vector_rank = entangled_vector.shape[1] if len(entangled_vector.shape) == 2 else 0
-    disentangled_vector_rank = disentangled_vector.shape[1] if len(disentangled_vector.shape) == 2 else 0
-    assert entangled_vector_rank == disentangled_vector_rank
-
-    cnots_needed = _cnots_decomposition(entangled_vector_qubits, disentangled_vector_qubits, entangled_vector_rank)
-    cnots_originally = _cnots_decomposition(
-        state_vector_qubits//2,
-        state_vector_qubits//2 + (0 if state_vector_qubits % 2 == 0 else 1),
-        2**(state_vector_qubits//2)
-    )
-
-    return cnots_originally - cnots_needed
-
-
-def _cnot_state_preparation(n_qubits):
-    # Moettoenen
-    return 2**n_qubits - n_qubits - 1
-
-
-def _cnot_isometries(n_qubits, m_qubits):
-    assert m_qubits > 0
-    assert m_qubits < n_qubits
-    # Iten, R., Colbeck, R., Kukuljan, I., Home, J. & Christandl, M. Quantum circuits for isometries.
-    # Phys Rev A 93, 032318 (2016).
-    # if n_qubits == 2:
-    #     # Appendix B.1.
-    #     return 2
-    # if n_qubits == 3:
-    #     # Appendix B.2.
-    #     return 9 if m_qubits == 1 else 14
-    # if n_qubits == 4:
-    #     # Appendix B.3.
-    #     if m_qubits == 1:
-    #         return 22
-    #     if m_qubits == 2:
-    #         return 3
-    #     if m_qubits == 3:
-    #         return 2 ** (m_qubits + n_qubits) - 1 / 24 * 2 ** n_qubits  # FIXME: Need info
-    # if 4 < n_qubits < 8:
-    #     return int(
-    #         2 ** (m_qubits + n_qubits) - 1 / 24 * 2 ** n_qubits  # FIXME: Need info
-    #     )
-    # else:
-    # return int(
-    #     2 ** (m_qubits + n_qubits) - 1 / 24 * 2 ** n_qubits
-    #     + 2**m_qubits * (28 * n_qubits**2 + m_qubits * (44 - 14*n_qubits) - 117 * n_qubits + 88)
-    #     - 28 * n_qubits**2 + m_qubits * (28 * n_qubits - 88) + 117 * n_qubits - 87
-    # )
-    return int(
-        2 ** (n_qubits + m_qubits) - 1/24 * 2 ** n_qubits + n_qubits**2 * 2 ** m_qubits
-    )
-
-
-def _cnot_unitaries(n_qubits):
-    return int(
-        23/48 * 2 ** (2 * n_qubits) - 3/2 * 2**n_qubits + 4/3
-    )
-
-
-def _cnots(n_qubits):
-    if n_qubits < 4:
-        cnot_counting = [0, 2, 4]
-        return cnot_counting[n_qubits-1]
-
-    # The expressions below are valid for k >= 2 (n_qubits >= 4).
-    # These are the expressions for the unitary decomposition QSD l=2 without
-    # the optimizations. With the optimizations, they need to be replaced.
-    # In some cases, the actual CNOT count of the Schmidt state preparation
-    # may be a bit larger. It happens because we do not yet have an efficient
-    # implementation for (n-1)-to-n isometries (like Cosine-Sine decomposition).
-    if n_qubits % 2 == 0:
-        k = n_qubits/2
-        return int(2 ** k - 1 + 9/8*2**(2*k) - 3/2 * 2**(k+1))
-
-    k = (n_qubits-1)/2
-    return int(2 ** k - 1 + 9/16*2**(2*k) - 3/2 * 2**(k) +
-                            9/16*2**(2*k + 2) - 3/2 * 2**(k + 1))
-
-
-def _cnots_decomposition(sub_system_1_qubits, sub_system_2_qubits, rank=0):
-    k = min(sub_system_1_qubits, sub_system_2_qubits)
-    m = _to_qubits(rank) if rank > 1 else 0
-    if m == 0:
-        # State Preparation
-        phase_1 = 0
-        phase_2 = 0
-        phase_3 = _cnot_state_preparation(sub_system_1_qubits)
-        phase_4 = _cnot_state_preparation(sub_system_2_qubits)
-    elif m < k:
-        # Isometries
-        phase_1 = _cnot_state_preparation(m)
-        phase_2 = m
-        # This is a nasty hack, but I don't seem to have control over the difference of isometries and unitaries.
-        phase_3 = min(_cnot_isometries(sub_system_1_qubits, m), _cnot_unitaries(sub_system_1_qubits))
-        phase_4 = min(_cnot_isometries(sub_system_2_qubits, m), _cnot_unitaries(sub_system_2_qubits))
-    else:
-        # Unitaries
-        phase_1 = _cnot_state_preparation(k)
-        phase_2 = k
-        phase_3 = _cnot_unitaries(sub_system_1_qubits)
-        phase_4 = _cnot_unitaries(sub_system_2_qubits)
-    return int(np.ceil(phase_1 + phase_2 + phase_3 + phase_4))
-
-
-def _cnots_(n_qubits, rank=0):
-    if n_qubits % 2 == 0:
-        k = n_qubits // 2
-        m = _to_qubits(rank) if rank > 1 else k
-        if m == 0:
-            # State Preparation
-            phase_1 = 0
-            phase_2 = 0
-            phase_3 = _cnot_state_preparation(k)
-            phase_4 = _cnot_state_preparation(k)
-        elif m < k:
-            # Isometries
-            phase_1 = _cnot_state_preparation(m)
-            phase_2 = m
-            phase_3 = _cnot_isometries(k, m)
-            phase_4 = _cnot_isometries(k, m)
-        else:
-            # Unitaries
-            phase_1 = _cnot_state_preparation(k)
-            phase_2 = k
-            phase_3 = _cnot_unitaries(k)
-            phase_4 = _cnot_unitaries(k)
-    else:
-        k = (n_qubits - 1) // 2
-        m = _to_qubits(rank) if rank > 1 else k
-        if m == 0:
-            # State Preparation
-            phase_1 = 0
-            phase_2 = 0
-            phase_3 = _cnot_state_preparation(k)
-            phase_4 = _cnot_state_preparation(k+1)
-        elif m < k:
-            # Isometries
-            phase_1 = _cnot_state_preparation(m)
-            phase_2 = m
-            phase_3 = _cnot_isometries(k, m)
-            phase_4 = _cnot_isometries(k + 1, m)
-        else:
-            # Unitaries
-            phase_1 = _cnot_state_preparation(k)
-            phase_2 = k
-            phase_3 = _cnot_unitaries(k)
-            phase_4 = _cnot_unitaries(k + 1)
-
-    return int(np.ceil(phase_1 + phase_2 + phase_3 + phase_4))
-
-
 def _to_qubits(n_state_vector):
     return int(np.ceil(np.log2(n_state_vector))) if n_state_vector > 0 else 0
+
+def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
+    method = 'estimate'
+    cnots_phase_3 = schmidt_cnots(subsystem1_vector, method=method)
+    cnots_phase_4 = schmidt_cnots(subsystem2_vector, method=method)
+    cnots_originally = schmidt_cnots(entangled_vector, method=method)
+
+    return cnots_originally - cnots_phase_3 - cnots_phase_4
