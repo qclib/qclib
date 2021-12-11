@@ -140,7 +140,7 @@ def _closest_unitary(matrix):
 def _compute_gates(gate1, gate2):
 
     d_square, gate_v = np.linalg.eig(gate1 @ gate2.conj().T)
-    list_d = np.sqrt(d_square, dtype=np.complex)
+    list_d = np.sqrt(d_square, dtype=np.complex128)
     gate_d = np.diag(list_d)
 
     if not _is_unitary(gate_v):
