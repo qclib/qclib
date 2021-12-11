@@ -306,8 +306,13 @@ def _to_qubits(n_state_vector):
 
 def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
     method = 'estimate'
-    cnots_phase_3 = schmidt_cnots(subsystem1_vector, method=method)
-    cnots_phase_4 = schmidt_cnots(subsystem2_vector, method=method)
+    if len(subsystem1_vector.shape) > 1 and subsystem1_vector.shape[1] == subsystem2_vector.shape[1] > 1:
+        cnots_new = schmidt_cnots(entangled_vector, low_rank=subsystem1_vector.shape[1], method=method)
+    else:
+        cnots_phase_3 = schmidt_cnots(subsystem1_vector, method=method)
+        cnots_phase_4 = schmidt_cnots(subsystem2_vector, method=method)
+        cnots_new = cnots_phase_3 + cnots_phase_4
+
     cnots_originally = schmidt_cnots(entangled_vector, method=method)
 
-    return cnots_originally - cnots_phase_3 - cnots_phase_4
+    return cnots_originally - cnots_new
