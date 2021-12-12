@@ -202,9 +202,9 @@ class TestBaa(TestCase):
         data = [(i, num_qubits, entanglement_bounds, max_fidelity_loss) for i in range(100)]
         if use_parallel:
             with Pool() as pool:
-                result = pool.starmap(TestBaa.execute_experiment, data)
+                result = pool.starmap(execute_experiment, data)
         else:
-            result = [TestBaa.execute_experiment(*d) for d in data]
+            result = [execute_experiment(*d) for d in data]
 
         df = pd.concat(result, ignore_index=True)
         print(df.to_string(), flush=True)
