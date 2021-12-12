@@ -191,6 +191,9 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_l
         else:
             return df
 
+
+class TestBaa(TestCase):
+
     def test(self):
         num_qubits = 7
         entanglement_bounds = (0.7, 1.0)
