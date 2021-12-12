@@ -208,3 +208,10 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_l
         timestamp_sec = int(datetime.datetime.now().timestamp())
         df.to_pickle(f'./{timestamp_sec}.test_baa.pickle')
         df.to_csv(f'./{timestamp_sec}.test_baa.csv')
+
+    def test_no_ops(self):
+        for _ in range(10):
+            state_vector, entganglement, depth = get_vector(0.7, 1.0, 8, 1, measure='geometric')
+            cnots, depth, fidelity_loss = initialize_loss(0.0, state_vector)
+
+            self.assertAlmostEqual(0.0, fidelity_loss, 4)
