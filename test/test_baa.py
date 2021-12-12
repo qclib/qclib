@@ -82,66 +82,65 @@ def calculate_entropy_meyer_wallach(vector: np.ndarray):
     return np.sum(meyer_wallach_entry) * (4/num_qb)
 
 
-class TestBaa(TestCase):
+def get_vector(e_lower: float, e_upper: float, num_qubits: int, start_depth_multiplier=1, measure='meyer_wallach'):
+    entanglement = -1.0
+    multiplier = start_depth_multiplier
+    iteration = 0
+    entanglements = []
+    vector = np.ndarray(shape=(0,))
+    while e_lower > entanglement or entanglement > e_upper:
+        qc: qiskit.QuantumCircuit = random_circuit(num_qubits, multiplier * num_qubits)
+        vector = get_state(qc)
+        if measure == 'geometric':
+            entanglement = geometric_entanglement(vector)
+        elif measure == 'meyer_wallach':
+            entanglement = calculate_entropy_meyer_wallach(vector)
+        else:
+            raise ValueError(f'Entanglement Measure {measure} unknown.')
+        iteration += 1
+        if iteration > 100:
+            multiplier += 1
+            iteration = 0
+            if not use_parallel:
+                print(f'{multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
+            entanglements = []
+        else:
+            entanglements.append(entanglement)
+            if not use_parallel:
+                print('.', end='', flush=True)
+    if not use_parallel:
+        print(f'Final {multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
+    return vector, entanglement, multiplier * num_qubits
 
-    @staticmethod
-    def get_vector(e_lower: float, e_upper: float, num_qubits: int, start_depth_multiplier=1, measure='meyer_wallach'):
-        entanglement = -1.0
-        multiplier = start_depth_multiplier
-        iteration = 0
-        entanglements = []
-        vector = np.ndarray(shape=(0,))
-        while e_lower > entanglement or entanglement > e_upper:
-            qc: qiskit.QuantumCircuit = random_circuit(num_qubits, multiplier * num_qubits)
-            vector = get_state(qc)
-            if measure == 'geometric':
-                entanglement = geometric_entanglement(vector)
-            elif measure == 'meyer_wallach':
-                entanglement = calculate_entropy_meyer_wallach(vector)
-            else:
-                raise ValueError(f'Entanglement Measure {measure} unknown.')
-            iteration += 1
-            if iteration > 100:
-                multiplier += 1
-                iteration = 0
-                if not use_parallel:
-                    print(f'{multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
-                entanglements = []
-            else:
-                entanglements.append(entanglement)
-                if not use_parallel:
-                    print('.', end='', flush=True)
-        if not use_parallel:
-            print(f'Final {multiplier} ({np.min(entanglements):.4f}-{np.max(entanglements):.4f})', end='\n', flush=True)
-        return vector, entanglement, multiplier * num_qubits
 
-    @staticmethod
-    def initialize_loss(fidelity_loss, state_vector=None, n_qubits=5, strategy='brute_force', use_low_rank=False):
+def initialize_loss(fidelity_loss, state_vector=None, n_qubits=5, strategy='brute_force', use_low_rank=False):
 
-        if state_vector is None:
-            state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
-            state_vector = state_vector / np.linalg.norm(state_vector)
+    if state_vector is None:
+        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss, strategy=strategy, use_low_rank=use_low_rank)
-        state = get_state(circuit)
-        overlap = TestBaaSchmidt.fidelity(state_vector, state)
-        assert f'Overlap must be 1 ({overlap})', round(overlap, 2) >= 1-fidelity_loss
+    circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss, strategy=strategy, use_low_rank=use_low_rank)
+    state = get_state(circuit)
+    fidelity = TestBaaSchmidt.fidelity(state_vector, state)
+    assert round(fidelity, 2) >= 1-fidelity_loss, f'Overlap must be 1 ({fidelity})'
 
-        try:
-            basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=3)
-            cnots = len([d[0] for d in basis_circuit.data if d[0].name == 'cx'])
-            depth = basis_circuit.depth()
-        except QiskitError as ex:
-            print(ex)
-            return -1, -1
+    try:
+        basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=3)
+        cnots = len([d[0] for d in basis_circuit.data if d[0].name == 'cx'])
+        depth = basis_circuit.depth()
+    except QiskitError as ex:
+        print(ex)
+        return -1, -1
 
-        return cnots, depth
+    return cnots, depth, 1 - fidelity
 
-    @staticmethod
-    def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses, return_state=False):
+
+def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses, return_state=False):
+        if use_parallel:
+            print(f"Starting {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
 
         # State Generation
-        state_vector, entganglement, depth = TestBaa.get_vector(*entanglement_bounds, num_qubits, 1)
+        state_vector, entganglement, depth = get_vector(*entanglement_bounds, num_qubits, 1, measure='geometric')
         mw = calculate_entropy_meyer_wallach(state_vector)
         ge = geometric_entanglement(state_vector)
         cnots = schmidt_cnots(state_vector)
@@ -149,7 +148,7 @@ class TestBaa(TestCase):
             print(f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. State preparation needs {cnots}.")
 
         # Benchmark against real Algorithm
-        real_cnots_benchmark, real_depth_benchmark = TestBaa.initialize_loss(
+        real_cnots_benchmark, real_depth_benchmark, real_fidelity_loss_benchmark = initialize_loss(
             state_vector=state_vector, fidelity_loss=0.0, use_low_rank=False
         )
         data_result = []
@@ -164,7 +163,7 @@ class TestBaa(TestCase):
                         zip(node.k_approximation, [list(v.shape) for v in node.vectors])
                     )
                     start_time = datetime.datetime.now()
-                    real_cnots, real_depth = TestBaa.initialize_loss(
+                    real_cnots, real_depth, real_fidelity_loss = initialize_loss(
                         state_vector=state_vector, fidelity_loss=max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy
                     )
                     end_time = datetime.datetime.now()
@@ -172,15 +171,18 @@ class TestBaa(TestCase):
                     data = [
                         exp_idx, use_low_rank, strategy, num_qubits, depth, cnots, ge, mw,
                         max_fidelity_loss, node.total_saved_cnots, node.total_fidelity_loss, data,
-                        real_cnots, real_cnots_benchmark, real_depth, real_depth_benchmark, duration
+                        real_cnots, real_cnots_benchmark, real_depth, real_depth_benchmark, real_fidelity_loss,
+                        real_fidelity_loss_benchmark, duration
                     ]
+                    print(f"Done {exp_idx, max_fidelity_loss, use_low_rank, strategy}")
                     data_result.append(data)
 
         # Experiment transcription
         df = pd.DataFrame(data=data_result, columns=[
             'id', 'with_low_rank', 'strategy', 'num_qubits', 'depth', 'cnots', 'entganglement', 'entganglement (MW)',
             'max_fidelity_loss', 'total_saved_cnots', 'total_fidelity_loss', 'data', 'real_cnots',
-            'real_cnots_no_approx', 'real_depth', 'real_depth_no_approx', 'duration'
+            'real_cnots_no_approx', 'real_depth', 'real_depth_no_approx', 'real_fidelity_loss',
+            'real_fidelity_loss_benchmark', 'duration'
         ])
         if use_parallel:
             print(f"Done {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
