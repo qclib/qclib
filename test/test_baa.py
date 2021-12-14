@@ -16,6 +16,7 @@
 Tests for the baa.py module.
 """
 import datetime
+import os
 from multiprocessing import Pool
 from unittest import TestCase
 
@@ -35,7 +36,7 @@ from test.test_baa_schmidt import TestBaaSchmidt
 # pylint: disable=missing-class-docstring
 
 
-use_parallel = True
+use_parallel = bool(os.getenv('QLIB_TEST_PARALLEL', 'False'))
 
 
 def get_iota(j: int, n: int, b: int, basis_state: int):
