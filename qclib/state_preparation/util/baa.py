@@ -358,7 +358,7 @@ def _compute_schmidt(state_vector, entangled_qubits, qubits_to_disentangle, max_
     return node_fidelity_loss, subsystem1, subsystem2
 
 
-@numba.jit('Tuple((complex128[:,:], complex128[:,:], complex128[:,:]))(complex128[:,:], int64[:], int64[:], float64, boolean)')
+# @numba.jit('Tuple((complex128[:,:], complex128[:,:], complex128[:,:]))(complex128[:,:], int64[:], int64[:], float64, boolean)')
 def _compute_schmidt_jit(state_vector, entangled_qubits: np.ndarray, qubits_to_disentangle, max_fidelity_loss, use_low_rank) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
 
     # Maintains the relative position between the qubits of the two subsystems.
