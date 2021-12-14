@@ -123,7 +123,6 @@ def initialize_loss(fidelity_loss, state_vector=None, n_qubits=5, strategy='brut
     circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss, strategy=strategy, use_low_rank=use_low_rank)
     state = get_state(circuit)
     fidelity = TestBaaSchmidt.fidelity(state_vector, state)
-    assert round(fidelity, 2) >= 1-fidelity_loss, f'Overlap must be 1 ({fidelity})'
 
     try:
         basis_circuit = qiskit.transpile(circuit, basis_gates=['rx', 'ry', 'rz', 'cx'], optimization_level=3)
@@ -196,10 +195,10 @@ class TestBaa(TestCase):
 
     def test(self):
         num_qubits = 7
-        entanglement_bounds = (0.7, 1.0)
-        max_fidelity_loss = np.linspace(0.1, 1.0, 10)
+        entanglement_bounds = (0.4, 1.0)
+        max_fidelity_loss = np.linspace(0.1, 1.0, 4)
 
-        data = [(i, num_qubits, entanglement_bounds, max_fidelity_loss) for i in range(100)]
+        data = [(i, num_qubits, entanglement_bounds, max_fidelity_loss) for i in range(5)]
         if use_parallel:
             with Pool() as pool:
                 result = pool.starmap(execute_experiment, data)
@@ -207,10 +206,43 @@ class TestBaa(TestCase):
             result = [execute_experiment(*d) for d in data]
 
         df = pd.concat(result, ignore_index=True)
-        print(df.to_string(), flush=True)
-        timestamp_sec = int(datetime.datetime.now().timestamp())
-        df.to_pickle(f'./{timestamp_sec}.test_baa.pickle')
-        df.to_csv(f'./{timestamp_sec}.test_baa.csv')
+
+        # Tests:
+        # Calculation Tests
+        # The benchmark will not change the state at all, so it must be essentially zero
+        df['benchmark_fidelity_loss_pass'] = np.abs(df['real_fidelity_loss_benchmark']) < 1e-6
+        # The expected / predicted fidelity loss must be less or equal to the max fidelity loss
+        df['approximation_calculation_pass'] = df['max_fidelity_loss'] >= df['total_fidelity_loss']
+
+        # The real Tests
+        # The real measured fidelity measure must be less or equal to the configured mx fidelity loss
+        df['real_approximation_calculation_pass'] = df['real_fidelity_loss'] < df['max_fidelity_loss']
+        # The predicted maximum CNOT gates and the no-approximation count should be within 10%
+        df['cnot_prediction_calculation_pass'] = np.abs(df['real_cnots_no_approx'] - df['cnots']) < 0.1 * df['cnots']
+        # The predicted CNOT gates should be within an error margin of 10%
+        df['saved_cnots_calculation_pass'] = np.abs(df['cnots'] - df['total_saved_cnots'] - df['real_cnots']) <= 0.1 * (df['cnots'] - df['total_saved_cnots'])
+
+        test_passed = True
+        if df.shape[0] != df[df['benchmark_fidelity_loss_pass']].shape[0]:
+            print("[FAIL] All benchmark_fidelity_loss_pass must be true")
+            test_passed = False
+        if df.shape[0] != df[df['approximation_calculation_pass']].shape[0]:
+            print("[FAIL] All approximation_calculation_pass must be true")
+            test_passed = False
+        if df.shape[0] != df[df['real_approximation_calculation_pass']].shape[0]:
+            print("[FAIL] All real_approximation_calculation_pass must be true")
+            test_passed = False
+        if df.shape[0] != df[df['cnot_prediction_calculation_pass']].shape[0]:
+            print("[FAIL] All cnot_prediction_calculation_pass must be true")
+            test_passed = False
+        if df.shape[0] != df[df['saved_cnots_calculation_pass']].shape[0]:
+            print("[FAIL] All saved_cnots_calculation_pass must be true")
+            test_passed = False
+
+        if not test_passed:
+            print(df.to_string(), flush=True)
+
+        self.assertTrue(test_passed, 'The tests should all pass.')
 
     def test_no_ops(self):
         # The Test is based on randomly generated states. They all should create the correct fidelity (1.0)
