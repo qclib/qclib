@@ -130,9 +130,9 @@ def initialize_loss(fidelity_loss, state_vector=None, n_qubits=5, strategy='brut
         depth = basis_circuit.depth()
     except QiskitError as ex:
         print(ex)
-        return -1, -1
+        return -1, -1, -1
 
-    return cnots, depth, 1 - fidelity
+    return cnots, depth, round(1 - fidelity, 4)
 
 
 def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses, return_state=False):
