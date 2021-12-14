@@ -85,7 +85,15 @@ def calculate_entropy_meyer_wallach(vector: np.ndarray):
 
 def get_vector(e_lower: float, e_upper: float, num_qubits: int, start_depth_multiplier=1, measure='meyer_wallach'):
     entanglement = -1.0
-    multiplier = start_depth_multiplier
+
+    if isinstance(start_depth_multiplier, int):
+        multiplier = start_depth_multiplier
+    elif isinstance(start_depth_multiplier, (tuple, list, np.ndarray)):
+        assert len(start_depth_multiplier) > 1
+        multiplier = np.random.randint(start_depth_multiplier[0], start_depth_multiplier[1])
+    else:
+        raise ValueError("start_depth_multiplier must be either an int or an array-like of int.")
+
     iteration = 0
     entanglements = []
     vector = np.ndarray(shape=(0,))
@@ -135,11 +143,14 @@ def initialize_loss(fidelity_loss, state_vector=None, n_qubits=5, strategy='brut
     return cnots, depth, round(1 - fidelity, 4)
 
 
-def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses, return_state=False):
+def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses, return_state=False,
+                       start_depth_multiplier=1):
         print(f"Starting {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
 
         # State Generation
-        state_vector, entganglement, depth = get_vector(*entanglement_bounds, num_qubits, 3, measure='geometric')
+        state_vector, entganglement, depth = get_vector(
+            *entanglement_bounds, num_qubits, start_depth_multiplier=start_depth_multiplier, measure='geometric'
+        )
         mw = calculate_entropy_meyer_wallach(state_vector)
         ge = geometric_entanglement(state_vector)
         cnots = schmidt_cnots(state_vector)
