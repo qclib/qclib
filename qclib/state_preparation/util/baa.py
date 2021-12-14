@@ -66,6 +66,13 @@ def adaptive_approximation(state_vector, max_fidelity_loss,
     qubits = [list(range(n_qubits))]
     vectors = [state_vector]
 
+    entanglement, product_state = geometric_entanglement(state_vector, return_product_state=True)
+    if max_fidelity_loss >= entanglement:
+        full_cnots = schmidt_cnots(state_vector)
+        qubits = [[n] for n in range(len(product_state))]
+        ranks = [1 for _ in range(len(product_state))]
+        return Node(full_cnots, full_cnots, entanglement, entanglement, product_state, qubits, ranks, [])
+
     root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, [0], [])
     _build_approximation_tree(root_node, max_fidelity_loss, strategy, max_combination_size, use_low_rank)
 
@@ -77,7 +84,7 @@ def adaptive_approximation(state_vector, max_fidelity_loss,
     return best_node
 
 
-def geometric_entanglement(state_vector):
+def geometric_entanglement(state_vector, return_product_state=False):
     # node = adaptive_approximation(state_vector, 10.0, strategy='greedy', max_combination_size=1, use_low_rank=False)
     # return node.total_fidelity_loss
     from tensorly.tucker_tensor import TuckerTensor
@@ -86,14 +93,19 @@ def geometric_entanglement(state_vector):
     shape = tuple([2] * _to_qubits(state_vector.shape[0]))
     rank = [1] * _to_qubits(state_vector.shape[0])
     tensor = tl.tensor(state_vector).reshape(shape)
-    results = []
+    results = {}
     # The Tucker decomposition is actually a randomized algorithm. We take three shots and take the min of it.
     for _ in range(3):
         decomp_tensor: TuckerTensor = tucker(tensor, rank=rank, verbose=False, svd='numpy_svd', init='random')
-        fidelity = 1 - np.linalg.norm(decomp_tensor.core) ** 2
-        results.append(fidelity)
+        fidelity_loss = 1 - np.linalg.norm(decomp_tensor.core) ** 2
+        results[fidelity_loss] = decomp_tensor
 
-    return min(results)
+    min_fidelity_loss = min(results)
+
+    if return_product_state:
+        return min_fidelity_loss, decomp_tensor.factors
+    else:
+        return min_fidelity_loss
 
 @dataclass
 class Node:
