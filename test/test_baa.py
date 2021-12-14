@@ -212,8 +212,11 @@ class TestBaa(TestCase):
         df.to_csv(f'./{timestamp_sec}.test_baa.csv')
 
     def test_no_ops(self):
+        # The Test is based on randomly generated states. They all should create the correct fidelity (1.0)
+        # After 10 attempts we may well find one that fails. If it doesn't it is probably okay.
         for _ in range(10):
             state_vector, entganglement, depth = get_vector(0.7, 1.0, 8, 1, measure='geometric')
             cnots, depth, fidelity_loss = initialize_loss(0.0, state_vector)
-
+            if cnots == depth == fidelity_loss == -1:
+                continue
             self.assertAlmostEqual(0.0, fidelity_loss, 4)
