@@ -136,8 +136,7 @@ def initialize_loss(fidelity_loss, state_vector=None, n_qubits=5, strategy='brut
 
 
 def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses, return_state=False):
-        if use_parallel:
-            print(f"Starting {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
+        print(f"Starting {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
 
         # State Generation
         state_vector, entganglement, depth = get_vector(*entanglement_bounds, num_qubits, 1, measure='geometric')
@@ -156,7 +155,7 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_l
             for use_low_rank in [False, True]:
                 for strategy in ['brute_force', 'greedy']:
                     if not use_parallel:
-                        print(f"{strategy.upper()} {'With' if use_low_rank else 'No'} Low Rank Processing....")
+                        print(f"[{max_fidelity_loss}] {strategy.upper()} {'With' if use_low_rank else 'No'} Low Rank Processing....", end='')
                     node = adaptive_approximation(state_vector, max_fidelity_loss, use_low_rank=use_low_rank, strategy=strategy)
                     # Result
                     data = list(
@@ -174,7 +173,8 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_l
                         real_cnots, real_cnots_benchmark, real_depth, real_depth_benchmark, real_fidelity_loss,
                         real_fidelity_loss_benchmark, duration
                     ]
-                    print(f"Done {exp_idx, max_fidelity_loss, use_low_rank, strategy}")
+                    if not use_parallel:
+                        print(f"in {duration} secs")
                     data_result.append(data)
 
         # Experiment transcription
@@ -184,8 +184,7 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_l
             'real_cnots_no_approx', 'real_depth', 'real_depth_no_approx', 'real_fidelity_loss',
             'real_fidelity_loss_benchmark', 'duration'
         ])
-        if use_parallel:
-            print(f"Done {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
+        print(f"Done {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
         if return_state:
             return df, state_vector
         else:
