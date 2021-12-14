@@ -319,19 +319,26 @@ def idx_subsystem(idx: int, subsystem: np.ndarray):
     return int(subsystem_idx)
 
 
-@numba.jit("complex128[:, :](complex128[:, :], int64[:])")
-def _separation_matrix(vector, subsystem2):
-    n_qubits =  _to_qubits(vector.shape[0])
+# @numba.jit("complex128[:, :](complex128[:, :], int64[:])")
+def _separation_matrix(vector: np.ndarray, subsystem2: np.ndarray):
+    n_qubits = _to_qubits(vector.shape[0])
     subsystem1 = np.asarray(list(set(range(n_qubits)).difference(set(subsystem2))))
 
     new_shape = (2 ** subsystem1.shape[0], 2 ** subsystem2.shape[0])
 
-    sep_matrix = np.zeros(shape=new_shape, dtype=np.complex128)
+    qubit_shape = tuple([2] * n_qubits)
+    # We need to swap qubits from their subsystem2 position to the end of the
+    # mode as we expect that we do LSB to be on the left -most side.
+    from_move = subsystem2
+    to_move = (n_qubits - np.arange(1, subsystem2.shape[0] + 1))[::-1]
 
-    for j, amp in enumerate(vector.flatten()):
-        idx2_ = idx_subsystem(j, subsystem2)
-        idx1_ = idx_subsystem(j, subsystem1)
-        sep_matrix[idx1_, idx2_] = amp
+    sep_matrix = np.moveaxis(vector.reshape(qubit_shape), from_move, to_move).reshape(new_shape)
+
+    # sep_matrix = np.zeros(shape=new_shape, dtype=np.complex128)
+    # for j, amp in enumerate(vector.flatten()):
+    #     idx2_ = idx_subsystem(j, subsystem2)
+    #     idx1_ = idx_subsystem(j, subsystem1)
+    #     sep_matrix[idx1_, idx2_] = amp
 
     return sep_matrix
 
