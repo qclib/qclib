@@ -383,7 +383,7 @@ def _compute_schmidt_jit(state_vector, entangled_qubits: np.ndarray, qubits_to_d
         subsystem1_vector = svd_u[:, 0:k+1]
         subsystem2_vector = svd_v.T[:, 0:k+1]
 
-    result = np.asarray([[node_fidelity_loss]], dtype=np.complex128), subsystem1_vector, subsystem2_vector
+    result = np.asarray([[np.round(node_fidelity_loss, 6)]], dtype=np.complex128), subsystem1_vector, subsystem2_vector
     return result
 
 
