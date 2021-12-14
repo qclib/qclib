@@ -139,7 +139,7 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds, max_fidelity_l
         print(f"Starting {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
 
         # State Generation
-        state_vector, entganglement, depth = get_vector(*entanglement_bounds, num_qubits, 1, measure='geometric')
+        state_vector, entganglement, depth = get_vector(*entanglement_bounds, num_qubits, 3, measure='geometric')
         mw = calculate_entropy_meyer_wallach(state_vector)
         ge = geometric_entanglement(state_vector)
         cnots = schmidt_cnots(state_vector)
