@@ -23,6 +23,28 @@ from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import U3Gate
 from random import randint
 
+def initialize(state):
+  state_dict = _build_state_dict(state)
+  
+  b_strings = list(state_dict.keys())
+  
+  n_qubits = len(b_strings[0])
+  quantum_register =  QuantumRegister(n_qubits)
+  quantum_circuit = QuantumCircuit(quantum_register)
+
+  while len(b_strings) > 1:
+    state_dict, quantum_circuit = _merging_procedure(state_dict, quantum_circuit)
+    b_strings = list(state_dict.keys())
+
+  x = b_strings.pop()
+  for (bit_idx, bit)  in enumerate(x): 
+    if bit == '1':
+      quantum_circuit.x(bit_idx)
+
+  return quantum_circuit.reverse_ops()
+
+
+
 def _build_state_dict(state): 
   """
     Builds a dict of the non zero amplitudes with their
@@ -361,23 +383,3 @@ def _merging_procedure(state_dict, quantum_circuit):
                                                          None,
                                                          merge_strings=[x1, x2] )
   return state_dict, quantum_circuit
-
-def initialize(state):
-  state_dict = _build_state_dict(state)
-  
-  b_strings = list(state_dict.keys())
-  
-  n_qubits = len(b_strings[0])
-  quantum_register =  QuantumRegister(n_qubits)
-  quantum_circuit = QuantumCircuit(quantum_register)
-
-  while len(b_strings) > 1:
-    state_dict, quantum_circuit = _merging_procedure(state_dict, quantum_circuit)
-    b_strings = list(state_dict.keys())
-
-  x = b_strings.pop()
-  for (bit_idx, bit)  in enumerate(x): 
-    if bit == '1':
-      quantum_circuit.x(bit_idx)
-
-  return quantum_circuit.reverse_ops()
