@@ -53,7 +53,7 @@ def get_state(circ):
     tcirc.save_statevector()
     state_vector = backend.run(tcirc).result().get_statevector()
 
-    return state_vector
+    return np.array(state_vector)
 
 
 def replace_all_values_with(new_value, dataset):
