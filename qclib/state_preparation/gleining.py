@@ -24,6 +24,16 @@ from qiskit.circuit.library import U3Gate
 from random import randint
 
 def initialize(state):
+  """
+    Classical algorithm that creates a quantum circuit C that loads 
+    a sparse quantum state, applying a sequence of operations maping 
+    the desired state |sigma> to |0>. And then inverting C to obtain
+    the mapping of |0> to the desired state |sigma>.   
+    Args:
+      state: Sparse array with real values
+    Returns: 
+      Quantum circuit C^{-1} that maps |0> to the desired state |sigma>  
+  """
   state_dict = _build_state_dict(state)
   
   b_strings = list(state_dict.keys())
@@ -114,7 +124,7 @@ def _build_bit_string_set(b_strings, dif_qubits, dif_values):
       dif_values: list of integers values containing the values each bit
                   with index in dif_qubits shoud have 
     Returns:
-      A new list ot bit_strings, with matchin values in dif_values
+      A new list of bit_strings, with matching values in dif_values
       on indexes dif_qubits
   """
   bit_string_set = [] 
@@ -201,7 +211,7 @@ def _search_bit_strings_for_merging(state_dict):
 
 def _apply_operation_to_bit_string(b_string, operation, qubit_indexes):
   """
-    Applies changes on binary strings according to the version
+    Applies changes on binary strings according to the operation
     Args:
       b_string: Binary string '00110'
       operation: Operation to be applied to the string
@@ -251,8 +261,9 @@ def _update_state_dict_according_to_operation(state_dict, operation, qubit_index
 
 def _equalize_bit_string_states(x1, x2, dif, state_dict, quantum_circuit):
   """
-    Makes states represented by bit strings x1 and x2 equal at every qubit except at the one in the
-    dif index. And alters the bit strings and state_dict accordingly.
+    Applies operations to the states represented by bit strings x1 and x2 equalizing them
+    at every qubit except the one in the dif index. And alters the bit strings and state_dict
+    accordingly.
     Args: 
       x1: Frist bit string
       x2: Second bit string
@@ -277,8 +288,8 @@ def _equalize_bit_string_states(x1, x2, dif, state_dict, quantum_circuit):
 
 def _apply_not_gates_to_qubit_index_list(x1, x2, dif_qubits, state_dict, quantum_circuit):
   """
-    Makes states represented by bit strings x1 and x2 equal at every qubit except at the one in the
-    dif index. And alters the bit strings and state_dict accordingly.
+    Applies quantum not gate at the qubit at a given index, where the state represented by the
+    bit string x2 is different than '1' at index in diff_qubits.
     Args: 
       x1: Frist bit string
       x2: Second bit string
