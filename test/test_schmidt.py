@@ -18,6 +18,7 @@ Tests for the schmidt.py module.
 
 from unittest import TestCase
 import numpy as np
+from itertools import combinations
 from qiskit import ClassicalRegister, execute, transpile
 from qiskit.providers.aer.backends import AerSimulator
 from qclib.state_preparation.schmidt import initialize
@@ -33,6 +34,13 @@ class TestSchmidt(TestCase):
         Mean Absolute Error
         """
         return np.sum(np.abs(state-ideal))/len(ideal)
+
+    @staticmethod
+    def fidelity(state1, state2):
+        bra = np.conj(state1)
+        ket = state2
+
+        return np.abs(bra.dot(ket))**2
 
     @staticmethod
     def get_counts(circuit):
@@ -55,15 +63,18 @@ class TestSchmidt(TestCase):
         sum_values = sum(counts.values())
         return [ value/sum_values for (key, value) in counts_with_zeros.items() ]
 
-    def _test_initialize_rank(self, rank, max_mae=10**-15):
+    def _test_initialize_mae(self, rank=0, max_mae=10**-15):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(state_vector, low_rank=rank)
+        qubits = list(range(5))
+        partitions = combinations(qubits, 3)
+        for partition in partitions:
+            circuit = initialize(state_vector, low_rank=rank, partition=partition)
 
-        state = get_state(circuit)
+            state = get_state(circuit)
 
-        self.assertTrue(TestSchmidt.mae(state,state_vector) < max_mae)
+            self.assertTrue(TestSchmidt.mae(state, state_vector) < max_mae)
 
     def test_initialize_full_rank(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
@@ -109,16 +120,16 @@ class TestSchmidt(TestCase):
         self.assertTrue(np.allclose(state_vector, state)) # same as unitary.
 
     def test_initialize_rank_4(self):
-        self._test_initialize_rank(4, max_mae=10**-14)
+        self._test_initialize_mae(4, max_mae=10**-14)
 
     def test_initialize_rank_3(self):
-        self._test_initialize_rank(3, max_mae=0.04)
+        self._test_initialize_mae(3, max_mae=0.04)
 
     def test_initialize_rank_2(self):
-        self._test_initialize_rank(2, max_mae=0.06)
+        self._test_initialize_mae(2, max_mae=0.06)
 
     def test_initialize_rank_1(self):
-        self._test_initialize_rank(1, max_mae=0.0825)
+        self._test_initialize_mae(1, max_mae=0.085)
 
     def test_cnot_count_rank_1(self):
         # Builds a rank 1 state.
