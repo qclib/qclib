@@ -19,6 +19,7 @@ implement generic quantum computations.
 
 # pylint: disable=maybe-no-member
 
+from math import ceil, log2
 import scipy as sp
 import qiskit
 from qiskit import transpile
@@ -31,7 +32,7 @@ def unitary(gate, decomposition='csd'):
     """
     size = len(gate)
     if size > 4:
-        n_qubits = int(np.log2(size))
+        n_qubits = int(log2(size))
 
         qubits = qiskit.QuantumRegister(n_qubits)
         circuit = qiskit.QuantumCircuit(qubits)
@@ -48,7 +49,7 @@ def unitary(gate, decomposition='csd'):
 
         return circuit
 
-    circuit = qiskit.QuantumCircuit(np.log2(size))
+    circuit = qiskit.QuantumCircuit(log2(size))
     circuit.unitary(gate, circuit.qubits)
 
     return circuit
@@ -84,7 +85,7 @@ def _csd(gate_list, n_qubits):
 
     circuit = circuit.compose(gate_left, qubits)
 
-    target = int(n_qubits - np.log2(len(left)))
+    target = int(n_qubits - log2(len(left)))
     control = list(range(0, target)) + list(range(target + 1, n_qubits))
     circuit.ucry(list(mid), control, target)
 
@@ -114,7 +115,7 @@ def _multiplexed_csd(gate_list):
 
 
 def _qsd(gate1, gate2):
-    n_qubits = int(np.log2(len(gate1))) + 1
+    n_qubits = int(log2(len(gate1))) + 1
 
     list_d, gate_v, gate_w = _compute_gates(gate1, gate2)
 
@@ -140,7 +141,7 @@ def _closest_unitary(matrix):
 def _compute_gates(gate1, gate2):
 
     d_square, gate_v = np.linalg.eig(gate1 @ gate2.conj().T)
-    list_d = np.sqrt(d_square, dtype=np.complex)
+    list_d = np.sqrt(d_square, dtype=complex)
     gate_d = np.diag(list_d)
 
     if not _is_unitary(gate_v):
@@ -178,15 +179,15 @@ def _cnot_count_estimate(gate, decomposition='csd'):
     """
     Estimate the number of CNOTs to decompose the unitary.
     """
-    n_qubits = int(np.log2(gate.shape[0]))
+    n_qubits = int(log2(gate.shape[0]))
     if n_qubits == 1:
         return 0
 
     if decomposition == 'csd':
         # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
-        return int( np.ceil( 4**n_qubits - 2*2**n_qubits ) )
+        return int( ceil( 4**n_qubits - 2*2**n_qubits ) )
 
     # Upper-bound expression for the unitary decomposition QSD l=2 without the optimizations.
     # With the optimizations, they need to be replaced.
     # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
-    return int( np.ceil( 9/16*2**(2*n_qubits) - 3/2 * 2**n_qubits ) )
+    return int( ceil( 9/16*2**(2*n_qubits) - 3/2 * 2**n_qubits ) )

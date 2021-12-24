@@ -33,7 +33,7 @@ class TestBaaSchmidt(TestCase):
         bra = np.conj(state1)
         ket = state2
 
-        return np.abs(bra.dot(ket))**2
+        return np.power(np.abs(bra.dot(ket)), 2)
 
     @staticmethod
     def get_counts(circuit):
@@ -57,12 +57,13 @@ class TestBaaSchmidt(TestCase):
         return [ value/sum_values for (key, value) in counts_with_zeros.items() ]
 
     def _test_initialize_loss(self, fidelity_loss, state_vector=None,
-                                    n_qubits=5, strategy='brute_force'):
+                                    n_qubits=5, strategy='brute_force', use_low_rank=False):
         if state_vector is None:
             state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
             state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss, strategy=strategy)
+        circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss, strategy=strategy,
+                                                                    use_low_rank=use_low_rank)
 
         state = get_state(circuit)
 
@@ -74,9 +75,19 @@ class TestBaaSchmidt(TestCase):
         for loss in range(10, 20):
             self._test_initialize_loss(loss/100, n_qubits=5, strategy='brute_force')
 
+    def test_initialize_loss_brute_force_low_rank(self):
+        for loss in range(10, 20):
+            self._test_initialize_loss(loss/100, n_qubits=5, strategy='brute_force',
+                                                                    use_low_rank=True)
+
     def test_initialize_loss_greedy(self):
         for loss in range(10, 20):
-            self._test_initialize_loss(loss/100, n_qubits=8, strategy='greedy')
+            self._test_initialize_loss(loss/100, n_qubits=5, strategy='greedy')
+
+    def test_initialize_loss_greedy_low_rank(self):
+        for loss in range(10, 20):
+            self._test_initialize_loss(loss/100, n_qubits=5, strategy='greedy',
+                                                                    use_low_rank=True)
 
     def test_initialize_loss_fixed_n3(self):
         state_vector = [-0.33*1j,0,-0.44-0.44*1j,0.24+0.23*1j,0,0,0,0.62-0.01*1j]
@@ -147,17 +158,6 @@ class TestBaaSchmidt(TestCase):
         self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
                         rtol=1e-01, atol=0.005))
 
-    def test_initialize_timing(self):
-        start = time.time()
-        self._test_initialize_loss(1.0, n_qubits=6, strategy='brute_force')
-        brute_force = time.time() - start
-
-        start = time.time()
-        self._test_initialize_loss(1.0, n_qubits=6, strategy='greedy')
-        greedy = time.time() - start
-
-        self.assertTrue(brute_force > greedy)
-
     def test_compare_strategies(self):
         fidelities1 = []
         fidelities2 = []
@@ -178,4 +178,4 @@ class TestBaaSchmidt(TestCase):
                 fidelities1.append(fidelity1)
                 fidelities2.append(fidelity2)
 
-        self.assertTrue(np.allclose(fidelities1, fidelities2, rtol=0.1, atol=0.0))
+        self.assertTrue(np.allclose(fidelities1, fidelities2, rtol=0.125, atol=0.0))

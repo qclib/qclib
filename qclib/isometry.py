@@ -12,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 """
 Implements the decomposition of isometries using the methods
 defined at https://arxiv.org/abs/1501.06911.
 """
 
-
+from math import log2
 import numpy as np
 import scipy
 import qiskit.quantum_info as qi
@@ -51,8 +50,8 @@ def decompose(isometry, scheme='ccd'):
                                            # preparation).
     lines = iso.shape[0]
     cols = iso.shape[1]
-    log_lines = np.log2(lines)
-    log_cols = np.log2(cols)
+    log_lines = log2(lines)
+    log_cols = log2(cols)
 
     _check_isometry(iso, log_lines, log_cols)
 
@@ -323,8 +322,8 @@ def _cnot_count_estimate(isometry, scheme='ccd'):
     if len(iso.shape) == 1:
         iso = iso.reshape(iso.shape[0], 1)
 
-    log_lines = int(np.log2(iso.shape[0]))
-    log_cols = int(np.log2(iso.shape[1]))
+    log_lines = int(log2(iso.shape[0]))
+    log_cols = int(log2(iso.shape[1]))
 
     if scheme == 'knill':
         return _cnot_count_estimate_knill(isometry, log_lines, log_cols)
