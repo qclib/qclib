@@ -32,7 +32,7 @@ class TestGleining(unittest.TestCase):
         backend = Aer.get_backend('statevector_simulator')
         job = execute(circ, backend)
         result = job.result()
-        self.assertTrue(np.allclose(result.get_statevector(), state))
+        self.assertTrue(np.allclose(np.asarray(result.get_statevector()), state))
 
     def test_three_states_superposition(self):
         state = 1 / np.sqrt(168) * np.array([0, 2, 0, 0, 8, 0, 0, 10])
@@ -40,4 +40,4 @@ class TestGleining(unittest.TestCase):
         backend = Aer.get_backend('statevector_simulator')
         job = execute(circ, backend)
         result = job.result()
-        self.assertTrue(np.allclose(result.get_statevector(), state))
+        self.assertTrue(np.allclose(np.asarray(result.get_statevector()), state))
