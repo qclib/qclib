@@ -63,7 +63,7 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     qubits = [list(range(n_qubits))]
     vectors = [state_vector]
 
-    root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, [])
+    root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, [0], [])
     _build_approximation_tree(root_node, max_fidelity_loss, strategy,
                                     max_combination_size, use_low_rank)
 
@@ -199,7 +199,7 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
     The increment in the partition size is done by choosing the qubit that has
     the lowest fidelity-loss when removed from the remaining entangled subsystem.
     """
-    node = Node( 0, 0, 0.0, 0.0, [entangled_vector], [entangled_qubits], [] )
+    node = Node( 0, 0, 0.0, 0.0, [entangled_vector], [entangled_qubits], [0], [] )
     for _ in range(max_k):
         current_vector = node.vectors[-1] # Last item is the current entangled state.
         current_qubits = node.qubits[-1]
