@@ -46,8 +46,8 @@ def top_down(angle_tree, circuit, start_level, control_nodes=None, target_nodes=
             else:
                 target_nodes = children(target_nodes)        # all the nodes in the current level
 
-            angles_y = [node.angle_y for node in target_nodes]
-            angles_z = [node.angle_z for node in target_nodes]
+            angles_y = [float(node.angle_y) for node in target_nodes]
+            angles_z = [float(node.angle_z) for node in target_nodes]
             target_qubit = target_nodes[0].qubit
             control_qubits = [node.qubit for node in control_nodes]
             circuit.ucry(angles_y, control_qubits[::-1], target_qubit)     # qiskit reverse
