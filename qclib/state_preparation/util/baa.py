@@ -152,24 +152,30 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
         else:
             combs = _all_combinations(entangled_qubits, max_k)
 
-        # Disentangles or reduces the entanglement of each bipartion of entangled_qubits.
+        # Disentangles or reduces the entanglement of each bipartition of
+        # entangled_qubits.
         for partition in combs:
             # Computes the two state vectors after disentangling "partition".
-            # If the bipartition cannot be fully disentangled, an approximate state is returned.
-            entanglement_info = _reduce_entanglement(entangled_vector, entangled_qubits,
-                                                                partition, use_low_rank)
+            # If the bipartition cannot be fully disentangled, an approximate
+            # state is returned.
+            entanglement_info = _reduce_entanglement(
+                entangled_vector, entangled_qubits, partition, use_low_rank
+            )
 
-            node_fidelity_loss = np.array([info.fidelity_loss for info in entanglement_info])
+            node_fidelity_loss = np.array(
+                [info.fidelity_loss for info in entanglement_info]
+            )
             total_fidelity_loss = 1.0 - (1.0 - node_fidelity_loss) * \
                                         (1.0 - node.total_fidelity_loss)
 
-            for j, loss in enumerate(total_fidelity_loss):
-                # Recursion should not continue in this branch if "total_fidelity_loss" has
-                # reached "max_fidelity_loss". The leaf corresponds to the node of best
-                # approximation of "max_fidelity_loss" on the branch.
+            for e_info, loss in zip(entanglement_info, total_fidelity_loss):
+                # Recursion should not continue in this branch if
+                # "total_fidelity_loss" has reached "max_fidelity_loss".
+                # The leaf corresponds to the node of the best approximation of
+                # "max_fidelity_loss" on the branch.
                 if loss <= max_fidelity_loss:
                     index = node.qubits.index(entangled_qubits)
-                    new_node = _create_node(node, index, entanglement_info[j])
+                    new_node = _create_node(node, index, e_info)
                     node.nodes.append(new_node)
 
     if len(node.nodes) > 0:  # If it is not the end of the recursion,
