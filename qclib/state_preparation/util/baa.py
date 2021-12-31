@@ -262,9 +262,11 @@ def _create_node(parent_node, index, e_info):
 
     vectors = parent_node.vectors.copy()
     qubits  = parent_node.qubits.copy()
+    ranks = parent_node.ranks.copy()
 
     vectors.pop(index)
     qubits.pop(index)
+    ranks.pop(index)
 
     if e_info.rank == 1:
         # The partition qubits have been completely disentangled from the
@@ -275,9 +277,11 @@ def _create_node(parent_node, index, e_info):
 
         vectors.append( e_info.svd_v.T[:, 0] )
         qubits.append( partition2 )
+        ranks.append(e_info.rank)
 
         vectors.append( e_info.svd_u[:, 0] )
         qubits.append( partition1 )
+        ranks.append(e_info.rank)
 
         node_saved_cnots = _count_saved_cnots(e_info.state, vectors[-1], vectors[-2])
     else:
@@ -289,6 +293,7 @@ def _create_node(parent_node, index, e_info):
                                                 normed_svd_s, e_info.local_partition)
         vectors.append( approximate_state )
         qubits.append( e_info.register )
+        ranks.append(e_info.rank)
 
         node_saved_cnots = _count_saved_cnots(e_info.state, vectors[-1], None)
 
@@ -296,8 +301,10 @@ def _create_node(parent_node, index, e_info):
     total_fidelity_loss = 1.0 - (1.0 - e_info.fidelity_loss) * \
                                 (1.0 - parent_node.total_fidelity_loss)
 
-    return Node(node_saved_cnots, total_saved_cnots, e_info.fidelity_loss,
-                                    total_fidelity_loss, vectors, qubits, [])
+    return Node(
+        node_saved_cnots, total_saved_cnots, e_info.fidelity_loss,
+        total_fidelity_loss, vectors, qubits, ranks, []
+    )
 
 def _search_leafs(node, leafs):
     # It returns the leaves of the tree. These nodes are the ones with
