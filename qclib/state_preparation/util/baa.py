@@ -111,6 +111,7 @@ class Node:
 
     vectors: List[List[complex]]
     qubits: List[List[int]]
+    ranks: List[int]
 
     nodes: List['Node']
 
@@ -125,12 +126,14 @@ class Node:
     def __str__(self):
         str_vectors = '\n'.join([str(np.around(i,2)) for i in self.vectors])
         str_qubits = ' '.join([str(i) for i in self.qubits])
+        str_ranks = ' '.join([str(i) for i in self.ranks])
         return f'saved cnots node={self.node_saved_cnots} ' + \
                f'total={self.total_saved_cnots}\n' + \
                f'fidelity loss node={round(self.node_fidelity_loss,6)} ' + \
                f'total={round(self.total_fidelity_loss,6)}\n' + \
                f'states\n{str_vectors}\n' + \
-               f'qubits\n{str_qubits}'
+               f'qubits\n{str_qubits}\n' + \
+               f'ranks\n{str_ranks}'
 
 def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', max_k=0,
                                                                     use_low_rank=False):
