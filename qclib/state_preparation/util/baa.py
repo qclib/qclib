@@ -300,11 +300,13 @@ def _create_node(parent_node, index, e_info):
 
         vectors.append( e_info.svd_v.T[:, 0] )
         qubits.append( partition2 )
-        ranks.append(e_info.rank)
+        partition2_rank = 1 if e_info.svd_v.T[:, 0].shape[0] == 2 else 0
+        ranks.append(partition2_rank)
 
         vectors.append( e_info.svd_u[:, 0] )
         qubits.append( partition1 )
-        ranks.append(e_info.rank)
+        partition1_rank = 1 if e_info.svd_u.T[:, 0].shape[0] == 2 else 0
+        ranks.append(partition1_rank)
 
         node_saved_cnots = _count_saved_cnots(e_info.state, vectors[-1], vectors[-2])
     else:
