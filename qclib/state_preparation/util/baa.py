@@ -114,6 +114,14 @@ class Node:
 
     nodes: List['Node']
 
+    def num_qubits(self):
+        return len(set([e for qb_list in self.qubits for e in qb_list]))
+
+    def state_vector(self):
+        import tensorly.tenalg
+        state = tensorly.tenalg.kronecker(self.vectors)
+        return state
+
     def __str__(self):
         str_vectors = '\n'.join([str(np.around(i,2)) for i in self.vectors])
         str_qubits = ' '.join([str(i) for i in self.qubits])

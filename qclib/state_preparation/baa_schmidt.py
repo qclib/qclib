@@ -24,7 +24,8 @@ from qclib.state_preparation.util.baa import adaptive_approximation
 
 def initialize(state_vector, max_fidelity_loss=0.0,
                         isometry_scheme='ccd', unitary_scheme='qsd',
-                        strategy='greedy', max_combination_size=0, use_low_rank=False):
+                        strategy='greedy', max_combination_size=0,
+                        use_low_rank=False, return_node=False):
     """
     State preparation using the bounded approximation algorithm via Schmidt
     decomposition arXiv:1003.5760
@@ -73,10 +74,16 @@ def initialize(state_vector, max_fidelity_loss=0.0,
             tuning for high-entanglement states and is slower.
             The default value is False.
 
+    return_node: bool
+            If set to true, returns also the best node for the
+            decomposition/approximation
+
     Returns
     -------
-    circuit: QuantumCircuit
-        QuantumCircuit to initialize the state.
+    circuit: QuantumCircuit or Tuple[QuantumCircuit, Node]
+        QuantumCircuit to initialize the state or if return_node==True, returns
+        a tuple with the QuantumCircuit and the best node for
+        decomposition/approximation.
     """
 
     if max_fidelity_loss < 0 or max_fidelity_loss > 1:
@@ -98,5 +105,8 @@ def initialize(state_vector, max_fidelity_loss=0.0,
         qc_vec = schmidt.initialize(vec, isometry_scheme=isometry_scheme,
                                             unitary_scheme=unitary_scheme)
         circuit.compose(qc_vec, node.qubits[i][::-1], inplace=True) # qiskit little-endian.
-
-    return circuit.reverse_bits() # qiskit little-endian.
+    qiskit_circuit = circuit.reverse_bits() # qiskit little-endian.
+    if return_node:
+        return qiskit_circuit, node
+    else:
+        return qiskit_circuit
