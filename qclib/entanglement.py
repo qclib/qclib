@@ -11,33 +11,71 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+"""
+Functions to compute entanglement measures.
+"""
+from typing import Union, Tuple, List
+
 import numpy as np
+import tensorly as tl
+from tensorly.tucker_tensor import TuckerTensor
+from tensorly.decomposition import tucker
 
 
-def _get_iota(j: int, n: int, b: int, basis_state: int):
-    assert b in [0, 1]
-    full_mask = 2**n - 1
+def _get_iota(qubit_idx: int, qubits: int, selector_bit: int, basis_state: int):
+    assert selector_bit in [0, 1]
+    full_mask = 2**qubits - 1
 
-    mask_j = 1 << j
-    value = (mask_j & basis_state) >> j
+    mask_j = 1 << qubit_idx
+    value = (mask_j & basis_state) >> qubit_idx
 
-    low_mask = full_mask >> (n - j)
-    high_mask = full_mask & (full_mask << (j + 1))
+    low_mask = full_mask >> (qubits - qubit_idx)
+    high_mask = full_mask & (full_mask << (qubit_idx + 1))
     new_basis_state = ((basis_state & high_mask) >> 1) + (basis_state & low_mask)
 
-    return value == b, new_basis_state
+    return value == selector_bit, new_basis_state
 
 
-def generalized_cross_product(u: np.ndarray, v: np.ndarray):
+def generalized_cross_product(vector_u: np.ndarray, vector_v: np.ndarray) -> np.ndarray:
+    """
+    Calculates the generalized cross product (see Eqn. (3) in quant-ph/0305094)
+
+    Args:
+        vector_u (array-like):
+            The first vector (called u)
+        vector_v (array-like):
+            The first vector (called u)
+
+    Returns:
+        array-like: the resulting vector
+
+    """
     entries = []
-    for j in range(u.shape[0]):
+    for j in range(vector_u.shape[0]):
         for i in range(j):
-            entry = np.abs(u[i] * v[j] - u[j] * v[i])**2
+            entry = np.abs(vector_u[i] * vector_v[j] - vector_u[j] * vector_v[i])**2
             entries.append(entry)
     return np.sum(entries)
 
 
-def meyer_wallach_entanglement(vector: np.ndarray):
+def meyer_wallach_entanglement(vector: np.ndarray) -> float:
+    """
+
+    Computes the Meyer-Wallach entanglement (1,2) of a quantum state.
+
+    [1] Meyer, D. A. & Wallach, N. R. Global entanglement in multiparticle systems. J Math Phys 43,
+        4273–4278 (2002).
+    [2] Brennen, G. An observable measure of entanglement for pure states of multi-qubit systems.
+        P Soc Photo-opt Ins 3, 619–626 (2003).
+
+    Args:
+        vector (array-like):
+            The vector of the quantum state (in computational basis)
+    Returns:
+        float: the entanglement which is between 0 and 1 (highest is 1)
+
+    """
     num_qb = _to_qubits(vector.shape[0])
     meyer_wallach_entry = np.zeros(shape=(num_qb, 1))
     for j in range(num_qb):
@@ -58,20 +96,30 @@ def meyer_wallach_entanglement(vector: np.ndarray):
     return np.sum(meyer_wallach_entry) * (4/num_qb)
 
 
-def geometric_entanglement(state_vector, return_product_state=False):
-    import importlib.util
-    tensorly_loader = importlib.util.find_spec('tensorly')
-    if tensorly_loader is None:
-        raise ImportError(
-            "To calculate the geometric entanglement we use Tucker decomposition"
-            " and use tensorly for that. Please install it, e.g., "
-            "`pip install tensortly`."
-        )
+def geometric_entanglement(state_vector: np.ndarray, return_product_state=False
+                           ) -> Union[float, Tuple[float, List[np.ndarray]]]:
+    """
 
-    import tensorly as tl
-    from tensorly.tucker_tensor import TuckerTensor
-    from tensorly.decomposition import tucker
+    Computes the geometric entanglement (1,2) of a quantum state.
 
+    [1] SHIMONY, A. Degree of Entanglementa. Ann Ny Acad Sci 755, 675–679 (1995).
+
+    [2] Barnum, H. & Linden, N. Monotones and invariants for multi-particle quantum states.
+        J Phys Math Gen 34, 6787 (2001).
+
+    Args:
+        state_vector (array-like):
+            The vector of the quantum state (in computational basis)
+
+        return_product_state (bool):
+            If True, return the list of product states too.
+
+    Returns:
+        float or Tuple[float, List[array-like]]: #
+            the entanglement which is between 0 and 1 (highest is 1).
+            If return_product_state == True, returns a tuple with a list of product state vectors.
+
+    """
     shape = tuple([2] * _to_qubits(state_vector.shape[0]))
     rank = [1] * _to_qubits(state_vector.shape[0])
     tensor = tl.tensor(state_vector).reshape(shape)
@@ -89,8 +137,8 @@ def geometric_entanglement(state_vector, return_product_state=False):
 
     if return_product_state:
         return min_fidelity_loss, decomp_tensor.factors
-    else:
-        return min_fidelity_loss
+
+    return min_fidelity_loss
 
 
 def _to_qubits(n_state_vector):

@@ -22,6 +22,7 @@ from itertools import combinations, chain
 from typing import List
 from math import log2, sqrt
 import numpy as np
+import tensorly as ty
 
 from qclib.entanglement import geometric_entanglement
 from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots, \
@@ -129,11 +130,12 @@ class Node:
         return all(np.asarray(self.ranks) >= 1)
 
     def num_qubits(self):
-        return len(set([e for qb_list in self.qubits for e in qb_list]))
+        """ Complete state number of qubits. """
+        return len([e for qb_list in self.qubits for e in qb_list])
 
     def state_vector(self):
-        import tensorly.tenalg
-        state = tensorly.tenalg.kronecker(self.vectors)
+        """ Complete state vector. """
+        state = ty.tenalg.kronecker(self.vectors) # pylint: disable=no-member
         return state
 
     def __str__(self):
