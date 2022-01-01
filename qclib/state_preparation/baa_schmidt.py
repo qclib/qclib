@@ -105,8 +105,8 @@ def initialize(state_vector, max_fidelity_loss=0.0,
         qc_vec = schmidt.initialize(vec, isometry_scheme=isometry_scheme,
                                             unitary_scheme=unitary_scheme)
         circuit.compose(qc_vec, node.qubits[i][::-1], inplace=True) # qiskit little-endian.
-    qiskit_circuit = circuit.reverse_bits() # qiskit little-endian.
+
     if return_node:
-        return qiskit_circuit, node
-    else:
-        return qiskit_circuit
+        return circuit.reverse_bits(), node
+
+    return circuit.reverse_bits()

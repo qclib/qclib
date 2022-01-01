@@ -17,7 +17,6 @@ Tests for the baa_schmidt.py module.
 """
 
 from unittest import TestCase
-import time
 import numpy as np
 from qiskit import ClassicalRegister, execute
 from qiskit.providers.aer.backends import AerSimulator

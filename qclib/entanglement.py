@@ -11,8 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import numpy as np
 
+"""
+Functions to compute entanglement measures.
+"""
+
+import importlib.util
+import numpy as np
+import tensorly as tl
+from tensorly.tucker_tensor import TuckerTensor
+from tensorly.decomposition import tucker
+
+# pylint: disable=missing-function-docstring
 
 def _get_iota(j: int, n: int, b: int, basis_state: int):
     assert b in [0, 1]
@@ -59,7 +69,6 @@ def meyer_wallach_entanglement(vector: np.ndarray):
 
 
 def geometric_entanglement(state_vector, return_product_state=False):
-    import importlib.util
     tensorly_loader = importlib.util.find_spec('tensorly')
     if tensorly_loader is None:
         raise ImportError(
@@ -67,10 +76,6 @@ def geometric_entanglement(state_vector, return_product_state=False):
             " and use tensorly for that. Please install it, e.g., "
             "`pip install tensortly`."
         )
-
-    import tensorly as tl
-    from tensorly.tucker_tensor import TuckerTensor
-    from tensorly.decomposition import tucker
 
     shape = tuple([2] * _to_qubits(state_vector.shape[0]))
     rank = [1] * _to_qubits(state_vector.shape[0])
@@ -89,8 +94,8 @@ def geometric_entanglement(state_vector, return_product_state=False):
 
     if return_product_state:
         return min_fidelity_loss, decomp_tensor.factors
-    else:
-        return min_fidelity_loss
+
+    return min_fidelity_loss
 
 
 def _to_qubits(n_state_vector):
