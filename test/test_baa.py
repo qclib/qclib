@@ -60,6 +60,7 @@ def get_vector(e_lower: float, e_upper: float, num_qubits: int,
     entanglements = []
     vector = np.ndarray(shape=(0,))
     while e_lower > entanglement or entanglement > e_upper:
+        np.random.seed()
         q_circuit: qiskit.QuantumCircuit = random_circuit(num_qubits, multiplier * num_qubits)
         vector = get_state(q_circuit)
         if measure == 'geometric':
