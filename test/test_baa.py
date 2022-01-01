@@ -190,8 +190,12 @@ class TestBaa(TestCase):
         num_qubits = 7
         entanglement_bounds = (0.4, 1.0)
         max_fidelity_loss = np.linspace(0.1, 1.0, 4)
+        number_of_experiments = 5
 
-        data = [(i, num_qubits, entanglement_bounds, max_fidelity_loss) for i in range(5)]
+        data = [
+            (i, num_qubits, entanglement_bounds, max_fidelity_loss)
+            for i in range(number_of_experiments)
+        ]
         if use_parallel:
             with Pool() as pool:
                 result = pool.starmap(execute_experiment, data)
