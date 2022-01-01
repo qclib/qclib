@@ -22,6 +22,8 @@ from itertools import combinations, chain
 from typing import List
 from math import log2, sqrt
 import numpy as np
+
+from qclib.entanglement import geometric_entanglement
 from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots, \
                                             schmidt_decomposition, \
                                             schmidt_composition, \
@@ -62,6 +64,13 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     n_qubits = _to_qubits(len(state_vector))
     qubits = [list(range(n_qubits))]
     vectors = [state_vector]
+
+    entanglement, product_state = geometric_entanglement(state_vector, return_product_state=True)
+    if max_fidelity_loss >= entanglement:
+        full_cnots = schmidt_cnots(state_vector)
+        qubits = [[n] for n in range(len(product_state))]
+        ranks = [1 for _ in range(len(product_state))]
+        return Node(full_cnots, full_cnots, entanglement, entanglement, product_state, qubits, ranks, [])
 
     root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, [0], [])
     _build_approximation_tree(root_node, max_fidelity_loss, strategy,
