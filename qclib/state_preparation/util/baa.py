@@ -115,6 +115,10 @@ class Node:
 
     nodes: List['Node']
 
+    @property
+    def is_final(self) -> bool:
+        return all(np.asarray(self.ranks) >= 1)
+
     def num_qubits(self):
         return len(set([e for qb_list in self.qubits for e in qb_list]))
 
@@ -188,7 +192,11 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
 
     for new_node in node.nodes:
         # call _build_approximation_tree recurrently for each new node.
-        _build_approximation_tree(new_node, max_fidelity_loss, strategy, max_k)
+        # except that the vectors are matrices. In this case we are done.
+        if not new_node.is_final:
+            _build_approximation_tree(
+                new_node, max_fidelity_loss, strategy, max_k, use_low_rank
+            )
 
 
 
