@@ -71,7 +71,9 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
         full_cnots = schmidt_cnots(state_vector)
         qubits = [[n] for n in range(len(product_state))]
         ranks = [1 for _ in range(len(product_state))]
-        return Node(full_cnots, full_cnots, entanglement, entanglement, product_state, qubits, ranks, [])
+        return Node(
+            full_cnots, full_cnots, entanglement, entanglement, product_state, qubits, ranks, []
+        )
 
     root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, [0], [])
     _build_approximation_tree(root_node, max_fidelity_loss, strategy,
@@ -83,9 +85,6 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     best_node = _search_best(leafs)
 
     return best_node
-
-
-
 
 @dataclass
 class Entanglement:
@@ -126,14 +125,18 @@ class Node:
     nodes: List['Node']
 
     @property
-    def is_final(self) -> bool:
+    def is_leaf(self) -> bool:
+        """
+        True if the all vectors have reached an approximation assessment. There is no more
+        decomposition/approximation possible. Therefore, the node is a leaf.
+        """
         return all(np.asarray(self.ranks) >= 1)
 
-    def num_qubits(self):
+    def num_qubits(self) -> int:
         """ Complete state number of qubits. """
         return len([e for qb_list in self.qubits for e in qb_list])
 
-    def state_vector(self):
+    def state_vector(self) -> np.ndarray:
         """ Complete state vector. """
         state = ty.tenalg.kronecker(self.vectors) # pylint: disable=no-member
         return state
@@ -204,14 +207,10 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
     for new_node in node.nodes:
         # call _build_approximation_tree recurrently for each new node.
         # except that the vectors are matrices. In this case we are done.
-        if not new_node.is_final:
+        if not new_node.is_leaf:
             _build_approximation_tree(
                 new_node, max_fidelity_loss, strategy, max_k, use_low_rank
             )
-
-
-
-
 
 def _all_combinations(entangled_qubits, max_k):
     return chain.from_iterable(combinations(entangled_qubits, k)
