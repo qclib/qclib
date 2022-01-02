@@ -125,8 +125,8 @@ def geometric_entanglement(state_vector: np.ndarray, return_product_state=False
     tensor = tl.tensor(state_vector).reshape(shape)
     results = {}
     # The Tucker decomposition is actually a randomized algorithm.
-    # We take three shots and take the min of it.
-    for _ in range(3):
+    # We take four shots and take the min of it.
+    for _ in range(4):
         decomp_tensor: TuckerTensor = tucker(
             tensor, rank=rank, verbose=False, svd='numpy_svd', init='random'
         )
@@ -136,7 +136,7 @@ def geometric_entanglement(state_vector: np.ndarray, return_product_state=False
     min_fidelity_loss = min(results)
 
     if return_product_state:
-        return min_fidelity_loss, decomp_tensor.factors
+        return min_fidelity_loss, [f.flatten() for f in results[min_fidelity_loss].factors]
 
     return min_fidelity_loss
 
