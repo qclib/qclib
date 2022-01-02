@@ -291,7 +291,8 @@ class TestBaa(TestCase):
             print("[FAIL] real_approximation_calculation_pass must be true", file=sys.stderr)
             test_passed = False
 
-        with np.printoptions(precision=2, linewidth=1000, suppress=True):
+        with np.printoptions(precision=2, linewidth=1000, suppress=True, threshold=sys.maxsize,
+                             floatmode='fixed'):
             print(test_data)
 
         self.assertTrue(test_passed, 'The tests should all pass.')
