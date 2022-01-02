@@ -192,7 +192,8 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
                 if loss <= max_fidelity_loss:
                     index = node.qubits.index(entangled_qubits)
                     new_node = _create_node(node, index, e_info)
-                    node.nodes.append(new_node)
+                    if new_node.total_saved_cnots > 0:
+                        node.nodes.append(new_node)
 
     if len(node.nodes) > 0:  # If it is not the end of the recursion,
         node.vectors.clear() # clear vectors and qubits to save memory.
