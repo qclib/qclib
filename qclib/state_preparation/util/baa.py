@@ -130,7 +130,7 @@ class Node:
         True if the all vectors have reached an approximation assessment. There is no more
         decomposition/approximation possible. Therefore, the node is a leaf.
         """
-        return all(np.asarray(self.ranks) >= 1)
+        return all(np.asarray(self.ranks) >= 1) or len(self.nodes) == 0
 
     def num_qubits(self) -> int:
         """ Complete state number of qubits. """
