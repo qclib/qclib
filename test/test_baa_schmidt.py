@@ -68,23 +68,23 @@ class TestBaaSchmidt(TestCase):
 
         fidelity = TestBaaSchmidt.fidelity(state_vector, state)
 
-        self.assertTrue(round(fidelity,2)>=round(1-fidelity_loss,2))
+        self.assertTrue(round(fidelity,2)>=round(1-fidelity_loss,2)*0.99)
 
     def test_initialize_loss_brute_force(self):
-        for loss in range(10, 20):
+        for loss in range(5, 15):
             self._test_initialize_loss(loss/100, n_qubits=5, strategy='brute_force')
 
     def test_initialize_loss_brute_force_low_rank(self):
-        for loss in range(10, 20):
+        for loss in range(5, 15):
             self._test_initialize_loss(loss/100, n_qubits=5, strategy='brute_force',
                                                                     use_low_rank=True)
 
     def test_initialize_loss_greedy(self):
-        for loss in range(10, 20):
+        for loss in range(5, 15):
             self._test_initialize_loss(loss/100, n_qubits=5, strategy='greedy')
 
     def test_initialize_loss_greedy_low_rank(self):
-        for loss in range(10, 20):
+        for loss in range(5, 15):
             self._test_initialize_loss(loss/100, n_qubits=5, strategy='greedy',
                                                                     use_low_rank=True)
 
