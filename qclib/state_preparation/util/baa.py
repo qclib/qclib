@@ -74,8 +74,10 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
         full_cnots = schmidt_cnots(state_vector)
         qubits = [[n] for n in range(len(product_state))]
         ranks = [1 for _ in range(len(product_state))]
+        partitions = [None for _ in range(len(product_state))]
         return Node(
-            full_cnots, full_cnots, entanglement, entanglement, product_state, qubits, ranks, []
+            full_cnots, full_cnots, entanglement, entanglement, product_state,
+            qubits, ranks, partitions, []
         )
 
     root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, ranks, partitions, [])
