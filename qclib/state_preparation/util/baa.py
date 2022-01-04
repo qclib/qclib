@@ -105,6 +105,7 @@ class Entanglement:
     svd_v: np.ndarray
     svd_s: np.ndarray
 
+    register: List[int]
     partition: List[int]
     local_partition: List[int]
 
@@ -192,8 +193,7 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
                 # The leaf corresponds to the node of the best approximation of
                 # "max_fidelity_loss" on the branch.
                 if loss <= max_fidelity_loss:
-                    index = node.qubits.index(entangled_qubits)
-                    new_node = _create_node(node, index, e_info)
+                    new_node = _create_node(node, e_info)
                     if new_node.total_saved_cnots > 0:
                         node.nodes.append(new_node)
 
@@ -235,7 +235,7 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
             entanglement_info = \
                 _reduce_entanglement(current_vector, current_qubits, [qubit_to_disentangle])
 
-            new_node = _create_node(node, -1, entanglement_info[0])
+            new_node = _create_node(node, entanglement_info[0])
 
             nodes.append(new_node)
         # Search for the node with lowest fidelity-loss.
@@ -275,18 +275,20 @@ def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
         fidelity_loss = 1.0 - sum(low_rank_s**2)
 
         entanglement_info.append(Entanglement(rank, low_rank_u, low_rank_v, low_rank_s,
+                                              register,
                                               partition,
                                               local_partition,
                                               fidelity_loss))
     return entanglement_info
 
-def _create_node(parent_node, index, e_info):
+def _create_node(parent_node, e_info):
 
     vectors = parent_node.vectors.copy()
     qubits = parent_node.qubits.copy()
     ranks = parent_node.ranks.copy()
     partitions = parent_node.partitions.copy()
 
+    index = parent_node.qubits.index(e_info.register)
     original_vector = vectors.pop(index)
     original_qubits = qubits.pop(index)
     original_rank = ranks.pop(index)
