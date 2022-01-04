@@ -19,7 +19,7 @@ https://arxiv.org/abs/2111.03132
 
 from dataclasses import dataclass
 from itertools import combinations, chain
-from typing import List
+from typing import List, Optional
 from math import log2, sqrt
 import numpy as np
 import tensorly as ty
@@ -61,10 +61,13 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
         Node: a node with the data required to build the quantum circuit.
     """
     n_qubits = _to_qubits(len(state_vector))
-    qubits = [list(range(n_qubits))]
-    vectors = [state_vector]
 
-    root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, [])
+    vectors = [state_vector]
+    qubits = [list(range(n_qubits))]
+    ranks = [0]
+    partitions = [None]
+
+    root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, ranks, partitions, [])
     _build_approximation_tree(root_node, max_fidelity_loss, strategy,
                                     max_combination_size, use_low_rank)
 
@@ -92,8 +95,6 @@ class Entanglement:
     svd_v: np.ndarray
     svd_s: np.ndarray
 
-    state: List[complex]
-    register: List[int]
     partition: List[int]
     local_partition: List[int]
 
@@ -112,6 +113,8 @@ class Node:
 
     vectors: List[List[complex]]
     qubits: List[List[int]]
+    ranks: List[int]
+    partitions: List[Optional[List[int]]]
 
     nodes: List['Node']
 
@@ -140,8 +143,7 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
     entangled_qubits_list  = [i for i in node.qubits if len(i) > 1]
     entangled_vectors_list = [i for i in node.vectors if len(i) > 2]
 
-    for i, entangled_qubits in enumerate(entangled_qubits_list):
-        entangled_vector = entangled_vectors_list[i]
+    for entangled_vector, entangled_qubits in zip(entangled_vectors_list, entangled_qubits_list):
 
         if not 1 <= max_k <= len(entangled_qubits)//2:
             max_k = len(entangled_qubits)//2
@@ -155,20 +157,21 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
         for partition in combs:
             # Computes the two state vectors after disentangling "partition".
             # If the bipartition cannot be fully disentangled, an approximate state is returned.
-            entanglement_info = _reduce_entanglement(entangled_vector, entangled_qubits,
-                                                                partition, use_low_rank)
+            entanglement_info = _reduce_entanglement(
+                                    entangled_vector, entangled_qubits, partition, use_low_rank
+                                )
 
-            node_fidelity_loss = np.array([info.fidelity_loss for info in entanglement_info])
+            node_fidelity_loss = np.array([e_info.fidelity_loss for e_info in entanglement_info])
             total_fidelity_loss = 1.0 - (1.0 - node_fidelity_loss) * \
                                         (1.0 - node.total_fidelity_loss)
 
-            for j, loss in enumerate(total_fidelity_loss):
+            for e_info, loss in zip(entanglement_info, total_fidelity_loss):
                 # Recursion should not continue in this branch if "total_fidelity_loss" has
                 # reached "max_fidelity_loss". The leaf corresponds to the node of best
                 # approximation of "max_fidelity_loss" on the branch.
                 if loss <= max_fidelity_loss:
                     index = node.qubits.index(entangled_qubits)
-                    new_node = _create_node(node, index, entanglement_info[j])
+                    new_node = _create_node(node, index, e_info)
                     node.nodes.append(new_node)
 
     if len(node.nodes) > 0:  # If it is not the end of the recursion,
@@ -198,7 +201,7 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
     The increment in the partition size is done by choosing the qubit that has
     the lowest fidelity-loss when removed from the remaining entangled subsystem.
     """
-    node = Node( 0, 0, 0.0, 0.0, [entangled_vector], [entangled_qubits], [] )
+    node = Node( 0, 0, 0.0, 0.0, [entangled_vector], [entangled_qubits], [0], [None], [] )
     for _ in range(max_k):
         current_vector = node.vectors[-1] # Last item is the current entangled state.
         current_qubits = node.qubits[-1]
@@ -226,8 +229,7 @@ def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
     local_partition = []
     # Maintains the relative position between the qubits of the two subsystems.
     for qubit_to_disentangle in partition:
-        local_partition.append(
-                        sum(i < qubit_to_disentangle for i in register))
+        local_partition.append(sum(i < qubit_to_disentangle for i in register))
 
     svd_u, svd_s, svd_v = schmidt_decomposition(state_vector, local_partition)
 
@@ -250,8 +252,6 @@ def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
         fidelity_loss = 1.0 - sum(low_rank_s**2)
 
         entanglement_info.append(Entanglement(rank, low_rank_u, low_rank_v, low_rank_s,
-                                              state_vector,
-                                              register,
                                               partition,
                                               local_partition,
                                               fidelity_loss))
@@ -260,25 +260,37 @@ def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
 def _create_node(parent_node, index, e_info):
 
     vectors = parent_node.vectors.copy()
-    qubits  = parent_node.qubits.copy()
+    qubits = parent_node.qubits.copy()
+    ranks = parent_node.ranks.copy()
+    partitions = parent_node.partitions.copy()
 
-    vectors.pop(index)
-    qubits.pop(index)
+    original_vector = vectors.pop(index)
+    original_qubits = qubits.pop(index)
+    original_rank = ranks.pop(index)
+    original_partition = partitions.pop(index)
 
     if e_info.rank == 1:
         # The partition qubits have been completely disentangled from the
         # rest of the register. Therefore, the original entangled state is
         # removed from the list and two new separate states are included.
-        partition1 = tuple(set(e_info.register).difference(set(e_info.partition)))
+        partition1 = tuple(set(original_qubits).difference(set(e_info.partition)))
         partition2 = e_info.partition
 
-        vectors.append( e_info.svd_v.T[:, 0] )
-        qubits.append( partition2 )
+        vectors.append(e_info.svd_v.T[:, 0])
+        qubits.append(partition2)
+        ranks.append(0)
+        partitions.append(None)
 
-        vectors.append( e_info.svd_u[:, 0] )
-        qubits.append( partition1 )
+        vectors.append(e_info.svd_u[:, 0])
+        qubits.append(partition1)
+        ranks.append(0)
+        partitions.append(None)
 
-        node_saved_cnots = _count_saved_cnots(e_info.state, vectors[-1], vectors[-2])
+        node_saved_cnots = _count_saved_cnots(
+                                original_vector, vectors[-1], vectors[-2],
+                                original_partition, None,
+                                original_rank
+                            )
     else:
         # The entanglement between partition qubits and the rest of the
         # register has been reduced, but not eliminated. Therefore, the
@@ -286,17 +298,23 @@ def _create_node(parent_node, index, e_info):
         normed_svd_s = e_info.svd_s/sqrt( 1.0 - e_info.fidelity_loss )
         approximate_state = schmidt_composition(e_info.svd_u, e_info.svd_v,
                                                 normed_svd_s, e_info.local_partition)
-        vectors.append( approximate_state )
-        qubits.append( e_info.register )
+        vectors.append(approximate_state)
+        qubits.append(original_qubits)
+        ranks.append(e_info.rank)
+        partitions.append(e_info.local_partition)
 
-        node_saved_cnots = _count_saved_cnots(e_info.state, vectors[-1], None)
+        node_saved_cnots = _count_saved_cnots(
+                                original_vector, vectors[-1], None,
+                                original_partition, e_info.local_partition,
+                                original_rank, e_info.rank
+                            )
 
     total_saved_cnots = parent_node.total_saved_cnots + node_saved_cnots
     total_fidelity_loss = 1.0 - (1.0 - e_info.fidelity_loss) * \
                                 (1.0 - parent_node.total_fidelity_loss)
 
     return Node(node_saved_cnots, total_saved_cnots, e_info.fidelity_loss,
-                                    total_fidelity_loss, vectors, qubits, [])
+                    total_fidelity_loss, vectors, qubits, ranks, partitions, [])
 
 def _search_leafs(node, leafs):
     # It returns the leaves of the tree. These nodes are the ones with
@@ -328,11 +346,19 @@ def _max_subsystem_size(node):
 def _to_qubits(n_state_vector):
     return int(log2(n_state_vector))
 
-def _count_saved_cnots(entangled_vector, subsystem1_vector, subsystem2_vector):
+def _count_saved_cnots(original_vector, subsystem1_vector, subsystem2_vector,
+                            original_partition=None,subsystem_local_partition=None,
+                            original_rank=0, subsystem_rank=0):
     method = 'estimate'
 
-    cnots_originally = schmidt_cnots(entangled_vector, method=method)
-    cnots_phase_3 = schmidt_cnots(subsystem1_vector, method=method)
+    cnots_originally = schmidt_cnots(
+                        original_vector, method=method, partition=original_partition,
+                        low_rank=original_rank
+                    )
+    cnots_phase_3 = schmidt_cnots(
+                        subsystem1_vector, method=method, partition=subsystem_local_partition,
+                        low_rank=subsystem_rank
+                    )
 
     cnots_phase_4 = 0
     if subsystem2_vector is not None:

@@ -160,7 +160,7 @@ def schmidt_composition(svd_u, svd_v, singular_values, partition):
 
     return state_vector
 
-def low_rank_approximation(low_rank, svd_u, svd_v, singular_values, rank_power_of_2=True):
+def low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
     """
     Low-rank approximation from the SVD.
     """
@@ -172,11 +172,8 @@ def low_rank_approximation(low_rank, svd_u, svd_v, singular_values, rank_power_o
         if 0 < low_rank < effective_rank:
             effective_rank = low_rank
 
-        if rank_power_of_2:
-            # To use isometries, the rank needs to be a power of 2.
-            rank = int(2**ceil(log2(effective_rank)))
-        else:
-            rank = effective_rank
+        # To use isometries, the rank needs to be a power of 2.
+        rank = int(2**ceil(log2(effective_rank)))
 
         svd_u = svd_u[:,:rank]
         svd_v = svd_v[:rank,:]

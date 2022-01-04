@@ -101,10 +101,10 @@ def initialize(state_vector, max_fidelity_loss=0.0,
     n_qubits = int(np.log2(len(state_vector)))
     circuit = QuantumCircuit(n_qubits)
 
-    for i, vec in enumerate(node.vectors):
-        qc_vec = schmidt.initialize(vec, isometry_scheme=isometry_scheme,
-                                            unitary_scheme=unitary_scheme)
-        circuit.compose(qc_vec, node.qubits[i][::-1], inplace=True) # qiskit little-endian.
+    for vector, qubits, rank, partition in zip(node.vectors, node.qubits,
+                                                node.ranks, node.partitions):
+        qc_vec = schmidt.initialize(vector, rank, isometry_scheme, unitary_scheme, partition)
+        circuit.compose(qc_vec, qubits[::-1], inplace=True) # qiskit little-endian.
 
     if return_node:
         return circuit.reverse_bits(), node
