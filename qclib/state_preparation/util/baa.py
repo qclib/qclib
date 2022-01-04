@@ -23,6 +23,8 @@ from typing import List, Optional
 from math import log2, sqrt
 import numpy as np
 import tensorly as ty
+
+from qclib.entanglement import geometric_entanglement
 from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots, \
                                             schmidt_decomposition, \
                                             schmidt_composition, \
@@ -67,6 +69,15 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     ranks = [0]
     partitions = [None]
 
+    entanglement, product_state = geometric_entanglement(state_vector, return_product_state=True)
+    if max_fidelity_loss >= entanglement:
+        full_cnots = schmidt_cnots(state_vector)
+        qubits = [[n] for n in range(len(product_state))]
+        ranks = [1 for _ in range(len(product_state))]
+        return Node(
+            full_cnots, full_cnots, entanglement, entanglement, product_state, qubits, ranks, []
+        )
+
     root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, ranks, partitions, [])
     _build_approximation_tree(root_node, max_fidelity_loss, strategy,
                                     max_combination_size, use_low_rank)
@@ -77,9 +88,6 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     best_node = _search_best(leafs)
 
     return best_node
-
-
-
 
 @dataclass
 class Entanglement:
@@ -118,11 +126,19 @@ class Node:
 
     nodes: List['Node']
 
-    def num_qubits(self):
+    @property
+    def is_leaf(self) -> bool:
+        """
+        True if the all vectors have reached an approximation assessment. There is no more
+        decomposition/approximation possible. Therefore, the node is a leaf.
+        """
+        return all(np.asarray(self.ranks) >= 1)
+
+    def num_qubits(self) -> int:
         """ Complete state number of qubits. """
         return len([e for qb_list in self.qubits for e in qb_list])
 
-    def state_vector(self):
+    def state_vector(self) -> np.ndarray:
         """ Complete state vector. """
         state = ty.tenalg.kronecker(self.vectors) # pylint: disable=no-member
         return state
@@ -130,20 +146,21 @@ class Node:
     def __str__(self):
         str_vectors = '\n'.join([str(np.around(i,2)) for i in self.vectors])
         str_qubits = ' '.join([str(i) for i in self.qubits])
+        str_ranks = ' '.join([str(i) for i in self.ranks])
         return f'saved cnots node={self.node_saved_cnots} ' + \
                f'total={self.total_saved_cnots}\n' + \
                f'fidelity loss node={round(self.node_fidelity_loss,6)} ' + \
                f'total={round(self.total_fidelity_loss,6)}\n' + \
                f'states\n{str_vectors}\n' + \
-               f'qubits\n{str_qubits}'
+               f'qubits\n{str_qubits}\n' + \
+               f'ranks\n{str_ranks}'
 
 def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', max_k=0,
                                                                     use_low_rank=False):
     # Ignore the completely disentangled qubits.
-    entangled_qubits_list  = [i for i in node.qubits if len(i) > 1]
-    entangled_vectors_list = [i for i in node.vectors if len(i) > 2]
+    data = [(q, v) for q, v, k in zip(node.qubits, node.vectors, node.ranks) if k == 0]
 
-    for entangled_vector, entangled_qubits in zip(entangled_vectors_list, entangled_qubits_list):
+    for entangled_qubits, entangled_vector in data:
 
         if not 1 <= max_k <= len(entangled_qubits)//2:
             max_k = len(entangled_qubits)//2
@@ -153,26 +170,30 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
         else:
             combs = _all_combinations(entangled_qubits, max_k)
 
-        # Disentangles or reduces the entanglement of each bipartion of entangled_qubits.
+        # Disentangles or reduces the entanglement of each bipartition of
+        # entangled_qubits.
         for partition in combs:
             # Computes the two state vectors after disentangling "partition".
-            # If the bipartition cannot be fully disentangled, an approximate state is returned.
+            # If the bipartition cannot be fully disentangled, an approximate
+            # state is returned.
             entanglement_info = _reduce_entanglement(
-                                    entangled_vector, entangled_qubits, partition, use_low_rank
-                                )
+                entangled_vector, entangled_qubits, partition, use_low_rank
+            )
 
             node_fidelity_loss = np.array([e_info.fidelity_loss for e_info in entanglement_info])
             total_fidelity_loss = 1.0 - (1.0 - node_fidelity_loss) * \
                                         (1.0 - node.total_fidelity_loss)
 
             for e_info, loss in zip(entanglement_info, total_fidelity_loss):
-                # Recursion should not continue in this branch if "total_fidelity_loss" has
-                # reached "max_fidelity_loss". The leaf corresponds to the node of best
-                # approximation of "max_fidelity_loss" on the branch.
+                # Recursion should not continue in this branch if
+                # "total_fidelity_loss" has reached "max_fidelity_loss".
+                # The leaf corresponds to the node of the best approximation of
+                # "max_fidelity_loss" on the branch.
                 if loss <= max_fidelity_loss:
                     index = node.qubits.index(entangled_qubits)
                     new_node = _create_node(node, index, e_info)
-                    node.nodes.append(new_node)
+                    if new_node.total_saved_cnots > 0:
+                        node.nodes.append(new_node)
 
     if len(node.nodes) > 0:  # If it is not the end of the recursion,
         node.vectors.clear() # clear vectors and qubits to save memory.
@@ -184,11 +205,11 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
 
     for new_node in node.nodes:
         # call _build_approximation_tree recurrently for each new node.
-        _build_approximation_tree(new_node, max_fidelity_loss, strategy, max_k)
-
-
-
-
+        # except that the vectors are matrices. In this case we are done.
+        if not new_node.is_leaf:
+            _build_approximation_tree(
+                new_node, max_fidelity_loss, strategy, max_k, use_low_rank
+            )
 
 def _all_combinations(entangled_qubits, max_k):
     return chain.from_iterable(combinations(entangled_qubits, k)
@@ -278,12 +299,12 @@ def _create_node(parent_node, index, e_info):
 
         vectors.append(e_info.svd_v.T[:, 0])
         qubits.append(partition2)
-        ranks.append(0)
+        ranks.append(1 if e_info.svd_v.T[:, 0].shape[0] == 2 else 0)
         partitions.append(None)
 
         vectors.append(e_info.svd_u[:, 0])
         qubits.append(partition1)
-        ranks.append(0)
+        ranks.append(1 if e_info.svd_u.T[:, 0].shape[0] == 2 else 0)
         partitions.append(None)
 
         node_saved_cnots = _count_saved_cnots(
