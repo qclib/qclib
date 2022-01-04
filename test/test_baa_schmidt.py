@@ -68,7 +68,7 @@ class TestBaaSchmidt(TestCase):
 
         fidelity = TestBaaSchmidt.fidelity(state_vector, state)
 
-        self.assertTrue(round(fidelity,2)>=round(1-fidelity_loss,2))
+        self.assertTrue(round(fidelity,2)>=round(1-fidelity_loss,2)*0.99)
 
     def test_initialize_loss_brute_force(self):
         for loss in range(5, 15):
