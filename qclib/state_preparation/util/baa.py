@@ -69,7 +69,7 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     ranks = [0]
     partitions = [None]
 
-    entanglement, product_state = geometric_entanglement(state_vector, return_product_state=True)
+    entanglement, product_state = geometric_entanglement(np.array(state_vector), return_product_state=True)
     if max_fidelity_loss >= entanglement:
         full_cnots = schmidt_cnots(state_vector)
         qubits = [[n] for n in range(len(product_state))]
