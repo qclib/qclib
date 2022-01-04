@@ -276,17 +276,20 @@ class TestBaa(TestCase):
             ].shape[0]
         )
         if benchmark_fidelity_loss_fail_count > 0:
-            print("[WARNING] NOT ALL benchmark_fidelity_loss_pass are true!", file=sys.stderr)
+            print(f"[WARNING] NOT ALL benchmark_fidelity_loss_pass are true ({benchmark_fidelity_loss_fail_count})",
+                  file=sys.stderr)
         if benchmark_fidelity_loss_fail_count > fails_to_still_pass:
             print("[FAIL] benchmark_fidelity_loss_pass must be true", file=sys.stderr)
             test_passed = False
         if approximation_calculation_fail_count > 0:
-            print("[WARNING] NOT ALL approximation_calculation_pass are true!", file=sys.stderr)
+            print(f"[WARNING] NOT ALL approximation_calculation_pass are true ({approximation_calculation_fail_count})",
+                  file=sys.stderr)
         if approximation_calculation_fail_count > fails_to_still_pass:
             print("[FAIL] approximation_calculation_pass must be true", file=sys.stderr)
             test_passed = False
         if real_approximation_calculation_fail_count > 0:
-            print("[WARNING] NOT ALL real_approximation_calculation_pass are true", file=sys.stderr)
+            print(f"[WARNING] NOT ALL real_approximation_calculation_pass are true "
+                  f"({real_approximation_calculation_fail_count})", file=sys.stderr)
         if real_approximation_calculation_fail_count > fails_to_still_pass:
             print("[FAIL] real_approximation_calculation_pass must be true", file=sys.stderr)
             test_passed = False
