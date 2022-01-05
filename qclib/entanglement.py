@@ -96,7 +96,7 @@ def meyer_wallach_entanglement(vector: np.ndarray) -> float:
     return np.sum(meyer_wallach_entry) * (4/num_qb)
 
 
-def geometric_entanglement(state_vector: np.ndarray, return_product_state=False
+def geometric_entanglement(state_vector: List[complex], return_product_state=False
                            ) -> Union[float, Tuple[float, List[np.ndarray]]]:
     """
 
@@ -120,8 +120,8 @@ def geometric_entanglement(state_vector: np.ndarray, return_product_state=False
             If return_product_state == True, returns a tuple with a list of product state vectors.
 
     """
-    shape = tuple([2] * _to_qubits(state_vector.shape[0]))
-    rank = [1] * _to_qubits(state_vector.shape[0])
+    shape = tuple([2] * _to_qubits(len(state_vector)))
+    rank = [1] * _to_qubits(len(state_vector))
     tensor = tl.tensor(state_vector).reshape(shape)
     results = {}
     # The Tucker decomposition is actually a randomized algorithm.
