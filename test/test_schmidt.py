@@ -129,7 +129,7 @@ class TestSchmidt(TestCase):
         self._test_initialize_mae(2, max_mae=0.06)
 
     def test_initialize_rank_1(self):
-        self._test_initialize_mae(1, max_mae=0.085)
+        self._test_initialize_mae(1, max_mae=0.0875)
 
     def test_cnot_count_rank_1(self):
         # Builds a rank 1 state.
