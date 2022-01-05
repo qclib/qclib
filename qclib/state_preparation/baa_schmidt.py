@@ -89,14 +89,9 @@ def initialize(state_vector, max_fidelity_loss=0.0,
     if max_fidelity_loss < 0 or max_fidelity_loss > 1:
         max_fidelity_loss = 0.0
 
-    # Completely separates the state to compute the maximum possible fidelity loss.
-    # With the below parameter setting, the cost of the function "adaptive_approximation"
-    # is linear in the number of qubits. If max_fidelity_loss input is less than the
-    # maximum possible loss, it runs the full routine with potentially exponential cost.
-    node = adaptive_approximation(state_vector, 1.0, strategy='greedy', max_combination_size=1)
-    if (node.total_fidelity_loss) > max_fidelity_loss:
-        node = adaptive_approximation(state_vector, max_fidelity_loss, strategy,
-                                                max_combination_size, use_low_rank)
+    node = adaptive_approximation(
+        state_vector, max_fidelity_loss, strategy, max_combination_size, use_low_rank
+    )
 
     n_qubits = int(np.log2(len(state_vector)))
     circuit = QuantumCircuit(n_qubits)
