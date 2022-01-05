@@ -229,7 +229,7 @@ def _create_quantum_circuit(state_vector, partition):
     if partition is None:
         partition = _default_partition(n_qubits)
 
-    complement = list(set(range(n_qubits)).difference(set(partition)))
+    complement = sorted(set(range(n_qubits)).difference(set(partition)))
 
     circuit = QuantumCircuit(n_qubits)
 
