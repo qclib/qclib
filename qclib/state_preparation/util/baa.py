@@ -63,19 +63,19 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
         Node: a node with the data required to build the quantum circuit.
     """
 
+    n_qubits = _to_qubits(len(state_vector))
+
     # Completely separates the state to estimate the maximum possible fidelity loss.
     # If max_fidelity_loss input is higher than the estimated loss, it runs the full
     # routine with potentially exponential cost.
     entanglement, product_state = geometric_entanglement(state_vector, return_product_state=True)
     if max_fidelity_loss >= entanglement:
-        qubits = [[n] for n in range(len(product_state))]
-        ranks = [1] * len(product_state)
-        partitions = [None] * len(product_state)
+        qubits = [[n] for n in range(n_qubits)]
+        ranks = [1] * n_qubits
+        partitions = [None] * n_qubits
         return Node(
             0, 0, entanglement, entanglement, product_state, qubits, ranks, partitions, []
         )
-
-    n_qubits = _to_qubits(len(state_vector))
 
     vectors = [state_vector]
     qubits = [list(range(n_qubits))]
