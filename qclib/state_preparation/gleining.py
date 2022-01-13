@@ -53,8 +53,6 @@ def initialize(state):
 
   return quantum_circuit.reverse_ops()
 
-
-
 def _build_state_dict(state): 
   """
     Builds a dict of the non zero amplitudes with their
@@ -67,7 +65,7 @@ def _build_state_dict(state):
   state_dict = {}
   for (value_idx, value) in enumerate(state):
     if value != 0: 
-      binary_string = '{:0{}b}'.format(value_idx, n_qubits)
+      binary_string = '{:0{}b}'.format(value_idx, n_qubits)[::-1]
       state_dict[binary_string] = value
   return state_dict
 
@@ -157,7 +155,7 @@ def _bit_string_search(b_strings, dif_qubits, dif_values):
   while len(temp_strings) > 1: 
     b, t_0, t_1 = _maximizing_difference_bit_search(temp_strings, dif_qubits)
     dif_qubits.append(b)
-    if len(t_0) <= len(t_1): 
+    if len(t_0) < len(t_1): 
       dif_values.append('0')
       temp_strings = t_0
     else: 
@@ -193,8 +191,8 @@ def _search_bit_strings_for_merging(state_dict):
     # Search for the difference bit
     b, t_0, t_1 = _maximizing_difference_bit_search(t, dif_qubits)
     dif = b
-    x1 = t_0[0]
-    x2 = t_1[0]
+    x1 = t_1[0]
+    x2 = t_0[0]
   else:
     # Searching for x1
     t, dif_qubits, dif_values = _bit_string_search(t, dif_qubits, dif_values)
@@ -250,8 +248,8 @@ def _update_state_dict_according_to_operation(state_dict, operation, qubit_index
     # Computes the norm of x1 and x2
     new_state_dict = state_dict.copy()
     norm = np.linalg.norm([new_state_dict[merge_strings[0]], new_state_dict[merge_strings[1]]])
-    new_state_dict.pop(merge_strings[0], None)
-    new_state_dict[merge_strings[1]] = norm
+    new_state_dict.pop(merge_strings[1], None)
+    new_state_dict[merge_strings[0]] = norm
   else:
     for (bit_string, value) in state_list:
       temp_bstring = _apply_operation_to_bit_string(bit_string, operation, qubit_indexes)
@@ -353,20 +351,22 @@ def _compute_angles(amplitude_1, amplitude_2):
       The angles theta, lambda and phi for the U3 operator
   """
   norm = np.linalg.norm([amplitude_1, amplitude_2])
-  amplitude_1 = np.conj(amplitude_1 / norm)
-  amplitude_2 = np.conj(amplitude_2 / norm)
   
   phi = 0
   lamb = 0 
   # there is no minus on the theta because the intetion is to compute the inverse
-  if isinstance(amplitude_1, complex) and isinstance(amplitude_2, complex): 
-    theta = 2 * np.arcsin(amplitude_2)
-    lamb = np.log(amplitude_2).imag
-    phi = np.log(amplitude_1).imag - lamb
-  else: 
-    theta = 2 * np.arcsin(amplitude_2)
+  if isinstance(amplitude_1, complex) or isinstance(amplitude_2, complex): 
+    amplitude_1 = complex(amplitude_1) if not isinstance(amplitude_1, complex) else amplitude_1
+    amplitude_2 = complex(amplitude_2) if not isinstance(amplitude_2, complex) else amplitude_2
 
-  return theta, lamb, phi
+    theta = - 2 * np.arcsin(np.abs(amplitude_2 / norm))
+    lamb = np.log(amplitude_2 / norm).imag
+    phi = np.log(amplitude_1 / norm).imag - lamb
+
+  else: 
+    theta = - 2 * np.arcsin(amplitude_2 / norm)
+
+  return theta, phi, lamb
 
 def _merging_procedure(state_dict, quantum_circuit):
 
@@ -388,6 +388,7 @@ def _merging_procedure(state_dict, quantum_circuit):
     merge_gate = U3Gate(theta, phi, lamb, label='U3')
   else:
     merge_gate = U3Gate(theta, phi, lamb, label='U3').control(num_ctrl_qubits=len(dif_qubits))
+
   quantum_circuit.append(merge_gate, dif_qubits+[dif], [])
   state_dict = _update_state_dict_according_to_operation(state_dict, 
                                                          'merge',

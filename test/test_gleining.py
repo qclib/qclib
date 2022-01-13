@@ -37,3 +37,15 @@ class TestGleining(unittest.TestCase):
         circ = initialize(state_vector)
         state = get_state(circ)
         self.assertTrue(np.allclose(state_vector, state))
+
+    def test_three_states_uniform_superposition(self):
+        state_vector = 1 / np.sqrt(3) * np.array([0, 1, 0, 0, 1, 0, 0, 1])
+        circ = initialize(state_vector)
+        state = get_state(circ)
+        self.assertTrue(np.allclose(state_vector, state))
+
+    def test_three_states_superposition_with_complex_features(self): 
+        state_vector = np.array([0, complex(np.sqrt(0.1), np.sqrt(0.1)), 0, 0, complex(np.sqrt(0.1), np.sqrt(0.2)), 0, 0, np.sqrt(0.5)])
+        circ = initialize(state_vector)
+        state = get_state(circ)
+        self.assertTrue(np.allclose(state_vector, state))
