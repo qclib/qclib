@@ -24,7 +24,7 @@ from qclib.util import get_state
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 
-class TestGleining(unittest.TestCase): 
+class TestGleining(unittest.TestCase):
 
     def test_two_states_uniform(self):
         state_vector = 1 / np.sqrt(2) * np.array([1, 0, 0, 0, 0, 1, 0, 0])
@@ -44,8 +44,9 @@ class TestGleining(unittest.TestCase):
         state = get_state(circ)
         self.assertTrue(np.allclose(state_vector, state))
 
-    def test_three_states_superposition_with_complex_features(self): 
-        state_vector = np.array([0, complex(np.sqrt(0.1), np.sqrt(0.1)), 0, 0, complex(np.sqrt(0.1), np.sqrt(0.2)), 0, 0, np.sqrt(0.5)])
+    def test_three_states_superposition_with_complex_features(self):
+        state_vector = np.array([0, complex(np.sqrt(0.1), np.sqrt(0.1)), 0, 0,
+                                 complex(np.sqrt(0.1), np.sqrt(0.2)), 0, 0, np.sqrt(0.5)])
         circ = initialize(state_vector)
         state = get_state(circ)
         self.assertTrue(np.allclose(state_vector, state))
