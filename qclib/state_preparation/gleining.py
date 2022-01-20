@@ -20,7 +20,7 @@ https://ieeexplore.ieee.org/document/9586240
 
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
-from qiskit.circuit.library import U3Gate
+from qiskit.circuit.library import UGate
 
 
 def initialize(state):
@@ -75,45 +75,37 @@ def _build_state_dict(state):
 def _maximizing_difference_bit_search(b_strings, dif_qubits):
     """
     Splits the set of bit strings into two (t_0 and t_1), by setting
-    t_0 as the set of bit_strings with 0 in the b-th position, and
-    t_1 as the set of bit_strings with 1 in the b-th position.
-    Searching for the bit b that maximizes the difference between
-    t_0 and t_1 where neither is empty.
+    t_0 as the set of bit_strings with 0 in the bint_index position, and
+    t_1 as the set of bit_strings with 1 in the bit_index position.
+    Searching for the bit_index not in dif_qubits that maximizes the difference
+    between the size of the nonempty t_0 and t_1.
     Args:
       b_string: A list of bit strings eg.: ['000', '011', ...,'101']
       dif_qubits: A list of previous qubits found to maximize the difference
     Returns:
-      bit_index: The qubit index that maximizes the splitting of the list b_strings
-      t_0: List of binary strings with 0 on the b-th qubit
-      t_1: List of binary strings with 1 on the b-th qubit
+      bit_index: The qubit index that maximizes abs(len(t_0)-len(t_1))
+      t_0: List of binary strings with 0 on the bit_index qubit
+      t_1: List of binary strings with 1 on the bit_index qubit
     """
     t_0 = []
     t_1 = []
     bit_index = 0
-    set_difference = 0
+    set_difference = -1
     bit_search_space = list(set(range(len(b_strings[0]))) - set(dif_qubits))
+
     for bit in bit_search_space:
-        temp_t0 = []
-        temp_t1 = []
-        for bit_string in b_strings:
-            if bit_string[bit] == '0':
-                temp_t0.append(bit_string)
-            else:
-                temp_t1.append(bit_string)
-        # Neither temp_t0 nor temp_t1 must be empty
-        if (temp_t0 and temp_t1):
+        temp_t0 = [x for x in b_strings if x[bit] == '0']
+        temp_t1 = [x for x in b_strings if x[bit] == '1']
+
+        if temp_t0 and temp_t1:
             temp_difference = np.abs(len(temp_t0) - len(temp_t1))
-            if temp_difference == 0 and not t_0 and not t_1:
-                t_0 = temp_t0
-                t_1 = temp_t1
-                bit_index = bit
-            elif temp_difference > set_difference:
+            if temp_difference > set_difference:
                 t_0 = temp_t0
                 t_1 = temp_t1
                 bit_index = bit
                 set_difference = temp_difference
-    return bit_index, t_0, t_1
 
+    return bit_index, t_0, t_1
 
 def _build_bit_string_set(b_strings, dif_qubits, dif_values):
     """
@@ -374,7 +366,7 @@ def _compute_angles(amplitude_1, amplitude_2):
       amplitude_2: A complex/real value, associated with the string with
                     0 on the dif qubit
     Returns:
-      The angles theta, lambda and phi for the U3 operator
+      The angles theta, lambda and phi for the U operator
     """
     norm = np.linalg.norm([amplitude_1, amplitude_2])
 
@@ -411,9 +403,9 @@ def _merging_procedure(state_dict, quantum_circuit):
     # Applying merge operation
     merge_gate = None
     if not dif_qubits:
-        merge_gate = U3Gate(theta, phi, lamb, label='U3')
+        merge_gate = UGate(theta, phi, lamb, label='U')
     else:
-        merge_gate = U3Gate(theta, phi, lamb, label='U3').control(
+        merge_gate = UGate(theta, phi, lamb, label='U').control(
             num_ctrl_qubits=len(dif_qubits))
 
     quantum_circuit.append(merge_gate, dif_qubits+[dif], [])
