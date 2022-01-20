@@ -122,14 +122,10 @@ def _build_bit_string_set(b_strings, dif_qubits, dif_values):
       on indexes dif_qubits
     """
     bit_string_set = []
-
     for b_string in b_strings:
-        include_string = True
-        for (b_index, b_value) in zip(dif_qubits, dif_values):
-            if b_string[b_index] != b_value:
-                include_string = False
-        if include_string:
+        if [b_string[i] for i in dif_qubits] == dif_values:
             bit_string_set.append(b_string)
+
     return bit_string_set
 
 
