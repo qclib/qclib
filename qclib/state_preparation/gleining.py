@@ -75,7 +75,7 @@ def _build_state_dict(state):
 def _maximizing_difference_bit_search(b_strings, dif_qubits):
     """
     Splits the set of bit strings into two (t_0 and t_1), by setting
-    t_0 as the set of bit_strings with 0 in the bint_index position, and
+    t_0 as the set of bit_strings with 0 in the bit_index position, and
     t_1 as the set of bit_strings with 1 in the bit_index position.
     Searching for the bit_index not in dif_qubits that maximizes the difference
     between the size of the nonempty t_0 and t_1.
@@ -155,6 +155,7 @@ def _bit_string_search(b_strings, dif_qubits, dif_values):
         else:
             dif_values.append('1')
             temp_strings = t_1
+
         # dif_qubits must have at least two values stored in it
         if len(temp_strings) == 1 and len(dif_qubits) == 1:
             temp_strings = b_strings
