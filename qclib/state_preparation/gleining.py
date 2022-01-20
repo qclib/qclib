@@ -43,8 +43,13 @@ def initialize(state):
     quantum_circuit = QuantumCircuit(quantum_register)
 
     while len(b_strings) > 1:
-        state_dict, quantum_circuit = _merging_procedure(
-            state_dict, quantum_circuit)
+        bitstr1, bitstr2, dif, dif_qubits = _select_strings(state_dict)
+
+        bitstr1, bitstr2, state_dict, quantum_circuit = _preprocess_states(
+            bitstr1, bitstr2, dif, dif_qubits, state_dict, quantum_circuit)
+
+        state_dict, quantum_circuit = _merge(
+            state_dict, quantum_circuit, bitstr1, bitstr2, dif_qubits, dif)
         b_strings = list(state_dict.keys())
 
     b_string = b_strings.pop()
@@ -163,7 +168,7 @@ def _bit_string_search(b_strings, dif_qubits, dif_values):
     return temp_strings, dif_qubits, dif_values
 
 
-def _search_bit_strings_for_merging(state_dict):
+def _select_strings(state_dict):
     """
     Searches for the states described by the bit strings bitstr1 and bitstr2 to be merged
     Args:
@@ -317,7 +322,7 @@ def _apply_not_gates_to_qubit_index_list(bitstr1, bitstr2, dif_qubits, state_dic
     return bitstr1, bitstr2, state_dict, quantum_circuit
 
 
-def _preprocess_states_for_merging(bitstr1, bitstr2, dif, dif_qubits, state_dict, quantum_circuit):
+def _preprocess_states(bitstr1, bitstr2, dif, dif_qubits, state_dict, quantum_circuit):
     """
     Apply the operations on the basis states to prepare for merging bitstr1 and bitstr2.
     Args:
@@ -330,7 +335,7 @@ def _preprocess_states_for_merging(bitstr1, bitstr2, dif, dif_qubits, state_dict
       quantum_circuit: Qiskit's QuantumCircuit object where the operations are to be called
     Returns:
       state_dict: Updated state dict
-      bitstr1: First updated binary string to be merge
+      bitstr1: First updated binary string to be merged
       bitstr2: Second updated binary string to be merged
       quantum_circuit: Qiskit's quantum circuit's object with the gates applied to the circuit
     """
@@ -386,14 +391,7 @@ def _compute_angles(amplitude_1, amplitude_2):
     return theta, phi, lamb
 
 
-def _merging_procedure(state_dict, quantum_circuit):
-
-    bitstr1, bitstr2, dif, dif_qubits = _search_bit_strings_for_merging(state_dict)
-
-    # Circuit building
-    bitstr1, bitstr2, state_dict, quantum_circuit = _preprocess_states_for_merging(
-        bitstr1, bitstr2, dif, dif_qubits, state_dict, quantum_circuit
-    )
+def _merge(state_dict, quantum_circuit, bitstr1, bitstr2, dif_qubits, dif):
 
     theta, phi, lamb = _compute_angles(state_dict[bitstr1], state_dict[bitstr2])
 
