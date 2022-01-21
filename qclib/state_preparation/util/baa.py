@@ -19,7 +19,7 @@ https://arxiv.org/abs/2111.03132
 
 from dataclasses import dataclass
 from itertools import combinations, chain
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from math import log2, sqrt
 import numpy as np
 import tensorly as ty
@@ -66,11 +66,11 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     n_qubits = _to_qubits(len(state_vector))
 
     # Completely separates the state to estimate the maximum possible fidelity loss.
-    # If max_fidelity_loss input is higher than the estimated loss, it runs the full
+    # If max_fidelity_loss input is lower than the estimated loss, it runs the full
     # routine with potentially exponential cost.
     entanglement, product_state = geometric_entanglement(state_vector, return_product_state=True)
     if max_fidelity_loss >= entanglement:
-        qubits = [[n] for n in range(n_qubits)]
+        qubits = [(n,) for n in range(n_qubits)]
         ranks = [1] * n_qubits
         partitions = [None] * n_qubits
         return Node(
@@ -78,7 +78,7 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
         )
 
     vectors = [state_vector]
-    qubits = [list(range(n_qubits))]
+    qubits = [tuple(range(n_qubits))]
     ranks = [0]
     partitions = [None]
 
@@ -86,10 +86,10 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     _build_approximation_tree(root_node, max_fidelity_loss, strategy,
                                     max_combination_size, use_low_rank)
 
-    leafs = []
-    _search_leafs(root_node, leafs)
+    leaves = []
+    _search_leaves(root_node, leaves)
 
-    best_node = _search_best(leafs)
+    best_node = _search_best(leaves)
 
     return best_node
 
@@ -107,9 +107,9 @@ class Entanglement:
     svd_v: np.ndarray
     svd_s: np.ndarray
 
-    register: List[int]
-    partition: List[int]
-    local_partition: List[int]
+    register: Tuple[int]
+    partition: Tuple[int]
+    local_partition: Tuple[int]
 
     fidelity_loss: float
 
@@ -125,9 +125,9 @@ class Node:
     total_fidelity_loss: float
 
     vectors: List[List[complex]]
-    qubits: List[List[int]]
+    qubits: List[Tuple[int]]
     ranks: List[int]
-    partitions: List[Optional[List[int]]]
+    partitions: List[Optional[Tuple[int]]]
 
     nodes: List['Node']
 
@@ -191,7 +191,7 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
                                         (1.0 - node.total_fidelity_loss)
 
             for e_info, loss in zip(entanglement_info, total_fidelity_loss):
-                # Recursion should not continue in this branch if
+                # Recursion should not continue for this branch if
                 # "total_fidelity_loss" has reached "max_fidelity_loss".
                 # The leaf corresponds to the node of the best approximation of
                 # "max_fidelity_loss" on the branch.
@@ -216,13 +216,20 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
             )
 
 def _all_combinations(entangled_qubits, max_k):
-    return chain.from_iterable(combinations(entangled_qubits, k)
-                                            for k in range(1, max_k+1))
+    combs = tuple(combinations(entangled_qubits, max_k))
+    if len(entangled_qubits)%2 == 0 and len(entangled_qubits)//2 == max_k:
+        # Ignore redundant complements. Only when max_k is exactly
+        # half the length of entangled_qubits. Reduces the number of branches.
+        # (0,1,2,3) -> (0,1), (0,2), (0,3); ignore (2,3), (1,3), (1,2) .
+        combs = combs[:len(combs)//2]
+
+    return chain(*(combinations(entangled_qubits, k)
+                                            for k in range(1, max_k)), combs)
 
 def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
     """
     Combinations with a qubit-by-qubit analysis.
-    Returns only one representative of the bipartitions of size k (1<=k<=max_k).
+    Returns only one representative of the partitions of size k (1<=k<=max_k).
     The increment in the partition size is done by choosing the qubit that has
     the lowest fidelity-loss when removed from the remaining entangled subsystem.
     """
@@ -235,7 +242,7 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
         # Disentangles one qubit at a time.
         for qubit_to_disentangle in current_qubits:
             entanglement_info = \
-                _reduce_entanglement(current_vector, current_qubits, [qubit_to_disentangle])
+                _reduce_entanglement(current_vector, current_qubits, (qubit_to_disentangle,))
 
             new_node = _create_node(node, entanglement_info[0])
 
@@ -248,13 +255,15 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
     # All disentangled qubits are in the slice "node.qubits[0:max_k]", in the order in which
     # they were selected. Each partition needs to be sorted to ensure that the correct
     # construction of the circuit.
-    return tuple( sorted( chain(*node.qubits[:k]) ) for k in range(1, max_k+1) )
+    return ( tuple(sorted( chain(*node.qubits[:k]) )) for k in range(1, max_k+1) )
 
 def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
     local_partition = []
     # Maintains the relative position between the qubits of the two subsystems.
     for qubit_to_disentangle in partition:
         local_partition.append(sum(i < qubit_to_disentangle for i in register))
+
+    local_partition = tuple(local_partition)
 
     svd_u, svd_s, svd_v = schmidt_decomposition(state_vector, local_partition)
 
@@ -343,14 +352,14 @@ def _create_node(parent_node, e_info):
     return Node(node_saved_cnots, total_saved_cnots, e_info.fidelity_loss,
                     total_fidelity_loss, vectors, qubits, ranks, partitions, [])
 
-def _search_leafs(node, leafs):
+def _search_leaves(node, leaves):
     # It returns the leaves of the tree. These nodes are the ones with
     # total_fidelity_loss closest to max_fidelity_loss for each branch.
     if len(node.nodes) == 0:
-        leafs.append(node)
+        leaves.append(node)
     else:
         for child in node.nodes:
-            _search_leafs(child, leafs)
+            _search_leaves(child, leaves)
 
 def _search_best(nodes):
     # Nodes with the greatest reduction in the number of CNOTs.
