@@ -20,7 +20,7 @@ import numpy as np
 from scipy.stats import unitary_group
 import qiskit
 import qclib.util
-from qclib.gate.mc_gate import mc_gate
+from qclib.gates.mc_gate import mc_gate
 
 
 class TestLinearToffoli(TestCase):

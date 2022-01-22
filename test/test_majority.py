@@ -16,7 +16,7 @@
 
 from unittest import TestCase
 from qiskit import ClassicalRegister, QuantumRegister, QuantumCircuit
-from qclib.gate.majority import operate as majority
+from qclib.gates.majority import operate as majority
 from qclib.util import get_counts
 
 class TestMajority(TestCase):
