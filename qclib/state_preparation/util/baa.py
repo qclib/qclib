@@ -22,7 +22,7 @@ from itertools import combinations, chain
 from typing import List, Optional, Tuple
 from math import log2, sqrt
 import numpy as np
-import tensorly as ty
+from tensorly.tenalg.core_tenalg import kronecker
 
 from qclib.entanglement import geometric_entanglement
 from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots, \
@@ -146,7 +146,12 @@ class Node:
 
     def state_vector(self) -> np.ndarray:
         """ Complete state vector. """
-        state = ty.tenalg.kronecker(self.vectors) # pylint: disable=no-member
+        # The vectors are not necessarily in the correct order, but these are
+        # given by the qubits field. We need to arrange them so that we have the
+        # vectors in the correct ordering!
+        new_order = [v[0] for v in sorted(enumerate(self.qubits), key=lambda v: v[1][0])]
+        correctly_ordered_vectors = [self.vectors[k] for k in new_order]
+        state = kronecker(correctly_ordered_vectors)
         return state
 
     def __str__(self):

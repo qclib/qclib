@@ -317,3 +317,28 @@ class TestBaa(TestCase):
             if cnots == depth == fidelity_loss == -1:
                 continue
             self.assertAlmostEqual(0.0, fidelity_loss, 4)
+
+    def test_node_state_vector(self):
+        """
+        The method Node.state_vector() is an important function for analytics, but it was wrong. The ordering
+        of the qubits must be taken into account. One example, visible to the human eye, was a probability
+        distribution, the log-normal. For a max-fidelity-loss of 0.06, the ordering is computed with
+        [(2,), (6,), (1,), (0,), (3, 4, 5)]
+        and the resulting state has then a fidelity of about 0.43639388266241197
+        The fix is to take the ordering into account. Here we test that for this example, the
+        fidelity is actually correct.
+
+        """
+
+        import scipy.stats as stats
+        from qclib.state_preparation.util import baa
+        x = np.linspace(0, 20, 128)
+        y = stats.lognorm.pdf(x, s=1)
+        y = y * (x[1] - x[0])
+        state = np.sqrt(y)
+        state = state / np.linalg.norm(state)
+
+        node = baa.adaptive_approximation(state, use_low_rank=True, max_fidelity_loss=0.06, strategy='brute_force')
+        fidelity = np.vdot(state, node.state_vector())**2
+
+        self.assertAlmostEqual(node.total_fidelity_loss, 1 - fidelity, places=4)
