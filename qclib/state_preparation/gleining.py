@@ -144,7 +144,7 @@ def _bit_string_search(b_strings, dif_qubits, dif_values):
             temp_strings = t_1
 
         # dif_qubits must have at least two values stored in it
-        if len(temp_strings) == 1 and len(dif_qubits) == 1:
+        if (len(temp_strings)-1) == 1 and len(dif_qubits) == 1:
             temp_strings = b_strings
 
     return temp_strings, dif_qubits, dif_values
@@ -171,23 +171,17 @@ def _select_strings(state_dict):
     bitstr1 = None
     bitstr2 = None
 
-    if len(b_strings1) == 2:
-        # Search for the difference bit
-        bit, t_0, t_1 = _maximizing_difference_bit_search(b_strings1, dif_qubits)
-        dif_qubit = bit
-        bitstr1 = t_1[0]
-        bitstr2 = t_0[0]
-    else:
-        # Searching for bitstr1
-        b_strings1, dif_qubits, dif_values = _bit_string_search(b_strings1, dif_qubits, dif_values)
-        dif_qubit = dif_qubits.pop()
-        dif_values.pop()
-        bitstr1 = b_strings1[0]
+    # Searching for bitstr1
+    b_strings1, dif_qubits, dif_values = _bit_string_search(b_strings1, dif_qubits, dif_values)
+    dif_qubit = dif_qubits.pop()
+    dif_values.pop()
+    bitstr1 = b_strings1[0]
 
-        # Searching for bitstr2
-        b_strings1 = _build_bit_string_set(b_strings2, dif_qubits, dif_values)
-        b_strings1, dif_qubits, dif_values = _bit_string_search(b_strings1, dif_qubits, dif_values)
-        bitstr2 = b_strings1[0]
+    # Searching for bitstr2
+    b_strings2.remove(bitstr1)
+    b_strings1 = _build_bit_string_set(b_strings2, dif_qubits, dif_values)
+    b_strings1, dif_qubits, dif_values = _bit_string_search(b_strings1, dif_qubits, dif_values)
+    bitstr2 = b_strings1[0]
 
     return bitstr1, bitstr2, dif_qubit, dif_qubits
 
