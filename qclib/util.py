@@ -224,3 +224,19 @@ def _compute_matrix_angles(feature, norm):
         alpha = 2 * (np.arcsin(sin_value))
 
     return alpha, beta, phi
+
+def build_state_dict(state):
+    """
+    Builds a dict of the non zero amplitudes with their
+    associated binary strings as follows:
+      { '000': <value>, ... , '111': <value> }
+    Args:
+      state: The classical description of the state vector
+    """
+    n_qubits = np.ceil(np.log(len(state))).astype(int)
+    state_dict = {}
+    for (value_idx, value) in enumerate(state):
+        if value != 0:
+            binary_string = '{:0{}b}'.format(value_idx, n_qubits)[::-1]
+            state_dict[binary_string] = value
+    return state_dict

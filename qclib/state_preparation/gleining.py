@@ -23,18 +23,18 @@ from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UGate
 
 
-def initialize(state):
+def initialize(state_dict: dict):
     """
     Classical algorithm that creates a quantum circuit C that loads
     a sparse quantum state, applying a sequence of operations maping
     the desired state |sigma> to |0>. And then inverting C to obtain
     the mapping of |0> to the desired state |sigma>.
     Args:
-      state: Sparse array with real values
+      state_dict: A dictionary with the non-zero amplitudes corresponting to each state in
+                 format { '000': <value>, ... , '111': <value> }
     Returns:
       Quantum circuit C^{-1} that maps |0> to the desired state |sigma>
     """
-    state_dict = _build_state_dict(state)
 
     b_strings = list(state_dict.keys())
 
@@ -58,24 +58,6 @@ def initialize(state):
             quantum_circuit.x(bit_idx)
 
     return quantum_circuit.reverse_ops()
-
-
-def _build_state_dict(state):
-    """
-    Builds a dict of the non zero amplitudes with their
-    associated binary strings as follows:
-      { '000': <value>, ... , '111': <value> }
-    Args:
-      state: The classical description of the state vector
-    """
-    n_qubits = np.ceil(np.log(len(state))).astype(int)
-    state_dict = {}
-    for (value_idx, value) in enumerate(state):
-        if value != 0:
-            binary_string = '{:0{}b}'.format(value_idx, n_qubits)[::-1]
-            state_dict[binary_string] = value
-    return state_dict
-
 
 def _maximizing_difference_bit_search(b_strings, dif_qubits):
     """
