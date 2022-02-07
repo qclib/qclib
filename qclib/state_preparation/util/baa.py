@@ -149,9 +149,19 @@ class Node:
         # The vectors are not necessarily in the correct order, but these are
         # given by the qubits field. We need to arrange them so that we have the
         # vectors in the correct ordering!
-        new_order = [v[0] for v in sorted(enumerate(self.qubits), key=lambda v: v[1][0])]
-        correctly_ordered_vectors = [self.vectors[k] for k in new_order]
-        state = kronecker(correctly_ordered_vectors)
+        # As there are full vectors spanning non-consecutive qubits, we flatten the
+        # qubits and deduce from that, how we need to move the axis
+        flatten_qubits = [e for q in self.qubits for e in q]
+
+        # The new order is given by ordering the flattened qubits
+        new_order = [v[0] for v in sorted(enumerate(flatten_qubits), key=lambda v: v[1])]
+
+        # Reshaping the vector must take the qubit structure into account.
+        no_qubits = len(flatten_qubits)
+        qubit_shape = [2] * no_qubits
+        state = kronecker(self.vectors).reshape(qubit_shape)
+        # Moveaxis to the rescue: we now can move the qubits axis and reshape to a vector
+        state = np.moveaxis(state, new_order, range(len(new_order))).reshape(-1, )
         return state
 
     def __str__(self):
