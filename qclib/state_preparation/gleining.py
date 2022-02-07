@@ -21,7 +21,7 @@ https://ieeexplore.ieee.org/document/9586240
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UGate
-
+from qclib.gate.mc_gate import mc_gate
 
 def initialize(state_dict: dict):
     """
@@ -259,7 +259,7 @@ def _equalize_bit_string_states(bitstr1, bitstr2, dif, state_dict, quantum_circu
     Args:
       bitstr1: First bit string
       bitstr2: Second bit string
-      dif: index where both bitstr1 and bitstr2 mus be different
+      dif: index where both bitstr1 and bitstr2 must be different
       state_dict: A dictionary with the non-zero amplitudes associated to their corresponding
                   binary strings as keys e.g.: {'001': <value>, '101': <value>}
       quantum_circuit: Qiskit's quantum circuit's object with the gates applied to the circuit
@@ -342,7 +342,7 @@ def _compute_angles(amplitude_1, amplitude_2):
     """
     Computes the angles for the adjoint of the merge matrix M
     that is going to map the dif qubit to zero e.g.:
-      M(a|0> + b|1>) -> |0>
+      M(a|0> + b|1>) -> |1>
 
     Args:
       amplitude_1: A complex/real value, associated with the string with
@@ -378,14 +378,13 @@ def _merge(state_dict, quantum_circuit, bitstr1, bitstr2, dif_qubits, dif):
     theta, phi, lamb = _compute_angles(state_dict[bitstr1], state_dict[bitstr2])
 
     # Applying merge operation
-    merge_gate = None
-    if not dif_qubits:
-        merge_gate = UGate(theta, phi, lamb, label='U')
+    merge_gate = UGate(theta, phi, lamb, label='U')
+    if not dif_qubits:        
+        quantum_circuit.append(merge_gate, dif_qubits+[dif], [])
     else:
-        merge_gate = UGate(theta, phi, lamb, label='U').control(
-            num_ctrl_qubits=len(dif_qubits))
+        gate_definition = UGate(theta, phi, lamb, label='U').to_matrix()
+        mc_gate(gate_definition, quantum_circuit, dif_qubits, dif)
 
-    quantum_circuit.append(merge_gate, dif_qubits+[dif], [])
     state_dict = _update_state_dict_according_to_operation(
         state_dict, 'merge', None, merge_strings=[bitstr1, bitstr2]
     )
