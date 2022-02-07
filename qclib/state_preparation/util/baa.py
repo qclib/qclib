@@ -22,7 +22,7 @@ from itertools import combinations, chain
 from typing import List, Optional, Tuple
 from math import log2, sqrt
 import numpy as np
-import tensorly as ty
+from tensorly.tenalg.core_tenalg import kronecker
 
 from qclib.entanglement import geometric_entanglement
 from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots, \
@@ -146,7 +146,22 @@ class Node:
 
     def state_vector(self) -> np.ndarray:
         """ Complete state vector. """
-        state = ty.tenalg.kronecker(self.vectors) # pylint: disable=no-member
+        # The vectors are not necessarily in the correct order, but these are
+        # given by the qubits field. We need to arrange them so that we have the
+        # vectors in the correct ordering!
+        # As there are full vectors spanning non-consecutive qubits, we flatten the
+        # qubits and deduce from that, how we need to move the axis
+        flatten_qubits = [e for q in self.qubits for e in q]
+
+        # The new order is given by ordering the flattened qubits
+        new_order = [v[0] for v in sorted(enumerate(flatten_qubits), key=lambda v: v[1])]
+
+        # Reshaping the vector must take the qubit structure into account.
+        no_qubits = len(flatten_qubits)
+        qubit_shape = [2] * no_qubits
+        state = kronecker(self.vectors).reshape(qubit_shape)
+        # Moveaxis to the rescue: we now can move the qubits axis and reshape to a vector
+        state = np.moveaxis(state, new_order, range(len(new_order))).reshape(-1, )
         return state
 
     def __str__(self):
