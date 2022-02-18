@@ -73,8 +73,9 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
         qubits = [(n,) for n in range(n_qubits)]
         ranks = [1] * n_qubits
         partitions = [None] * n_qubits
+        cnots = schmidt_cnots(state_vector, method='estimate')
         return Node(
-            0, 0, entanglement, entanglement, product_state, qubits, ranks, partitions, []
+            cnots, cnots, entanglement, entanglement, product_state, qubits, ranks, partitions, []
         )
 
     vectors = [state_vector]
