@@ -34,7 +34,7 @@ def decompose(isometry, scheme='ccd'):
     `https://arxiv.org/abs/1501.06911`_.
     Args:
         isometry (list): an isometry from m to n qubits (n>=2 and m<=n), i.e., a
-            complex 2^n×2^m array with orthonormal columns.
+            complex 2^n x 2^m array with orthonormal columns.
         scheme (str): method to decompose the isometry ('knill', 'ccd', 'csd').
             Default is scheme='ccd'.
     Returns:
@@ -117,7 +117,7 @@ def _knill(iso, log_lines, log_cols):
 
     for i in range(2**log_lines):                            # The eigenvalues are not necessarily
                                                              # ordered.
-        if np.abs(arg[i]) > 10**-15:
+        if np.abs(arg[i]) > 10**-7:
             state = eigvec[:,i]
 
             circuit.compose( schmidt(state).inverse(), reg, inplace=True )
