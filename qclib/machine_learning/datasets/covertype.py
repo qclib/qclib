@@ -13,26 +13,25 @@
 # limitations under the License.
 
 """
-Iris dataset
-https://archive.ics.uci.edu/ml/datasets/iris
+Covertype dataset
+https://archive.ics.uci.edu/ml/datasets/Covertype
 """
 
 from sklearn import datasets
 from .common import preprocessing # pylint: disable=relative-beyond-top-level
 
-def load(training_size:int, test_size:int, classes=None, features=4, random_seed=42,
+def load(training_size:int, test_size:int, classes=None, features=54, random_seed=42,
                                                                         normalize=True):
     """
-    Iris dataset
-    https://archive.ics.uci.edu/ml/datasets/iris
+    Covertype dataset
+    https://archive.ics.uci.edu/ml/datasets/Covertype
     """
     if classes is None:
-        classes = list(range(3))
+        classes = list(range(7))
 
-    class_labels = [r'Setosa', r'Versicolor', r'Virginica']
-    class_labels = [class_labels[i] for i in classes]
+    class_labels = [i+1 for i in classes]
 
-    data = datasets.load_iris(return_X_y=True)
+    data = datasets.fetch_covtype()
 
     return preprocessing(
         training_size, test_size, features, 64, data, class_labels, random_seed, normalize
