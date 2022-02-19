@@ -34,5 +34,5 @@ def load(training_size:int, test_size:int, classes=None, features=54, random_see
     data = datasets.fetch_covtype()
 
     return preprocessing(
-        training_size, test_size, features, 64, data, class_labels, random_seed, normalize
+        training_size, test_size, features, 64, data, class_labels, 7, random_seed, normalize
     )

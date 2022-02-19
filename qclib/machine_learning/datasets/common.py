@@ -22,14 +22,14 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
 
 def preprocessing(training_size:int, test_size:int, features:int, max_features:int,
-                    data:np.ndarray, class_labels:list, random_seed=42, normalize=True):
+                    data:np.ndarray, class_labels:list, num_classes:int, random_seed=42, normalize=True):
     """
     Common dataset preprocessing routine
     """
 
     # pylint: disable=no-member
     sample_train, sample_test, label_train, label_test = \
-        train_test_split(data.data, data.target, test_size=test_size*len(class_labels),
+        train_test_split(data.data, data.target, test_size=test_size*num_classes,
                                                  random_state=random_seed,
                                                  shuffle=True,
                                                  stratify=data.target)

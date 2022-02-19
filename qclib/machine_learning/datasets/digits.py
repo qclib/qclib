@@ -34,5 +34,5 @@ def load(training_size:int, test_size:int, classes=None, features=64, random_see
     data = datasets.load_digits()
 
     return preprocessing(
-        training_size, test_size, features, 64, data, class_labels, random_seed, normalize
+        training_size, test_size, features, 64, data, class_labels, 10, random_seed, normalize
     )
