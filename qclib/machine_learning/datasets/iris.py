@@ -35,5 +35,5 @@ def load(training_size:int, test_size:int, classes=None, features=4, random_seed
     data = datasets.load_iris(return_X_y=True)
 
     return preprocessing(
-        training_size, test_size, features, 64, data, class_labels, random_seed, normalize
+        training_size, test_size, features, 64, data, class_labels, 3, random_seed, normalize
     )
