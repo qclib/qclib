@@ -30,7 +30,7 @@ from qiskit import QuantumCircuit
 from qiskit.aqua.algorithms import VQC as qiskit_vqc
 from qiskit.aqua.algorithms.classifiers.vqc import return_probabilities
 #from qiskit.circuit.library import BlueprintCircuit
-from qiskit.ml.circuit.library import RawFeatureVector
+from qiskit_machine_learning.circuit.library import RawFeatureVector
 from .baa_feature_vector import BaaFeatureVector  # pylint: disable=relative-beyond-top-level
 
 # pylint: disable=invalid-name
