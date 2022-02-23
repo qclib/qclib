@@ -22,7 +22,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
 
 def preprocessing(training_size:int, test_size:int, features:int, max_features:int,
-                    data:np.ndarray, class_labels:list, num_classes:int, random_seed=42, normalize=True):
+                    data, class_labels:list, num_classes:int, random_seed=42, normalize=True):
     """
     Common dataset preprocessing routine
     """
