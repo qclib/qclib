@@ -21,7 +21,8 @@ from scipy.stats import unitary_group
 import qiskit
 import qclib.util
 from qclib.gates.mc_gate import mc_gate
-
+from qiskit import transpile
+from qiskit.providers.aer import AerSimulator
 
 class TestLinearToffoli(TestCase):
     """ Testing qclib.gate.toffoli """
@@ -139,3 +140,31 @@ class TestLinearToffoli(TestCase):
         t_qcirc2 = qiskit.transpile(qcirc2, basis_gates=['u', 'cx'])
 
         self.assertTrue(t_qcirc2.depth() < t_qcirc1.depth())
+
+    def test_arq(self):
+        from qiskit.test.mock import FakeGuadalupe
+        device_backend = FakeGuadalupe()
+        sim_guadalupe = AerSimulator.from_backend(device_backend)
+
+        initial_layout = [1, 2, 3, 5, 8, 11, 14, 13, 12, 10, 7, 4]
+        gate_u = unitary_group.rvs(2)
+
+        n_qubits = 5
+        circuit = qiskit.QuantumCircuit(n_qubits)
+        for k in range(n_qubits):
+            circuit.x(k)
+
+        circuit.unitary(gate_u, n_qubits-1)
+        mc_gate(gate_u.conj().T, circuit, list(range(n_qubits-1)), n_qubits-1, arq=True)
+
+        circuit.measure_all()
+
+        tcirc_guadalupe = transpile(circuit, sim_guadalupe, initial_layout=initial_layout[:n_qubits], optimization_level=3)
+        print('guadalupe', tcirc_guadalupe.depth())
+
+        counts = qclib.util.get_counts(circuit)
+        print(counts)
+
+        tcircuit = transpile(circuit, basis_gates=['u', 'cx'])
+        print('ops ', tcircuit.count_ops())
+        print('profundidade', tcircuit.depth())
