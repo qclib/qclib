@@ -20,7 +20,7 @@ import numpy as np
 from collections import namedtuple
 
 
-def mc_gate(gate: np.ndarray, qcirc: qiskit.QuantumCircuit, controls: list, targ: int):
+def mc_gate(gate: np.ndarray, qcirc: qiskit.QuantumCircuit, controls: list, targ: int, arq=False):
     """
 
     Parameters
@@ -39,41 +39,25 @@ def mc_gate(gate: np.ndarray, qcirc: qiskit.QuantumCircuit, controls: list, targ
     gate_circuit = qiskit.QuantumCircuit(n_qubits, name="T" + str(targ))
 
     c1c2(gate, n_qubits, gate_circuit)
-    _c3(gate, n_qubits, gate_circuit)
+    c1c2(gate, n_qubits, gate_circuit, step=-1)
 
     c1c2(gate, n_qubits-1, gate_circuit, False)
-    _c3(gate, n_qubits - 1, gate_circuit, False)
+    c1c2(gate, n_qubits - 1, gate_circuit, False, step=-1)
 
     qcirc.compose(gate_circuit, controls + [targ], inplace=True)
 
 
-def _c3(gate, n_qubits, qcirc, first=True):
-    """ phase 2 """
+def c1c2(gate, n_qubits, qcirc, first=True, step=1):
     pairs = namedtuple("pairs", ["control", "target"])
 
-    qubit_pairs = [pairs(control, target) for target in range(n_qubits) for control in range(1, target)]
-    qubit_pairs.sort(key=lambda e: e.control + e.target, reverse=False)
-
-    for pair in qubit_pairs:
-        exponent = pair.target - pair.control
-        if pair.control == 0:
-            exponent = exponent - 1
-        param = 2 ** exponent
-        signal = -1
-
-        if pair.target == n_qubits - 1 and first:
-
-            csqgate = _gate_u(gate, param, signal)
-            qcirc.compose(csqgate, qubits=[pair.control, pair.target], inplace=True)
-        else:
-            qcirc.crx(signal * np.pi / param, pair.control, pair.target)
-
-
-def c1c2(gate, n_qubits, qcirc, first=True):
-    pairs = namedtuple("pairs", ["control", "target"])
-
-    qubit_pairs = [pairs(control, target) for target in range(n_qubits) for control in range(target)]
-    qubit_pairs.sort(key=lambda e: e.control+e.target, reverse=True)
+    if step == 1:
+        start = 0
+        reverse = True
+    else:
+        start = 1
+        reverse = False
+    qubit_pairs = [pairs(control, target) for target in range(n_qubits) for control in range(start, target)]
+    qubit_pairs.sort(key=lambda e: e.control+e.target, reverse=reverse)
 
     for pair in qubit_pairs:
         exponent = pair.target - pair.control
@@ -81,6 +65,7 @@ def c1c2(gate, n_qubits, qcirc, first=True):
             exponent = exponent - 1
         param = 2 ** exponent
         signal = -1 if (pair.control == 0 and not first) else 1
+        signal = step * signal
         if pair.target == n_qubits - 1 and first:
 
             csqgate = _gate_u(gate, param, signal)
@@ -101,7 +86,7 @@ def _gate_u(agate, coef, signal):
         gate = np.linalg.inv(gate)
 
     sqgate = qiskit.QuantumCircuit(1, name='U^1/' + str(coef))
-    sqgate.unitary(gate, 0) # pylint: disable=maybe-no-member
+    sqgate.unitary(gate, 0)  # pylint: disable=maybe-no-member
     csqgate = sqgate.control(1)
 
     return csqgate
