@@ -24,7 +24,6 @@ from math import log2, sqrt
 import numpy as np
 from tensorly.tenalg.core_tenalg import kronecker
 
-from qclib.entanglement import geometric_entanglement
 from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots, \
                                             schmidt_decomposition, \
                                             schmidt_composition, \
@@ -44,9 +43,19 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
         max_fidelity_loss (float):
             Maximum fidelity loss allowed to the approximated state.
         strategy (string):
-            Method to search for the best approximation ('brute_force' or 'greedy').
+            Method to search for the best approximation ('brute_force', 'greedy', 'split'
+            or 'single_split').
             For states larger than 2**8, the greedy strategy should preferably be used.
-            Default is strategy='greedy'.
+            If ``strategy``=='greedy', produces only one representative of the partitions of size k
+            (1<=k<=``max_combination_size``). The increment in the partition size is done by
+            choosing the qubit that has the lowest fidelity-loss when removed from the remaining
+            entangled subsystem.
+            If ``strategy``=='split', only partitions of size ``max_combination_size`` are
+            produced (the default size is ``n_qubits``//2).
+            If ``strategy``=='single_split', only one bipartition occurs at each step and produces
+            subsystems of length ``max_combination_size`` and ``n_qubits-max_combination_size``
+            preserving the order of the qubits.
+            Default is ``strategy``='greedy'.
         max_combination_size (int):
             Maximum size of the combination ``C(n_qubits, max_combination_size)``
             between the qubits of an entangled subsystem of length ``n_qubits`` to
@@ -68,15 +77,10 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     # Completely separates the state to estimate the maximum possible fidelity loss.
     # If max_fidelity_loss input is lower than the estimated loss, it runs the full
     # routine with potentially exponential cost.
-    entanglement, product_state = geometric_entanglement(state_vector, return_product_state=True)
-    if max_fidelity_loss >= entanglement:
-        qubits = [(n,) for n in range(n_qubits)]
-        ranks = [1] * n_qubits
-        partitions = [None] * n_qubits
-        cnots = schmidt_cnots(state_vector, method='estimate')
-        return Node(
-            cnots, cnots, entanglement, entanglement, product_state, qubits, ranks, partitions, []
-        )
+    if strategy != 'single_split':
+        product_state_node = adaptive_approximation(state_vector, 1.0, 'single_split')
+        if max_fidelity_loss >= product_state_node.total_fidelity_loss:
+            return product_state_node
 
     vectors = [state_vector]
     qubits = [tuple(range(n_qubits))]
@@ -189,6 +193,10 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
 
         if strategy == 'greedy':
             combs = _greedy_combinations(entangled_vector, entangled_qubits, max_k)
+        elif strategy == 'split':
+            combs = _split_combinations(entangled_qubits, max_k)
+        elif strategy == 'single_split':
+            combs = (entangled_qubits[:max_k], )
         else:
             combs = _all_combinations(entangled_qubits, max_k)
 
@@ -231,13 +239,18 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
                 new_node, max_fidelity_loss, strategy, max_k, use_low_rank
             )
 
-def _all_combinations(entangled_qubits, max_k):
+def _split_combinations(entangled_qubits, max_k):
     combs = tuple(combinations(entangled_qubits, max_k))
     if len(entangled_qubits)%2 == 0 and len(entangled_qubits)//2 == max_k:
         # Ignore redundant complements. Only when max_k is exactly
         # half the length of entangled_qubits. Reduces the number of branches.
         # (0,1,2,3) -> (0,1), (0,2), (0,3); ignore (2,3), (1,3), (1,2) .
         combs = combs[:len(combs)//2]
+
+    return combs
+
+def _all_combinations(entangled_qubits, max_k):
+    combs = _split_combinations(entangled_qubits, max_k)
 
     return chain(*(combinations(entangled_qubits, k)
                                             for k in range(1, max_k)), combs)
