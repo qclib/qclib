@@ -20,14 +20,13 @@ import qiskit
 import numpy as np
 
 
-
-def mc_gate(gate: np.ndarray, qcirc: qiskit.QuantumCircuit, controls: list, targ: int, arq=False):
+def mc_gate(gate: np.ndarray, circuit: qiskit.QuantumCircuit, controls: list, targ: int):
     """
 
     Parameters
     ----------
     gate: 2 X 2 unitary gate
-    qcirc: qiskit.QuantumCircuit
+    circuit: qiskit.QuantumCircuit
     controls: list of control qubits
     targ: target qubit
 
@@ -39,17 +38,17 @@ def mc_gate(gate: np.ndarray, qcirc: qiskit.QuantumCircuit, controls: list, targ
     n_qubits = len(controls) + 1
     gate_circuit = qiskit.QuantumCircuit(n_qubits, name="T" + str(targ))
     gate_circuit.permutation = list(range(len(controls) + 1))
-    _c1c2(gate, n_qubits, gate_circuit, arq=arq)
-    _c1c2(gate, n_qubits, gate_circuit, step=-1, arq=arq)
+    _c1c2(gate, n_qubits, gate_circuit)
+    _c1c2(gate, n_qubits, gate_circuit, step=-1)
 
-    _c1c2(gate, n_qubits - 1, gate_circuit, False, arq=arq)
-    _c1c2(gate, n_qubits - 1, gate_circuit, False, step=-1, arq=arq)
+    _c1c2(gate, n_qubits - 1, gate_circuit, False)
+    _c1c2(gate, n_qubits - 1, gate_circuit, False, step=-1)
 
-    qcirc.compose(gate_circuit, controls + [targ], inplace=True)
-    qcirc.permutation = gate_circuit.permutation
+    circuit.compose(gate_circuit, controls + [targ], inplace=True)
+    circuit.permutation = gate_circuit.permutation
 
 
-def _c1c2(gate, n_qubits, qcirc, first=True, step=1, arq=False):
+def _c1c2(gate, n_qubits, qcirc, first=True, step=1):
     pairs = namedtuple("pairs", ["control", "target"])
 
     if step == 1:
@@ -59,14 +58,13 @@ def _c1c2(gate, n_qubits, qcirc, first=True, step=1, arq=False):
         start = 1
         reverse = False
 
-    qubit_pairs = [pairs(control, target) for target in range(n_qubits)
-                                          for control in range(start, target)]
+    qubit_pairs = [pairs(control, target)
+                   for target in range(n_qubits)
+                   for control in range(start, target)]
 
     qubit_pairs.sort(key=lambda e: e.control+e.target, reverse=reverse)
 
     for pair in qubit_pairs:
-        control = qcirc.permutation[pair.control]
-        target = qcirc.permutation[pair.target]
         exponent = pair.target - pair.control
         if pair.control == 0:
             exponent = exponent - 1
@@ -74,19 +72,13 @@ def _c1c2(gate, n_qubits, qcirc, first=True, step=1, arq=False):
         signal = -1 if (pair.control == 0 and not first) else 1
         signal = step * signal
         if pair.target == n_qubits - 1 and first:
-
             csqgate = _gate_u(gate, param, signal)
-            qcirc.compose(csqgate, qubits=[control, target], inplace=True)
+            qcirc.compose(csqgate, qubits=[pair.control, pair.target], inplace=True)
         else:
-            qcirc.crx(signal * np.pi / param, control, target)
+            qcirc.crx(signal * np.pi / param, pair.control, pair.target)
 
-        if arq:
-            qcirc.swap(control, target)
-            qcirc.permutation[pair.control], qcirc.permutation[pair.target] = \
-                qcirc.permutation[pair.target], qcirc.permutation[pair.control]
 
 def _gate_u(agate, coef, signal):
-
     param = 1/np.abs(coef)
 
     values, vectors = np.linalg.eig(agate)
