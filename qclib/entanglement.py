@@ -19,9 +19,8 @@ from typing import Union, Tuple, List
 
 import numpy as np
 import tensorly as tl
-from tensorly.tucker_tensor import TuckerTensor
-from tensorly.decomposition import tucker
-
+from tensorly.decomposition import parafac
+from tensorly.cp_tensor import CPTensor
 
 def _get_iota(qubit_idx: int, qubits: int, selector_bit: int, basis_state: int):
     assert selector_bit in [0, 1]
@@ -126,11 +125,11 @@ def geometric_entanglement(state_vector: List[complex], return_product_state=Fal
     results = {}
     # The Tucker decomposition is actually a randomized algorithm.
     # We take four shots and take the min of it.
+
+
     for _ in range(4):
-        decomp_tensor: TuckerTensor = tucker(
-            tensor, rank=rank, verbose=False, svd='numpy_svd', init='random'
-        )
-        fidelity_loss = 1 - np.linalg.norm(decomp_tensor.core) ** 2
+        decomp_tensor: CPTensor = parafac(tensor, rank=1, normalize_factors=True, init='random')
+        fidelity_loss = 1 - np.abs(decomp_tensor.weights[0]) ** 2
         results[fidelity_loss] = decomp_tensor
 
     min_fidelity_loss = min(results)
