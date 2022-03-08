@@ -22,7 +22,6 @@ import qiskit
 import qclib.util
 from qclib.gates.mc_gate import mc_gate
 
-
 class TestLinearToffoli(TestCase):
     """ Testing qclib.gate.toffoli """
 
