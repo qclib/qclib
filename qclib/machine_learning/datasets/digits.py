@@ -13,8 +13,8 @@
 # limitations under the License.
 
 """
-Digits dataset
-https://archive.ics.uci.edu/ml/datasets/Pen-Based+Recognition+of+Handwritten+Digits
+Optical Recognition of Handwritten Digits Data Set
+https://archive.ics.uci.edu/ml/datasets/optical+recognition+of+handwritten+digits
 """
 
 from sklearn import datasets
@@ -23,8 +23,8 @@ from .common import preprocessing # pylint: disable=relative-beyond-top-level
 def load(training_size:int, test_size:int, classes=None, features=64, random_seed=42,
                                                                         normalize=True):
     """
-    Digits dataset
-    https://archive.ics.uci.edu/ml/datasets/Pen-Based+Recognition+of+Handwritten+Digits
+    Optical Recognition of Handwritten Digits Data Set
+    https://archive.ics.uci.edu/ml/datasets/optical+recognition+of+handwritten+digits
     """
     if classes is None:
         classes = list(range(10))

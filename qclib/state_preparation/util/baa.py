@@ -52,9 +52,11 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
             entangled subsystem.
             If ``strategy``=='split', only partitions of size ``max_combination_size`` are
             produced (the default size is ``n_qubits``//2).
-            If ``strategy``=='single_split', only one bipartition occurs at each step and produces
+            If ``strategy``=='canonical', only one bipartition occurs at each step and produces
             subsystems of length ``max_combination_size`` and ``n_qubits-max_combination_size``
-            preserving the order of the qubits.
+            preserving the order of the qubits. When ``max_combination_size``==``n_qubits``//2
+            (the default value), it is equivalent to the Hierarchical Tucker Format (HTF) with a
+            binary dimension tree (called Canonical Dimension Tree).
             Default is ``strategy``='greedy'.
         max_combination_size (int):
             Maximum size of the combination ``C(n_qubits, max_combination_size)``
@@ -77,8 +79,8 @@ def adaptive_approximation(state_vector, max_fidelity_loss, strategy='greedy',
     # Completely separates the state to estimate the maximum possible fidelity loss.
     # If max_fidelity_loss input is lower than the estimated loss, it runs the full
     # routine with potentially exponential cost.
-    if strategy != 'single_split':
-        product_state_node = adaptive_approximation(state_vector, 1.0, 'single_split')
+    if strategy != 'canonical':
+        product_state_node = adaptive_approximation(state_vector, 1.0, 'canonical')
         if max_fidelity_loss >= product_state_node.total_fidelity_loss:
             return product_state_node
 
@@ -195,7 +197,7 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
             combs = _greedy_combinations(entangled_vector, entangled_qubits, max_k)
         elif strategy == 'split':
             combs = _split_combinations(entangled_qubits, max_k)
-        elif strategy == 'single_split':
+        elif strategy == 'canonical':
             combs = (entangled_qubits[:max_k], )
         else:
             combs = _all_combinations(entangled_qubits, max_k)
@@ -228,7 +230,7 @@ def _build_approximation_tree(node, max_fidelity_loss, strategy='brute_force', m
         node.vectors.clear() # clear vectors and qubits to save memory.
         node.qubits.clear()  # This information is no longer needed from this point
                              # on (but may be needed in the future).
-    if strategy == 'greedy' and len(node.nodes) > 0:
+    if len(node.nodes) > 0 and strategy in ('greedy', 'canonical'):
         # Locally optimal choice at each stage.
         node.nodes = [_search_best(node.nodes)]
 
