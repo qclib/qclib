@@ -18,7 +18,7 @@ $ python
 
 ```python
 import numpy as np
-from qiskit import execute
+from qiskit import execute, transpile
 from qiskit.providers.aer.backends import AerSimulator
 from qclib.state_preparation.schmidt import initialize
 
@@ -30,12 +30,19 @@ input_state = input_state/np.linalg.norm(input_state)
 
 # Build a quantum circuit to initialize the input state
 circuit = initialize(input_state)
-circuit.measure_all()
 
 # Construct an ideal simulator
 backend = AerSimulator()
 
+# Compare the encoded state vector with the input vector.
+t_circuit = transpile(circuit, backend)
+t_circuit.save_statevector()
+state_vector = backend.run(t_circuit).result().get_statevector()
+print('Equal:', np.allclose(state_vector, input_state))
+#Equal: True
+
 # Perform an ideal simulation
+circuit.measure_all()
 result = execute(circuit, backend).result()
 counts = result.get_counts(0)
 print('Counts:', counts)
