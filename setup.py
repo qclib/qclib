@@ -9,7 +9,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="qclib",
-    version="0.0.8",
+    version="0.0.13",
     author="Adenilton Silva",
     author_email="ajsilva@cin.ufpe.br",
     description="A quantum computing library using qiskit",
@@ -24,8 +24,12 @@ setuptools.setup(
     python_requires='>=3.7',
     install_requires=[
         'scipy>=1.7.1',
-        'qiskit>=0.18.3',
+        'qiskit>=0.34.0',
+        'qiskit-aqua>=0.9.5',
+        'qiskit-machine-learning>=0.3.1',
         'deprecation',
+        'tensorly',
+        'keras',
         'graphviz'
     ]
 )
