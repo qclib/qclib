@@ -25,11 +25,11 @@ from qclib.state_preparation.schmidt import initialize
 # Generate 3-qubit random input state vector
 n = 3
 rnd = np.random.RandomState(42)
-input_state = rnd.rand(2**n) + rnd.rand(2**n) * 1j
-input_state = input_state/np.linalg.norm(input_state)
+input_vector = rnd.rand(2**n) + rnd.rand(2**n) * 1j
+input_vector = input_vector/np.linalg.norm(input_vector)
 
-# Build a quantum circuit to initialize the input state
-circuit = initialize(input_state)
+# Build a quantum circuit to initialize the input vector
+circuit = initialize(input_vector)
 
 # Construct an ideal simulator
 backend = AerSimulator()
@@ -38,6 +38,6 @@ backend = AerSimulator()
 t_circuit = transpile(circuit, backend)
 t_circuit.save_statevector()
 state_vector = backend.run(t_circuit).result().get_statevector()
-print('Equal:', np.allclose(state_vector, input_state))
+print('Equal:', np.allclose(state_vector, input_vector))
 #Equal: True
 ```
