@@ -21,7 +21,7 @@ https://ieeexplore.ieee.org/document/9586240
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UGate
-from qclib.gate.mc_gate import mc_gate
+from qclib.gates.mc_gate import mc_gate
 
 def initialize(state_dict: dict):
     """
