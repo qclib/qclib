@@ -22,7 +22,7 @@ Gate U2 in PRL 85.6 (2000) is implemented with uniformly controlled rotations
 
 import numpy as np
 from qiskit import QuantumCircuit
-from qiskit.extensions import UCRYGate
+from qiskit.extensions import UCRYGate, UCRZGate
 from qiskit.extensions import UnitaryGate
 
 def initialize(state_vector):
@@ -49,13 +49,17 @@ def initialize(state_vector):
 
     n_qubits = int(n_qubits) + 1
     theta = np.zeros(n_amplitudes)
+    phi = np.zeros(n_amplitudes)
     for k, value in enumerate(state_vector):
-        theta[k] = 2 * np.arccos(value)
+        theta[k] = 2 * np.arccos(abs(value))
+        phi[k] = -2 * np.angle(value)
 
     gate_u = QuantumCircuit(n_qubits, name='U')
     gate_u.h(list(range(1, n_qubits)))
     ury_gate = UCRYGate(list(theta))
+    urz_gate = UCRZGate(list(phi))
     gate_u.append(ury_gate, gate_u.qubits)
+    gate_u.append(urz_gate, gate_u.qubits)
     gate_u = gate_u.to_instruction()
 
     # gate_it = QuantumCircuit(1, name='I_t')
