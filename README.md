@@ -1,6 +1,6 @@
 # Quantum computing library (qclib)
 
-qclib is a quantum computing library implemented using qiskit.
+Qclib is a quantum computing library implemented using qiskit.
 
 ## Instalation
 The easiest way of installing qclib is by using pip:
@@ -44,10 +44,12 @@ print('Equal:', np.allclose(state_vector, input_vector))
 
 ## Authors
 
-qclib is the work of [many contributors](https://github.com/qclib/qclib/graphs/contributors).
+The first version of qclib was developed at [Centro de Informática](https://portal.cin.ufpe.br) - UFPE.
+Qclib is an active project, and [other people](https://github.com/qclib/qclib/graphs/contributors) have contributed.
 
 If you are doing research using qclib, please cite our project.
-We use a [CITATION.cff](https://citation-file-format.github.io/) file, so you can easily copy the citation information from the repository landing page.
+We use a [CITATION.cff](https://citation-file-format.github.io/) file, so you can easily copy the citation 
+information from the repository landing page.
 
 ## License
 
