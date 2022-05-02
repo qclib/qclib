@@ -20,21 +20,22 @@ https://ieeexplore.ieee.org/document/9586240
 
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
-from qiskit.circuit.library import U3Gate
+from qiskit.circuit.library import UGate
+from qclib.gates.mc_gate import mc_gate
 
 
-def initialize(state):
+def initialize(state_dict: dict):
     """
     Classical algorithm that creates a quantum circuit C that loads
     a sparse quantum state, applying a sequence of operations maping
     the desired state |sigma> to |0>. And then inverting C to obtain
     the mapping of |0> to the desired state |sigma>.
     Args:
-      state: Sparse array with real values
+      state_dict: A dictionary with the non-zero amplitudes corresponting to each state in
+                 format { '000': <value>, ... , '111': <value> }
     Returns:
       Quantum circuit C^{-1} that maps |0> to the desired state |sigma>
     """
-    state_dict = _build_state_dict(state)
 
     b_strings = list(state_dict.keys())
 
@@ -43,8 +44,13 @@ def initialize(state):
     quantum_circuit = QuantumCircuit(quantum_register)
 
     while len(b_strings) > 1:
-        state_dict, quantum_circuit = _merging_procedure(
-            state_dict, quantum_circuit)
+        bitstr1, bitstr2, dif, dif_qubits = _select_strings(state_dict)
+
+        bitstr1, bitstr2, state_dict, quantum_circuit = _preprocess_states(
+            bitstr1, bitstr2, dif, dif_qubits, state_dict, quantum_circuit)
+
+        state_dict, quantum_circuit = _merge(
+            state_dict, quantum_circuit, bitstr1, bitstr2, dif_qubits, dif)
         b_strings = list(state_dict.keys())
 
     b_string = b_strings.pop()
@@ -54,66 +60,40 @@ def initialize(state):
 
     return quantum_circuit.reverse_ops()
 
-
-def _build_state_dict(state):
-    """
-    Builds a dict of the non zero amplitudes with their
-    associated binary strings as follows:
-      { '000': <value>, ... , '111': <value> }
-    Args:
-      state: The classical description of the state vector
-    """
-    n_qubits = np.ceil(np.log(len(state))).astype(int)
-    state_dict = {}
-    for (value_idx, value) in enumerate(state):
-        if value != 0:
-            binary_string = '{:0{}b}'.format(value_idx, n_qubits)[::-1]
-            state_dict[binary_string] = value
-    return state_dict
-
-
 def _maximizing_difference_bit_search(b_strings, dif_qubits):
     """
     Splits the set of bit strings into two (t_0 and t_1), by setting
-    t_0 as the set of bit_strings with 0 in the b-th position, and
-    t_1 as the set of bit_strings with 1 in the b-th position.
-    Searching for the bit b that maximizes the difference between
-    t_0 and t_1 where neither is empty.
+    t_0 as the set of bit_strings with 0 in the bit_index position, and
+    t_1 as the set of bit_strings with 1 in the bit_index position.
+    Searching for the bit_index not in dif_qubits that maximizes the difference
+    between the size of the nonempty t_0 and t_1.
     Args:
       b_string: A list of bit strings eg.: ['000', '011', ...,'101']
       dif_qubits: A list of previous qubits found to maximize the difference
     Returns:
-      bit_index: The qubit index that maximizes the splitting of the list b_strings
-      t_0: List of binary strings with 0 on the b-th qubit
-      t_1: List of binary strings with 1 on the b-th qubit
+      bit_index: The qubit index that maximizes abs(len(t_0)-len(t_1))
+      t_0: List of binary strings with 0 on the bit_index qubit
+      t_1: List of binary strings with 1 on the bit_index qubit
     """
     t_0 = []
     t_1 = []
     bit_index = 0
-    set_difference = 0
+    set_difference = -1
     bit_search_space = list(set(range(len(b_strings[0]))) - set(dif_qubits))
+
     for bit in bit_search_space:
-        temp_t0 = []
-        temp_t1 = []
-        for bit_string in b_strings:
-            if bit_string[bit] == '0':
-                temp_t0.append(bit_string)
-            else:
-                temp_t1.append(bit_string)
-        # Neither temp_t0 nor temp_t1 must be empty
-        if (temp_t0 and temp_t1):
+        temp_t0 = [x for x in b_strings if x[bit] == '0']
+        temp_t1 = [x for x in b_strings if x[bit] == '1']
+
+        if temp_t0 and temp_t1:
             temp_difference = np.abs(len(temp_t0) - len(temp_t1))
-            if temp_difference == 0 and not t_0 and not t_1:
-                t_0 = temp_t0
-                t_1 = temp_t1
-                bit_index = bit
-            elif temp_difference > set_difference:
+            if temp_difference > set_difference:
                 t_0 = temp_t0
                 t_1 = temp_t1
                 bit_index = bit
                 set_difference = temp_difference
-    return bit_index, t_0, t_1
 
+    return bit_index, t_0, t_1
 
 def _build_bit_string_set(b_strings, dif_qubits, dif_values):
     """
@@ -130,14 +110,10 @@ def _build_bit_string_set(b_strings, dif_qubits, dif_values):
       on indexes dif_qubits
     """
     bit_string_set = []
-
     for b_string in b_strings:
-        include_string = True
-        for (b_index, b_value) in zip(dif_qubits, dif_values):
-            if b_string[b_index] != b_value:
-                include_string = False
-        if include_string:
+        if [b_string[i] for i in dif_qubits] == dif_values:
             bit_string_set.append(b_string)
+
     return bit_string_set
 
 
@@ -167,14 +143,15 @@ def _bit_string_search(b_strings, dif_qubits, dif_values):
         else:
             dif_values.append('1')
             temp_strings = t_1
+
         # dif_qubits must have at least two values stored in it
-        if len(temp_strings) == 1 and len(dif_qubits) == 1:
+        if (len(temp_strings)-1) == 1 and len(dif_qubits) == 1:
             temp_strings = b_strings
 
     return temp_strings, dif_qubits, dif_values
 
 
-def _search_bit_strings_for_merging(state_dict):
+def _select_strings(state_dict):
     """
     Searches for the states described by the bit strings bitstr1 and bitstr2 to be merged
     Args:
@@ -195,23 +172,17 @@ def _search_bit_strings_for_merging(state_dict):
     bitstr1 = None
     bitstr2 = None
 
-    if len(b_strings1) == 2:
-        # Search for the difference bit
-        bit, t_0, t_1 = _maximizing_difference_bit_search(b_strings1, dif_qubits)
-        dif_qubit = bit
-        bitstr1 = t_1[0]
-        bitstr2 = t_0[0]
-    else:
-        # Searching for bitstr1
-        b_strings1, dif_qubits, dif_values = _bit_string_search(b_strings1, dif_qubits, dif_values)
-        dif_qubit = dif_qubits.pop()
-        dif_values.pop()
-        bitstr1 = b_strings1[0]
+    # Searching for bitstr1
+    b_strings1, dif_qubits, dif_values = _bit_string_search(b_strings1, dif_qubits, dif_values)
+    dif_qubit = dif_qubits.pop()
+    dif_values.pop()
+    bitstr1 = b_strings1[0]
 
-        # Searching for bitstr2
-        b_strings1 = _build_bit_string_set(b_strings2, dif_qubits, dif_values)
-        b_strings1, dif_qubits, dif_values = _bit_string_search(b_strings1, dif_qubits, dif_values)
-        bitstr2 = b_strings1[0]
+    # Searching for bitstr2
+    b_strings2.remove(bitstr1)
+    b_strings1 = _build_bit_string_set(b_strings2, dif_qubits, dif_values)
+    b_strings1, dif_qubits, dif_values = _bit_string_search(b_strings1, dif_qubits, dif_values)
+    bitstr2 = b_strings1[0]
 
     return bitstr1, bitstr2, dif_qubit, dif_qubits
 
@@ -283,7 +254,7 @@ def _equalize_bit_string_states(bitstr1, bitstr2, dif, state_dict, quantum_circu
     Args:
       bitstr1: First bit string
       bitstr2: Second bit string
-      dif: index where both bitstr1 and bitstr2 mus be different
+      dif: index where both bitstr1 and bitstr2 must be different
       state_dict: A dictionary with the non-zero amplitudes associated to their corresponding
                   binary strings as keys e.g.: {'001': <value>, '101': <value>}
       quantum_circuit: Qiskit's quantum circuit's object with the gates applied to the circuit
@@ -328,7 +299,7 @@ def _apply_not_gates_to_qubit_index_list(bitstr1, bitstr2, dif_qubits, state_dic
     return bitstr1, bitstr2, state_dict, quantum_circuit
 
 
-def _preprocess_states_for_merging(bitstr1, bitstr2, dif, dif_qubits, state_dict, quantum_circuit):
+def _preprocess_states(bitstr1, bitstr2, dif, dif_qubits, state_dict, quantum_circuit):
     """
     Apply the operations on the basis states to prepare for merging bitstr1 and bitstr2.
     Args:
@@ -341,7 +312,7 @@ def _preprocess_states_for_merging(bitstr1, bitstr2, dif, dif_qubits, state_dict
       quantum_circuit: Qiskit's QuantumCircuit object where the operations are to be called
     Returns:
       state_dict: Updated state dict
-      bitstr1: First updated binary string to be merge
+      bitstr1: First updated binary string to be merged
       bitstr2: Second updated binary string to be merged
       quantum_circuit: Qiskit's quantum circuit's object with the gates applied to the circuit
     """
@@ -366,7 +337,7 @@ def _compute_angles(amplitude_1, amplitude_2):
     """
     Computes the angles for the adjoint of the merge matrix M
     that is going to map the dif qubit to zero e.g.:
-      M(a|0> + b|1>) -> |0>
+      M(a|0> + b|1>) -> |1>
 
     Args:
       amplitude_1: A complex/real value, associated with the string with
@@ -374,7 +345,7 @@ def _compute_angles(amplitude_1, amplitude_2):
       amplitude_2: A complex/real value, associated with the string with
                     0 on the dif qubit
     Returns:
-      The angles theta, lambda and phi for the U3 operator
+      The angles theta, lambda and phi for the U operator
     """
     norm = np.linalg.norm([amplitude_1, amplitude_2])
 
@@ -397,26 +368,18 @@ def _compute_angles(amplitude_1, amplitude_2):
     return theta, phi, lamb
 
 
-def _merging_procedure(state_dict, quantum_circuit):
-
-    bitstr1, bitstr2, dif, dif_qubits = _search_bit_strings_for_merging(state_dict)
-
-    # Circuit building
-    bitstr1, bitstr2, state_dict, quantum_circuit = _preprocess_states_for_merging(
-        bitstr1, bitstr2, dif, dif_qubits, state_dict, quantum_circuit
-    )
+def _merge(state_dict, quantum_circuit, bitstr1, bitstr2, dif_qubits, dif):
 
     theta, phi, lamb = _compute_angles(state_dict[bitstr1], state_dict[bitstr2])
 
     # Applying merge operation
-    merge_gate = None
+    merge_gate = UGate(theta, phi, lamb, label='U')
     if not dif_qubits:
-        merge_gate = U3Gate(theta, phi, lamb, label='U3')
+        quantum_circuit.append(merge_gate, dif_qubits+[dif], [])
     else:
-        merge_gate = U3Gate(theta, phi, lamb, label='U3').control(
-            num_ctrl_qubits=len(dif_qubits))
+        gate_definition = UGate(theta, phi, lamb, label='U').to_matrix()
+        mc_gate(gate_definition, quantum_circuit, dif_qubits, dif)
 
-    quantum_circuit.append(merge_gate, dif_qubits+[dif], [])
     state_dict = _update_state_dict_according_to_operation(
         state_dict, 'merge', None, merge_strings=[bitstr1, bitstr2]
     )
