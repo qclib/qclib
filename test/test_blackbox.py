@@ -4,9 +4,9 @@ from qclib.util import get_state
 import numpy as np
 
 
-class TestBdsp(TestCase):
+class TestBlackbox(TestCase):
     def test_blackbox(self):
-        state = np.random.rand(16) - 0.5
+        state = np.random.rand(16) - 0.5 + (np.random.rand(16) - 0.5) * 1j
         state = state / np.linalg.norm(state)
 
         qc = initialize(state)
