@@ -3,14 +3,14 @@
 Qclib is a quantum computing library implemented using qiskit.
 
 ## Instalation
-The easiest way of installing Qclib is by using pip:
+The easiest way of installing qclib is by using pip:
 
 ```python
 pip install qclib
 ``` 
 
-## Initializing your first quantum state with Qclib
-Now that Qclib is installed, you can start building quantum circuits to prepare quantum states. Here is a basic example:
+## Initializing your first quantum state with qclib
+Now that qclib is installed, you can start building quantum circuits to prepare quantum states. Here is a basic example:
 
 ```
 $ python
@@ -41,3 +41,16 @@ state_vector = backend.run(t_circuit).result().get_statevector()
 print('Equal:', np.allclose(state_vector, input_vector))
 #Equal: True
 ```
+
+## Authors
+
+The first version of qclib was developed at [Centro de Informática](https://portal.cin.ufpe.br) - UFPE.
+Qclib is an active project, and [other people](https://github.com/qclib/qclib/graphs/contributors) have contributed.
+
+If you are doing research using qclib, please cite our project.
+We use a [CITATION.cff](https://citation-file-format.github.io/) file, so you can easily copy the citation 
+information from the repository landing page.
+
+## License
+
+qclib is **free** and **open source**, released under the Apache License, Version 2.0.
