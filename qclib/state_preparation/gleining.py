@@ -23,6 +23,7 @@ from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UGate
 from qclib.gates.mc_gate import mc_gate
 
+
 def initialize(state_dict: dict):
     """
     Classical algorithm that creates a quantum circuit C that loads
@@ -373,7 +374,7 @@ def _merge(state_dict, quantum_circuit, bitstr1, bitstr2, dif_qubits, dif):
 
     # Applying merge operation
     merge_gate = UGate(theta, phi, lamb, label='U')
-    if not dif_qubits:        
+    if not dif_qubits:
         quantum_circuit.append(merge_gate, dif_qubits+[dif], [])
     else:
         gate_definition = UGate(theta, phi, lamb, label='U').to_matrix()

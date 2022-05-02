@@ -24,6 +24,7 @@ from qclib.util import get_state, build_state_dict
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 
+
 class TestGleining(unittest.TestCase):
 
     def test_two_states_uniform(self):
