@@ -47,24 +47,22 @@ def initialize(state_vector):
     if not n_qubits.is_integer():
         raise Exception("state_vector size is not a power of 2")
 
-    n_qubits = int(n_qubits) + 1
-    theta = np.zeros(n_amplitudes)
-    phi = np.zeros(n_amplitudes)
-    for k, value in enumerate(state_vector):
-        theta[k] = 2 * np.arccos(abs(value))
-        phi[k] = -2 * np.angle(value)
+    theta = 2 * np.arccos(np.abs(state_vector))
+    phi = -2 * np.angle(state_vector)
 
-    gate_u = QuantumCircuit(n_qubits, name='U')
-    gate_u.h(list(range(1, n_qubits)))
     ury_gate = UCRYGate(list(theta))
     urz_gate = UCRZGate(list(phi))
+
+    n_qubits = int(n_qubits) + 1
+    gate_u = QuantumCircuit(n_qubits, name='U')
+    gate_u.h(gate_u.qubits[1:])
     gate_u.append(ury_gate, gate_u.qubits)
     gate_u.append(urz_gate, gate_u.qubits)
     gate_u = gate_u.to_instruction()
 
-    # gate_it = QuantumCircuit(1, name='I_t')
     it_matrix = [[-1, 0], [0, 1]]
     gate_it = UnitaryGate(it_matrix)
+    gate_it.name = 'I_t'
 
     gate_is = gate_it.control(n_qubits-1, ctrl_state=0)
     gate_is.name = 'I_s'
@@ -73,11 +71,11 @@ def initialize(state_vector):
     repetitions = int(repetitions)
 
     q_circuit = QuantumCircuit(n_qubits)
-    for k in range(repetitions):
+    for _ in range(repetitions):
         q_circuit.append(gate_u, q_circuit.qubits)
-        q_circuit.append(gate_it, [0])
+        q_circuit.append(gate_it, q_circuit.qubits[0:1])
         q_circuit.append(gate_u.inverse(), q_circuit.qubits)
-        q_circuit.append(gate_is, list(range(1, n_qubits)) + [0])
+        q_circuit.append(gate_is, q_circuit.qubits)
 
     q_circuit.append(gate_u, q_circuit.qubits)
 
