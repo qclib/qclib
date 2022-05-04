@@ -15,7 +15,9 @@
 """ Test blackbox state preparation """
 from unittest import TestCase
 import numpy as np
-from qclib.state_preparation.blackbox import initialize
+from qiskit import QuantumCircuit
+
+from qclib.state_preparation.blackbox import BlackBoxInitialize
 from qclib.util import get_state
 
 
@@ -24,13 +26,15 @@ class TestBlackbox(TestCase):
 
     def test_blackbox(self):
         """ Run blackbox state preparation """
+        initialize = BlackBoxInitialize.initialize
 
         state = np.random.rand(16) - 0.5 + (np.random.rand(16) - 0.5) * 1j
         state = state / np.linalg.norm(state)
 
-        q_circuit = initialize(state)
-        out = get_state(q_circuit)
+        q_circuit = QuantumCircuit(5)
+        initialize(q_circuit, state.tolist())
 
+        out = get_state(q_circuit)
         out = out.reshape((len(out)//2, 2))
         out = out[:, 0]
 

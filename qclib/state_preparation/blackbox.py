@@ -13,73 +13,88 @@
 # limitations under the License.
 
 """
-Black-box state preparation (real amplitudes)
+Black-box state preparation
 Grover, Lov K. "Synthesis of quantum superpositions by quantum computation."
 Physical review letters 85.6 (2000): 1334.
 
 Gate U2 in PRL 85.6 (2000) is implemented with uniformly controlled rotations
 """
 
+from qclib.state_preparation.initialize import Initialize
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.extensions import UCRYGate, UCRZGate
 from qiskit.extensions import UnitaryGate
 
-def initialize(state_vector):
+
+class BlackBoxInitialize(Initialize):
     """
-    Blackbox state preparation
-    https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.85.1334
+    Black-box state preparation
+    Grover, Lov K. "Synthesis of quantum superpositions by quantum computation."
+    Physical review letters 85.6 (2000): 1334.
 
-    For instance, to initialize the state a|00> + b|10> (|a|^2+|b|^2=1)
-        $ state = [a, 0, b, 0]
-        $ circuit = initialize(state)
-
-    Parameters
-    ----------
-    state_vector: 2^n dimensional real unit vector
-
-    Returns
-    -------
-    q_circuit: Circuit that initializes a approximated state_vector in a quantum device
+    Gate U2 in PRL 85.6 (2000) is implemented with uniformly controlled rotations
     """
-    n_amplitudes = len(state_vector)
-    n_qubits = float(np.log2(n_amplitudes))
-    if not n_qubits.is_integer():
-        raise Exception("state_vector size is not a power of 2")
 
-    theta = 2 * np.arccos(np.abs(state_vector))
-    phi = -2 * np.angle(state_vector)
+    def __init__(self, params, inverse=False, label=None):
+        self._name = 'blackbox'
+        self._get_num_qubits(params)
+        self.num_qubits += 1
 
-    ury_gate = UCRYGate(list(theta))
-    urz_gate = UCRZGate(list(phi))
+        self._label = label
+        if label is None:
+            self._label = 'SP'
 
-    n_qubits = int(n_qubits) + 1
-    gate_u = QuantumCircuit(n_qubits, name='U')
-    gate_u.h(gate_u.qubits[1:])
-    gate_u.append(ury_gate, gate_u.qubits)
-    gate_u.append(urz_gate, gate_u.qubits)
-    gate_u = gate_u.to_instruction()
+            if inverse:
+                self._label = 'SPdg'
 
-    it_matrix = [[-1, 0], [0, 1]]
-    gate_it = UnitaryGate(it_matrix)
-    gate_it.name = 'I_t'
+        super().__init__(self._name, self.num_qubits, params, label=self._label)
 
-    gate_is = gate_it.control(n_qubits-1, ctrl_state=0)
-    gate_is.name = 'I_s'
+    def _define(self):
+        self.definition = self._define_initialize()
 
-    repetitions = (np.pi/4) * (np.sqrt(n_amplitudes) / np.linalg.norm(state_vector))
-    repetitions = int(repetitions)
+    def _define_initialize(self):
+        n_amplitudes = len(self.params)
 
-    q_circuit = QuantumCircuit(n_qubits)
-    for _ in range(repetitions):
+        theta = 2 * np.arccos(np.abs(self.params))
+        phi = -2 * np.angle(self.params)
+
+        ury_gate = UCRYGate(list(theta))
+        urz_gate = UCRZGate(list(phi))
+
+        gate_u = QuantumCircuit(self.num_qubits, name='U')
+        gate_u.h(gate_u.qubits[1:])
+        gate_u.append(ury_gate, gate_u.qubits)
+        gate_u.append(urz_gate, gate_u.qubits)
+        gate_u = gate_u.to_instruction()
+
+        it_matrix = [[-1, 0], [0, 1]]
+        gate_it = UnitaryGate(it_matrix)
+        gate_it.name = 'I_t'
+
+        gate_is = gate_it.control(self.num_qubits - 1, ctrl_state=0)
+        gate_is.name = 'I_s'
+
+        repetitions = (np.pi / 4) * (np.sqrt(n_amplitudes) / np.linalg.norm(self.params))
+        repetitions = int(repetitions)
+
+        q_circuit = QuantumCircuit(self.num_qubits)
+        for _ in range(repetitions):
+            q_circuit.append(gate_u, q_circuit.qubits)
+            q_circuit.append(gate_it, q_circuit.qubits[0:1])
+            q_circuit.append(gate_u.inverse(), q_circuit.qubits)
+            q_circuit.append(gate_is, q_circuit.qubits)
+
         q_circuit.append(gate_u, q_circuit.qubits)
-        q_circuit.append(gate_it, q_circuit.qubits[0:1])
-        q_circuit.append(gate_u.inverse(), q_circuit.qubits)
-        q_circuit.append(gate_is, q_circuit.qubits)
 
-    q_circuit.append(gate_u, q_circuit.qubits)
+        if repetitions % 2 == 1:
+            q_circuit.global_phase = np.pi
 
-    if repetitions % 2 == 1:
-        q_circuit.global_phase = np.pi
+        return q_circuit
 
-    return q_circuit
+    @staticmethod
+    def initialize(q_circuit, state, qubits=None):
+        if qubits is None:
+            q_circuit.append(BlackBoxInitialize(state), q_circuit.qubits)
+        else:
+            q_circuit.append(BlackBoxInitialize(state), qubits)
