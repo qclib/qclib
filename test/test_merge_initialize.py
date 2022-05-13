@@ -13,12 +13,12 @@
 # limitations under the License.
 
 """
-Tests for the gleining.py module.
+Tests for the merge.py module.
 """
 
 import unittest
 import numpy as np
-from qclib.state_preparation.gleining import initialize
+from qclib.state_preparation.merge import initialize
 from qclib.util import get_state, build_state_dict
 
 # pylint: disable=missing-function-docstring

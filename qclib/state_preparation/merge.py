@@ -13,7 +13,7 @@
 # limitations under the License.
 
 '''
-Gleining et al algorithm for creating a quantum
+Gleinig et al algorithm for creating a quantum
 circuit that loads a sparse state.
 https://ieeexplore.ieee.org/document/9586240
 '''
