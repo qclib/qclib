@@ -113,7 +113,7 @@ def _knill(iso, log_lines, log_cols):
     reg = QuantumRegister(log_lines)
     circuit = QuantumCircuit(reg)
 
-    from qclib.state_preparation.schmidt import LRInitialize # pylint: disable=import-outside-toplevel
+    from qclib.state_preparation.lowrank import LRInitialize # pylint: disable=import-outside-toplevel
 
     for i in range(2**log_lines):                            # The eigenvalues are not necessarily
                                                              # ordered.
@@ -341,7 +341,7 @@ def _cnot_count_estimate_knill(iso, log_lines, log_cols):
     eigval, eigvec = np.linalg.eig(unitary)
     arg = np.angle(eigval)
 
-    from qclib.state_preparation.schmidt import cnot_count as schmidt_cnot_count # pylint: disable=import-outside-toplevel
+    from qclib.state_preparation.lowrank import cnot_count as schmidt_cnot_count # pylint: disable=import-outside-toplevel
 
     cnots = 0
     for i in range(2**log_lines):

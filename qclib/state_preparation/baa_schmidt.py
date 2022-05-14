@@ -19,7 +19,7 @@ https://arxiv.org/abs/2111.03132
 
 import numpy as np
 from qiskit import QuantumCircuit
-from qclib.state_preparation.schmidt import LRInitialize
+from qclib.state_preparation.lowrank import LRInitialize
 from qclib.state_preparation.util.baa import adaptive_approximation
 
 def initialize(state_vector, max_fidelity_loss=0.0,

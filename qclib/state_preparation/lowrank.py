@@ -116,7 +116,7 @@ class LRInitialize(Initialize):
         if self.num_qubits < 2:
             return mottonen(self.params)
 
-        circuit, reg_a, reg_b = _create_quantum_circuit(self.params, self.partition)
+        circuit, reg_a, reg_b = self._create_quantum_circuit()
 
         # Schmidt decomposition
         svd_u, singular_values, svd_v = schmidt_decomposition(self.params, reg_a)
@@ -177,6 +177,17 @@ class LRInitialize(Initialize):
         # Apply gate U to the register reg
         circuit.compose(gate_u, reg, inplace=True)
 
+    def _create_quantum_circuit(self):
+
+        if self.partition is None:
+            self.partition = _default_partition(self.num_qubits)
+
+        complement = sorted(set(range(self.num_qubits)).difference(set(self.partition)))
+
+        circuit = QuantumCircuit(self.num_qubits)
+
+        return circuit, self.partition[::-1], complement[::-1]
+
 
 def low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
     """
@@ -203,18 +214,6 @@ def low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
 def _default_partition(n_qubits):
     odd = n_qubits % 2
     return list(range(n_qubits//2 + odd))
-
-
-def _create_quantum_circuit(state_vector, partition):
-    n_qubits = _to_qubits(len(state_vector))
-    if partition is None:
-        partition = _default_partition(n_qubits)
-
-    complement = sorted(set(range(n_qubits)).difference(set(partition)))
-
-    circuit = QuantumCircuit(n_qubits)
-
-    return circuit, partition[::-1], complement[::-1]
 
 
 def cnot_count(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='qsd',

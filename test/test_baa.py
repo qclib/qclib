@@ -31,7 +31,7 @@ from qiskit.circuit.random import random_circuit
 from qclib.entanglement import geometric_entanglement, \
     meyer_wallach_entanglement
 from qclib.state_preparation.baa_schmidt import initialize
-from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots
+from qclib.state_preparation.lowrank import cnot_count as schmidt_cnots
 from qclib.util import get_state
 
 # pylint: disable=missing-function-docstring

@@ -17,7 +17,7 @@
 import numpy as np
 import qiskit
 from qiskit import QuantumCircuit
-from qclib.state_preparation.schmidt import LRInitialize
+from qclib.state_preparation.lowrank import LRInitialize
 
 # pylint: disable=maybe-no-member
 

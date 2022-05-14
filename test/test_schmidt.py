@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-Tests for the schmidt.py module.
+Tests for the lowrank.py module.
 """
 
 from unittest import TestCase
@@ -21,7 +21,7 @@ import numpy as np
 from itertools import combinations
 from qiskit import QuantumCircuit, ClassicalRegister, execute, transpile
 from qiskit.providers.aer.backends import AerSimulator
-from qclib.state_preparation.schmidt import LRInitialize
+from qclib.state_preparation.lowrank import LRInitialize
 from qclib.util import get_state
 
 # pylint: disable=missing-function-docstring
