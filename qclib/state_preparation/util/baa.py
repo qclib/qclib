@@ -24,9 +24,8 @@ from math import log2, sqrt
 import numpy as np
 from tensorly.tenalg.core_tenalg import kronecker
 
+from qclib.entanglement import schmidt_composition, schmidt_decomposition
 from qclib.state_preparation.schmidt import cnot_count as schmidt_cnots, \
-                                            schmidt_decomposition, \
-                                            schmidt_composition, \
                                             low_rank_approximation
 
 # pylint: disable=missing-class-docstring
