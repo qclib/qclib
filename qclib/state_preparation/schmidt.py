@@ -19,33 +19,39 @@ defined at https://arxiv.org/abs/1003.5760.
 
 from math import ceil, log2
 import numpy as np
-import deprecation
-from qiskit import QuantumCircuit, QuantumRegister
+from qiskit import QuantumCircuit
 from qclib.state_preparation.mottonen import initialize as mottonen
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
 from qclib.state_preparation.initialize import Initialize
-from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_rank, _undo_separation_matrix
+from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_rank
 
 # pylint: disable=maybe-no-member
 
 
 class LRInitialize(Initialize):
     def __init__(self, params, inverse=False, label=None, lr_params=None):
+
         self._name = 'low_rank'
         self._get_num_qubits(params)
-        self.low_rank = 0 if lr_params.get('lr') is None else lr_params.get('lr')
-        self.partition = lr_params.get('partition')
 
-        if lr_params.get('iso_scheme') is None:
+        if lr_params is None:
             self.isometry_scheme = 'ccd'
-        else:
-            self.isometry_scheme = lr_params.get('iso_scheme')
-
-        if lr_params.get('unitary_scheme') is None:
             self.unitary_scheme = 'qsd'
+            self.low_rank = 0
+            self.partition = None
         else:
-            self.unitary_scheme = lr_params.get('unitary_scheme')
+            self.low_rank = 0 if lr_params.get('lr') is None else lr_params.get('lr')
+            self.partition = lr_params.get('partition')
+            if lr_params.get('iso_scheme') is None:
+                self.isometry_scheme = 'ccd'
+            else:
+                self.isometry_scheme = lr_params.get('iso_scheme')
+
+            if lr_params.get('unitary_scheme') is None:
+                self.unitary_scheme = 'qsd'
+            else:
+                self.unitary_scheme = lr_params.get('unitary_scheme')
 
         self._label = label
         if label is None:
@@ -125,16 +131,15 @@ class LRInitialize(Initialize):
         if e_bits > 0:
             reg_sv = reg_b[:e_bits]
             singular_values = singular_values / np.linalg.norm(singular_values)
-            _encode(singular_values.reshape(rank, 1), circuit, reg_sv,
-                    self.isometry_scheme, self.unitary_scheme)
+            self._encode(singular_values.reshape(rank, 1), circuit, reg_sv)
 
         # Phase 2. Entangles only the necessary qubits, according to rank.
         for j in range(e_bits):
             circuit.cx(reg_b[j], reg_a[j])
 
         # Phase 3 and 4 encode gates U and V.T
-        _encode(svd_u, circuit, reg_b, self.isometry_scheme, self.unitary_scheme)
-        _encode(svd_v.T, circuit, reg_a, self.isometry_scheme, self.unitary_scheme)
+        self._encode(svd_u, circuit, reg_b)
+        self._encode(svd_v.T, circuit, reg_a)
 
         return circuit.reverse_bits()
 
@@ -146,6 +151,31 @@ class LRInitialize(Initialize):
             q_circuit.append(LRInitialize(state, lr_params=lr_params), q_circuit.qubits)
         else:
             q_circuit.append(LRInitialize(state, lr_params=lr_params), qubits)
+
+    def _encode(self, data, circuit, reg):
+        """
+        Encodes data using the most appropriate method.
+        """
+        n_qubits = len(reg)
+        rank = 0
+        if data.shape[1] == 1:
+            partition = _default_partition(n_qubits)
+            _, svals, _ = schmidt_decomposition(data[:, 0], partition)
+            rank = _effective_rank(svals)
+
+        if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4 or rank == 1):
+            # state preparation
+            lr_params = {'iso_scheme': self.isometry_scheme,
+                         'unitary_scheme': self.unitary_scheme}
+            gate_u = LRInitialize(data[:, 0], lr_params=lr_params)
+
+        elif data.shape[0] > data.shape[1]:
+            gate_u = decompose_isometry(data, scheme=self.isometry_scheme)
+        else:
+            gate_u = decompose_unitary(data, decomposition=self.unitary_scheme)
+
+        # Apply gate U to the register reg
+        circuit.compose(gate_u, reg, inplace=True)
 
 
 def low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
@@ -185,32 +215,6 @@ def _create_quantum_circuit(state_vector, partition):
     circuit = QuantumCircuit(n_qubits)
 
     return circuit, partition[::-1], complement[::-1]
-
-
-def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
-    """
-    Encodes data using the most appropriate method.
-    """
-    n_qubits = len(reg)
-    rank = 0
-    if data.shape[1] == 1:
-        partition = _default_partition(n_qubits)
-        _, svals, _ = schmidt_decomposition(data[:, 0], partition)
-        rank = _effective_rank(svals)
-
-    if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4 or rank == 1):
-        # state preparation
-        lr_params = {'iso_scheme': iso_scheme,
-                     'unitary_scheme': uni_scheme}
-        gate_u = LRInitialize(data[:, 0], lr_params=lr_params)
-
-    elif data.shape[0] > data.shape[1]:
-        gate_u = decompose_isometry(data, scheme=iso_scheme)
-    else:
-        gate_u = decompose_unitary(data, decomposition=uni_scheme)
-
-    # Apply gate U to the register reg
-    circuit.compose(gate_u, reg, inplace=True)
 
 
 def cnot_count(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='qsd',
