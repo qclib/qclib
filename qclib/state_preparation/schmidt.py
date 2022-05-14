@@ -24,137 +24,128 @@ from qiskit import QuantumCircuit, QuantumRegister
 from qclib.state_preparation.mottonen import initialize as mottonen
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
+from qclib.state_preparation.initialize import Initialize
+from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_rank, _undo_separation_matrix
 
 # pylint: disable=maybe-no-member
 
 
-def initialize(state_vector, low_rank=0, isometry_scheme='ccd',
-               unitary_scheme='qsd', partition=None):
-    """
-    Low-rank state preparation using Schmidt decomposition.
-    https://arxiv.org/abs/2111.03132
+class LRInitialize(Initialize):
+    def __init__(self, params, inverse=False, label=None, lr_params=None):
+        self._name = 'low_rank'
+        self._get_num_qubits(params)
+        self.low_rank = 0 if lr_params.get('lr') is None else lr_params.get('lr')
+        self.partition = lr_params.get('partition')
 
-    For instance, to initialize the state a|00> + b|10> (|a|^2+|b|^2=1)
-        $ state = [a, 0, b, 0]
-        $ circuit = initialize(state)
+        if lr_params.get('iso_scheme') is None:
+            self.isometry_scheme = 'ccd'
+        else:
+            self.isometry_scheme = lr_params.get('iso_scheme')
 
-    Parameters
-    ----------
-    state_vector: list of complex
-        A unit vector representing a quantum state.
-        Values are amplitudes.
+        if lr_params.get('unitary_scheme') is None:
+            self.unitary_scheme = 'qsd'
+        else:
+            self.unitary_scheme = lr_params.get('unitary_scheme')
 
-    low_rank: int
-        ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
-        If ``low_rank`` is not in the valid range, it will be ignored.
-        This parameter limits the rank of the Schmidt decomposition. If the Schmidt rank
-        of the state decomposition is greater than ``low_rank``, a low-rank approximation
-        is applied.
+        self._label = label
+        if label is None:
+            self._label = 'SP'
 
-    isometry_scheme: string
-        Scheme used to decompose isometries.
-        Possible values are ``'knill'`` and ``'ccd'`` (column-by-column decomposition).
-        Default is ``isometry_scheme='ccd'``.
+            if inverse:
+                self._label = 'SPdg'
 
-    unitary_scheme: string
-        Scheme used to decompose unitaries.
-        Possible values are ``'csd'`` (cosine-sine decomposition) and ``'qsd'`` (quantum
-        Shannon decomposition).
-        Default is ``unitary_scheme='qsd'``.
+        super().__init__(self._name, self.num_qubits, params, label=self._label)
 
-    partition: list of int
-        Set of qubit indices that represent a part of the bipartition.
-        The other partition will be the relative complement of the full set of qubits
-        with respect to the set ``partition``.
-        The valid range for indexes is ``0 <= index < n_qubits``. The number of indexes
-        in the partition must be greater than or equal to ``1`` and less than or equal
-        to ``n_qubits//2`` (``n_qubits//2+1`` if ``n_qubits`` is odd).
-        Default is ``partition=list(range(n_qubits//2 + odd))``.
+    def _define(self):
+        self.definition = self._define_initialize()
 
-    Returns
-    -------
-    circuit: QuantumCircuit
-        QuantumCircuit to initialize the state.
-    """
+    def _define_initialize(self):
+        """
+        Low-rank state preparation using Schmidt decomposition.
+        https://arxiv.org/abs/2111.03132
 
-    n_qubits = _to_qubits(len(state_vector))
-    if n_qubits < 2:
-        return mottonen(state_vector)
+        For instance, to initialize the state a|00> + b|10> (|a|^2+|b|^2=1)
+            $ state = [a, 0, b, 0]
+            $ circuit = initialize(state)
 
-    circuit, reg_a, reg_b = _create_quantum_circuit(state_vector, partition)
+        Parameters
+        ----------
+        state_vector: list of complex
+            A unit vector representing a quantum state.
+            Values are amplitudes.
 
-    # Schmidt decomposition
-    svd_u, singular_values, svd_v = schmidt_decomposition(state_vector, reg_a)
+        low_rank: int
+            ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
+            If ``low_rank`` is not in the valid range, it will be ignored.
+            This parameter limits the rank of the Schmidt decomposition. If the Schmidt rank
+            of the state decomposition is greater than ``low_rank``, a low-rank approximation
+            is applied.
 
-    rank, svd_u, svd_v, singular_values = \
-        low_rank_approximation(low_rank, svd_u, svd_v, singular_values)
+        isometry_scheme: string
+            Scheme used to decompose isometries.
+            Possible values are ``'knill'`` and ``'ccd'`` (column-by-column decomposition).
+            Default is ``isometry_scheme='ccd'``.
 
-    # Schmidt measure of entanglement
-    ebits = _to_qubits(rank)
+        unitary_scheme: string
+            Scheme used to decompose unitaries.
+            Possible values are ``'csd'`` (cosine-sine decomposition) and ``'qsd'`` (quantum
+            Shannon decomposition).
+            Default is ``unitary_scheme='qsd'``.
 
-    # Phase 1. Encodes the singular values.
-    if ebits > 0:
-        reg_sv = reg_b[:ebits]
-        singular_values = singular_values / np.linalg.norm(singular_values)
-        _encode(singular_values.reshape(rank, 1), circuit, reg_sv,
-                isometry_scheme, unitary_scheme)
+        partition: list of int
+            Set of qubit indices that represent a part of the bipartition.
+            The other partition will be the relative complement of the full set of qubits
+            with respect to the set ``partition``.
+            The valid range for indexes is ``0 <= index < n_qubits``. The number of indexes
+            in the partition must be greater than or equal to ``1`` and less than or equal
+            to ``n_qubits//2`` (``n_qubits//2+1`` if ``n_qubits`` is odd).
+            Default is ``partition=list(range(n_qubits//2 + odd))``.
 
-    # Phase 2. Entangles only the necessary qubits, according to rank.
-    for j in range(ebits):
-        circuit.cx(reg_b[j], reg_a[j])
+        Returns
+        -------
+        circuit: QuantumCircuit
+            QuantumCircuit to initialize the state.
+        """
 
-    # Phase 3 and 4 encode gates U and V.T
-    _encode(svd_u, circuit, reg_b, isometry_scheme, unitary_scheme)
-    _encode(svd_v.T, circuit, reg_a, isometry_scheme, unitary_scheme)
+        if self.num_qubits < 2:
+            return mottonen(self.params)
 
-    return circuit.reverse_bits()
+        circuit, reg_a, reg_b = _create_quantum_circuit(self.params, self.partition)
 
+        # Schmidt decomposition
+        svd_u, singular_values, svd_v = schmidt_decomposition(self.params, reg_a)
 
-def schmidt_decomposition(state_vector, partition):
-    """
-    Execute the Schmidt decomposition of a state vector.
+        rank, svd_u, svd_v, singular_values = \
+            low_rank_approximation(self.low_rank, svd_u, svd_v, singular_values)
 
-    Parameters
-    ----------
-    state_vector: list of complex
-        A unit vector representing a quantum state.
-        Values are amplitudes.
+        # Schmidt measure of entanglement
+        e_bits = _to_qubits(rank)
 
-    partition: list of int
-        Set of qubit indices that represent a part of the bipartition.
-        The other partition will be the relative complement of the full set of qubits
-        with respect to the set ``partition``.
-        The valid range for indexes is ``0 <= index < n_qubits``. The number of indexes
-        in the partition must be greater than or equal to ``1`` and less than or equal
-        to ``n_qubits//2`` (``n_qubits//2+1`` if ``n_qubits`` is odd).
-    """
+        # Phase 1. Encodes the singular values.
+        if e_bits > 0:
+            reg_sv = reg_b[:e_bits]
+            singular_values = singular_values / np.linalg.norm(singular_values)
+            _encode(singular_values.reshape(rank, 1), circuit, reg_sv,
+                    self.isometry_scheme, self.unitary_scheme)
 
-    n_qubits = _to_qubits(len(state_vector))
+        # Phase 2. Entangles only the necessary qubits, according to rank.
+        for j in range(e_bits):
+            circuit.cx(reg_b[j], reg_a[j])
 
-    sep_matrix = _separation_matrix(n_qubits, state_vector, partition)
+        # Phase 3 and 4 encode gates U and V.T
+        _encode(svd_u, circuit, reg_b, self.isometry_scheme, self.unitary_scheme)
+        _encode(svd_v.T, circuit, reg_a, self.isometry_scheme, self.unitary_scheme)
 
-    return np.linalg.svd(sep_matrix)
+        return circuit.reverse_bits()
 
-
-def schmidt_composition(svd_u, svd_v, singular_values, partition):
-    """
-    Execute the Schmidt composition of a state vector.
-    The inverse of the Schmidt decomposition.
-
-    Returns
-    -------
-    state_vector: list of complex
-        A unit vector representing a quantum state.
-        Values are amplitudes.
-    """
-
-    n_qubits = _to_qubits(svd_u.shape[0]) + _to_qubits(svd_v.shape[1])
-
-    sep_matrix = (svd_u * singular_values) @ svd_v
-
-    state_vector = _undo_separation_matrix(n_qubits, sep_matrix, partition)
-
-    return state_vector
+    @staticmethod
+    def initialize(q_circuit, state, qubits=None, lr_params=None):
+        if lr_params is None:
+            lr_params = {'lr': 0, 'iso_scheme': 'ccd', 'unitary_scheme': 'qsd', 'partition': None}
+        if qubits is None:
+            q_circuit.append(LRInitialize(state, lr_params=lr_params), q_circuit.qubits)
+        else:
+            q_circuit.append(LRInitialize(state, lr_params=lr_params), qubits)
 
 
 def low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
@@ -177,43 +168,6 @@ def low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
         singular_values = singular_values[:rank]
 
     return rank, svd_u, svd_v, singular_values
-
-
-def _separation_matrix(n_qubits, state_vector, partition):
-    new_shape = (2 ** (n_qubits-len(partition)), 2 ** len(partition))
-
-    qubit_shape = tuple([2] * n_qubits)
-    # We need to swap qubits from their subsystem2 position to the end of the
-    # mode as we expect that we do LSB to be on the left-most side.
-    from_move = sorted(partition)
-    to_move = (n_qubits - np.arange(1, len(partition) + 1))[::-1]
-
-    sep_matrix = \
-        np.moveaxis(np.array(state_vector).reshape(qubit_shape),
-                    from_move, to_move).reshape(new_shape)
-    return sep_matrix
-
-
-def _undo_separation_matrix(n_qubits, sep_matrix, partition):
-    new_shape = (2 ** n_qubits, )
-
-    qubit_shape = tuple([2] * n_qubits)
-
-    to_move = sorted(partition)
-    from_move = (n_qubits - np.arange(1, len(partition) + 1))[::-1]
-
-    state_vector = \
-        np.moveaxis(np.array(sep_matrix).reshape(qubit_shape),
-                    from_move, to_move).reshape(new_shape)
-    return state_vector
-
-
-def _effective_rank(singular_values):
-    return sum(j > 10**-7 for j in singular_values)
-
-
-def _to_qubits(n_state_vector):
-    return int(log2(n_state_vector))
 
 
 def _default_partition(n_qubits):
@@ -246,8 +200,9 @@ def _encode(data, circuit, reg, iso_scheme='ccd', uni_scheme='qsd'):
 
     if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4 or rank == 1):
         # state preparation
-        gate_u = initialize(data[:, 0], isometry_scheme=iso_scheme,
-                            unitary_scheme=uni_scheme)
+        lr_params = {'iso_scheme': iso_scheme,
+                     'unitary_scheme': uni_scheme}
+        gate_u = LRInitialize(data[:, 0], lr_params=lr_params)
 
     elif data.shape[0] > data.shape[1]:
         gate_u = decompose_isometry(data, scheme=iso_scheme)
@@ -314,63 +269,3 @@ def _cnots(data, iso_scheme='ccd', uni_scheme='qsd', method='estimate'):
         return cnots_isometry(data, scheme=iso_scheme, method=method)
 
     return cnots_unitary(data, decomposition=uni_scheme, method=method)
-
-
-@deprecation.deprecated(deprecated_in="0.0.7",
-                        details="Use the initialize function instead")
-def initialize_original(state_vector):
-    """ State preparation using Schmidt decomposition arXiv:1003.5760.
-        This function implements the original algorithm as defined in arXiv:1003.5760.
-        It is kept here for didactic reasons.
-        The ``initialize`` function should preferably be used.
-
-    For instance, to initialize the state a|0> + b|1>
-        $ state = [a, b]
-        $ circuit = initialize_original(state)
-
-    Parameters
-    ----------
-    state_vector: list of int
-        A unit vector representing a quantum state.
-        Values are amplitudes.
-
-    Returns
-    -------
-    circuit: QuantumCircuit
-        QuantumCircuit to initialize the state.
-    """
-
-    state = np.copy(state_vector)
-
-    size = len(state)
-    n_qubits = _to_qubits(size)
-
-    odd = n_qubits % 2
-
-    state.shape = (int(2**(n_qubits//2)), int(2**(n_qubits//2 + odd)))
-
-    svd_u, singular_values, svd_v = np.linalg.svd(state)
-
-    singular_values = singular_values / np.linalg.norm(singular_values)
-
-    reg_a = QuantumRegister(n_qubits//2 + odd)
-    reg_b = QuantumRegister(n_qubits//2)
-
-    circuit = QuantumCircuit(reg_a, reg_b)
-
-    if len(singular_values) > 2:
-        circ = initialize_original(singular_values)
-    else:
-        circ = mottonen(singular_values)
-    circuit.compose(circ, reg_b, inplace=True)
-
-    for k in range(int(n_qubits//2)):
-        circuit.cx(reg_b[k], reg_a[k])
-
-    gate_u = decompose_unitary(svd_u, 'qsd')
-    gate_v = decompose_unitary(svd_v.T, 'qsd')
-
-    circuit.compose(gate_u, reg_b, inplace=True)  # apply gate U to the first register
-    circuit.compose(gate_v, reg_a, inplace=True)  # apply gate V to the second register
-
-    return circuit
