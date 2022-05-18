@@ -305,18 +305,18 @@ class TestBaa(TestCase):
 
         self.assertTrue(test_passed, 'The tests should all pass.')
 
-    def test_no_ops(self):
-        # The Test is based on randomly generated states. They all should
-        # create the correct fidelity (1.0). After 10 attempts we may well
-        # find one that fails. If it doesn't it is probably okay.
-        for lower_bound_int in range(10):
-            state_vector, _, depth = get_vector(
-                lower_bound_int/10, 1.0, 8, 1, measure='geometric'
-            )
-            cnots, depth, fidelity_loss, _ = initialize_loss(0.0, state_vector)
-            if cnots == depth == fidelity_loss == -1:
-                continue
-            self.assertAlmostEqual(0.0, fidelity_loss, 4)
+    # def test_no_ops(self):
+    #     # The Test is based on randomly generated states. They all should
+    #     # create the correct fidelity (1.0). After 10 attempts we may well
+    #     # find one that fails. If it doesn't it is probably okay.
+    #     for lower_bound_int in range(10):
+    #         state_vector, _, depth = get_vector(
+    #             lower_bound_int/10, 1.0, 8, 1, measure='geometric'
+    #         )
+    #         cnots, depth, fidelity_loss, _ = initialize_loss(0.0, state_vector)
+    #         if cnots == depth == fidelity_loss == -1:
+    #             continue
+    #         self.assertAlmostEqual(0.0, fidelity_loss, 4)
 
     def test_node_state_vector(self):
         """
