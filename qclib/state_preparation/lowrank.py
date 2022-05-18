@@ -30,8 +30,53 @@ from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_ran
 
 
 class LowRankInitialize(Initialize):
-    def __init__(self, params, inverse=False, label=None, lr_params=None):
+    """
+    Low-rank state preparation
+    https://arxiv.org/abs/2111.03132
 
+    This class implements a state preparation gate.
+    """
+
+    def __init__(self, params, inverse=False, label=None, lr_params=None):
+        """
+            Parameters
+            ----------
+            params: list of complex
+                A unit vector representing a quantum state.
+                Values are amplitudes.
+
+            lr_params: {'lr': low_rank,
+                        'iso_scheme': isometry_scheme,
+                        'unitary_scheme': unitary_scheme,
+                        'partition': partition}
+                low_rank: int
+                    ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
+                    If ``low_rank`` is not in the valid range, it will be ignored.
+                    This parameter limits the rank of the Schmidt decomposition. If the Schmidt rank
+                    of the state decomposition is greater than ``low_rank``, a low-rank approximation
+                    is applied.
+
+                iso_scheme: string
+                    Scheme used to decompose isometries.
+                    Possible values are ``'knill'`` and ``'ccd'`` (column-by-column decomposition).
+                    Default is ``isometry_scheme='ccd'``.
+
+                unitary_scheme: string
+                    Scheme used to decompose unitaries.
+                    Possible values are ``'csd'`` (cosine-sine decomposition) and ``'qsd'`` (quantum
+                    Shannon decomposition).
+                    Default is ``unitary_scheme='qsd'``.
+
+                partition: list of int
+                    Set of qubit indices that represent a part of the bipartition.
+                    The other partition will be the relative complement of the full set of qubits
+                    with respect to the set ``partition``.
+                    The valid range for indexes is ``0 <= index < n_qubits``. The number of indexes
+                    in the partition must be greater than or equal to ``1`` and less than or equal
+                    to ``n_qubits//2`` (``n_qubits//2+1`` if ``n_qubits`` is odd).
+                    Default is ``partition=list(range(n_qubits//2 + odd))``.
+
+                """
         self._name = 'low_rank'
         self._get_num_qubits(params)
 
@@ -66,52 +111,6 @@ class LowRankInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        """
-        Low-rank state preparation using Schmidt decomposition.
-        https://arxiv.org/abs/2111.03132
-
-        For instance, to initialize the state a|00> + b|10> (|a|^2+|b|^2=1)
-            $ state = [a, 0, b, 0]
-            $ circuit = initialize(state)
-
-        Parameters
-        ----------
-        state_vector: list of complex
-            A unit vector representing a quantum state.
-            Values are amplitudes.
-
-        low_rank: int
-            ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
-            If ``low_rank`` is not in the valid range, it will be ignored.
-            This parameter limits the rank of the Schmidt decomposition. If the Schmidt rank
-            of the state decomposition is greater than ``low_rank``, a low-rank approximation
-            is applied.
-
-        isometry_scheme: string
-            Scheme used to decompose isometries.
-            Possible values are ``'knill'`` and ``'ccd'`` (column-by-column decomposition).
-            Default is ``isometry_scheme='ccd'``.
-
-        unitary_scheme: string
-            Scheme used to decompose unitaries.
-            Possible values are ``'csd'`` (cosine-sine decomposition) and ``'qsd'`` (quantum
-            Shannon decomposition).
-            Default is ``unitary_scheme='qsd'``.
-
-        partition: list of int
-            Set of qubit indices that represent a part of the bipartition.
-            The other partition will be the relative complement of the full set of qubits
-            with respect to the set ``partition``.
-            The valid range for indexes is ``0 <= index < n_qubits``. The number of indexes
-            in the partition must be greater than or equal to ``1`` and less than or equal
-            to ``n_qubits//2`` (``n_qubits//2+1`` if ``n_qubits`` is odd).
-            Default is ``partition=list(range(n_qubits//2 + odd))``.
-
-        Returns
-        -------
-        circuit: QuantumCircuit
-            QuantumCircuit to initialize the state.
-        """
 
         if self.num_qubits < 2:
             return mottonen(self.params)
@@ -145,6 +144,9 @@ class LowRankInitialize(Initialize):
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, lr_params=None):
+        """
+        Appends a LowRankInitialize gate into the q_circuit
+        """
         if lr_params is None:
             lr_params = {'lr': 0, 'iso_scheme': 'ccd', 'unitary_scheme': 'qsd', 'partition': None}
         if qubits is None:
@@ -231,7 +233,6 @@ def cnot_count(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
 
     cnots = 0
 
-    # Schmidt decomposition
     svd_u, singular_values, svd_v = schmidt_decomposition(state_vector, partition)
 
     rank, svd_u, svd_v, singular_values = \
