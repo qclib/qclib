@@ -33,7 +33,7 @@ class TestGleining(unittest.TestCase):
         state_dict = build_state_dict(state_vector)
         initialize = MergeInitialize.initialize
         circ = QuantumCircuit(3)
-        circ = initialize(circ, state_dict)
+        initialize(circ, state_dict)
         state = get_state(circ)
         self.assertTrue(np.allclose(state_vector, state))
 
@@ -42,7 +42,7 @@ class TestGleining(unittest.TestCase):
         state_dict = build_state_dict(state_vector)
         initialize = MergeInitialize.initialize
         circ = QuantumCircuit(3)
-        circ = initialize(circ, state_dict)
+        initialize(circ, state_dict)
         state = get_state(circ)
         self.assertTrue(np.allclose(state_vector, state))
 
@@ -51,7 +51,7 @@ class TestGleining(unittest.TestCase):
         state_dict = build_state_dict(state_vector)
         initialize = MergeInitialize.initialize
         circ = QuantumCircuit(3)
-        circ = initialize(circ, state_dict)
+        initialize(circ, state_dict)
         state = get_state(circ)
         self.assertTrue(np.allclose(state_vector, state))
 
@@ -61,7 +61,7 @@ class TestGleining(unittest.TestCase):
         state_dict = build_state_dict(state_vector)
         initialize = MergeInitialize.initialize
         circ = QuantumCircuit(3)
-        circ = initialize(circ, state_dict)
+        initialize(circ, state_dict)
         state = get_state(circ)
         self.assertTrue(np.allclose(state_vector, state))
 

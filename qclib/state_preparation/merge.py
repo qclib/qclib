@@ -29,14 +29,15 @@ class MergeInitialize(InitializeSparse):
 
         self._label = label
         if label is None:
-            self._label = 'MERGE'
+            self._label = 'SP'
             if inverse:
-                self._label = 'MERGEdg'
+                self._label = 'SPdg'
         
         # Parameters need to be validated first by superclass
         self._get_num_qubits(params)
 
         super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
+        self.state_dict = params
 
     def _define(self):
         self.definition = self._define_initialize()
@@ -54,7 +55,7 @@ class MergeInitialize(InitializeSparse):
         Quantum circuit C^{-1} that maps |0> to the desired state |sigma>
         """
 
-        state_dict = self.params
+        state_dict = self.state_dict
 
         b_strings = list(state_dict.keys())
 
@@ -415,3 +416,4 @@ class MergeInitialize(InitializeSparse):
         )
 
         return state_dict, quantum_circuit
+  
