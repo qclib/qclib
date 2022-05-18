@@ -21,7 +21,7 @@ import numpy as np
 from itertools import combinations
 from qiskit import QuantumCircuit, ClassicalRegister, execute, transpile
 from qiskit.providers.aer.backends import AerSimulator
-from qclib.state_preparation.lowrank import LRInitialize
+from qclib.state_preparation import LowRankInitialize
 from qclib.util import get_state
 
 # pylint: disable=missing-function-docstring
@@ -66,7 +66,7 @@ class TestSchmidt(TestCase):
         for partition in partitions:
             circuit = QuantumCircuit(5)
             lr_params = {'lr': rank, 'partition': partition}
-            LRInitialize.initialize(circuit, state_vector, lr_params=lr_params)
+            LowRankInitialize.initialize(circuit, state_vector, lr_params=lr_params)
 
             state = get_state(circuit)
 
@@ -76,7 +76,7 @@ class TestSchmidt(TestCase):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
         circuit = QuantumCircuit(5)
-        LRInitialize.initialize(circuit, state_vector)
+        LowRankInitialize.initialize(circuit, state_vector)
 
         state = get_state(circuit)
 
@@ -87,7 +87,7 @@ class TestSchmidt(TestCase):
         state_vector = state_vector / np.linalg.norm(state_vector)
 
         circuit = QuantumCircuit(5)
-        LRInitialize.initialize(circuit, state_vector, lr_params={'lr': 5})
+        LowRankInitialize.initialize(circuit, state_vector, lr_params={'lr': 5})
 
         state = get_state(circuit)
 
@@ -115,7 +115,7 @@ class TestSchmidt(TestCase):
             state_vector = np.kron(state_vector, vec)
 
         circuit = QuantumCircuit(5)
-        LRInitialize.initialize(circuit, state_vector)
+        LowRankInitialize.initialize(circuit, state_vector)
         transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=3)
 
         self.assertTrue('cx' not in transpiled_circuit.count_ops())

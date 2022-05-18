@@ -113,13 +113,13 @@ def _knill(iso, log_lines, log_cols):
     reg = QuantumRegister(log_lines)
     circuit = QuantumCircuit(reg)
 
-    from qclib.state_preparation.lowrank import LRInitialize # pylint: disable=import-outside-toplevel
+    from qclib.state_preparation import LowRankInitialize # pylint: disable=import-outside-toplevel
 
     for i in range(2**log_lines):                            # The eigenvalues are not necessarily
                                                              # ordered.
         if np.abs(arg[i]) > 10**-7:
             state = eigvec[:,i]
-            gate = LRInitialize(state)
+            gate = LowRankInitialize(state)
 
             circuit.compose(gate.inverse(), reg, inplace=True)
 

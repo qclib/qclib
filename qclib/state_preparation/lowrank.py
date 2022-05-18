@@ -29,7 +29,7 @@ from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_ran
 # pylint: disable=maybe-no-member
 
 
-class LRInitialize(Initialize):
+class LowRankInitialize(Initialize):
     def __init__(self, params, inverse=False, label=None, lr_params=None):
 
         self._name = 'low_rank'
@@ -148,9 +148,9 @@ class LRInitialize(Initialize):
         if lr_params is None:
             lr_params = {'lr': 0, 'iso_scheme': 'ccd', 'unitary_scheme': 'qsd', 'partition': None}
         if qubits is None:
-            q_circuit.append(LRInitialize(state, lr_params=lr_params), q_circuit.qubits)
+            q_circuit.append(LowRankInitialize(state, lr_params=lr_params), q_circuit.qubits)
         else:
-            q_circuit.append(LRInitialize(state, lr_params=lr_params), qubits)
+            q_circuit.append(LowRankInitialize(state, lr_params=lr_params), qubits)
 
     def _encode(self, data, circuit, reg):
         """
@@ -167,7 +167,7 @@ class LRInitialize(Initialize):
             # state preparation
             lr_params = {'iso_scheme': self.isometry_scheme,
                          'unitary_scheme': self.unitary_scheme}
-            gate_u = LRInitialize(data[:, 0], lr_params=lr_params)
+            gate_u = LowRankInitialize(data[:, 0], lr_params=lr_params)
 
         elif data.shape[0] > data.shape[1]:
             gate_u = decompose_isometry(data, scheme=self.isometry_scheme)
