@@ -15,6 +15,7 @@
 from re import match
 from qclib.state_preparation.initialize import Initialize
 
+
 class InitializeSparse(Initialize):
     '''
     Superclass dedicated for state preparation algorithms
