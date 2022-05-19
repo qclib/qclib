@@ -30,7 +30,6 @@ class Initialize(Gate):
         self.num_qubits = int(self.num_qubits)
 
     def validate_parameter(self, parameter):
-
         if isinstance(parameter, (int, float, complex)):
             return complex(parameter)
         elif isinstance(parameter, np.number):
