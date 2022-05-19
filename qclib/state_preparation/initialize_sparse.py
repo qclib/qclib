@@ -13,21 +13,35 @@
 # limitations under the License.
 
 from re import match
-
-from pytest import param
 from qclib.state_preparation.initialize import Initialize
 
-class InitializeSparse(Initialize): 
+class InitializeSparse(Initialize):
+    '''
+    Superclass dedicated for state preparation algorithms
+    for initializing sparse states.
+    '''
 
-  def _get_num_qubits(self, params):
-    bit_string = list(params.keys())[0]
-    self.num_qubits = len(bit_string)
+    def _get_num_qubits(self, params):
+        """
+        Computes the number of qubits, based
+        on the number of 0 or 1 charachters in
+        the dictionary key.
+        """
+        bit_string = list(params.keys())[0]
+        self.num_qubits = len(bit_string)
 
-  def validate_parameter(self, parameter):
-    if isinstance(parameter, tuple):
-      if not match('(0|1)+', parameter[0]):
-        raise Exception('Dictionary keys must be binary strings')
-      return super().validate_parameter(parameter[1])
-    else: 
-      raise Exception(''.join('Input param must be a dictionary ',
-                              'with pairs (binary_string, values)'))
+    def validate_parameter(self, parameter):
+        """
+        Sparse peparation params are converted to a list of tuples when
+        being validated, where each tuple contains the binary string
+        and the value wich represents the amplitude associated to the
+        quantum state.
+        """
+        if isinstance(parameter, tuple):
+            if not match('(0|1)+', parameter[0]):
+                raise Exception('Dictionary keys must be binary strings')
+            validated_value = super().validate_parameter(parameter[1])
+            return (parameter[0], validated_value)
+
+        raise Exception(''.join('Input param must be a dictionary ',
+                                'with pairs (binary_string, values)'))
