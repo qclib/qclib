@@ -18,7 +18,7 @@ from unittest import TestCase
 import numpy as np
 from qiskit import ClassicalRegister, QuantumRegister, QuantumCircuit
 from qclib.memory.pqm import initialize as pqm
-from qclib.state_preparation.schmidt import initialize
+from qclib.state_preparation import LowRankInitialize
 from qclib.util import get_counts
 
 class TestPQM(TestCase):
@@ -37,7 +37,7 @@ class TestPQM(TestCase):
         circ = QuantumCircuit(memory, aux, output)
 
         # initialize data
-        init_gate = initialize(data)
+        init_gate = LowRankInitialize(data)
         circ.append(init_gate, memory)
 
         # initialize input pattern

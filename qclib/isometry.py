@@ -113,20 +113,21 @@ def _knill(iso, log_lines, log_cols):
     reg = QuantumRegister(log_lines)
     circuit = QuantumCircuit(reg)
 
-    from qclib.state_preparation.schmidt import initialize as schmidt # pylint: disable=import-outside-toplevel
+    from qclib.state_preparation import LowRankInitialize # pylint: disable=import-outside-toplevel
 
     for i in range(2**log_lines):                            # The eigenvalues are not necessarily
                                                              # ordered.
         if np.abs(arg[i]) > 10**-7:
             state = eigvec[:,i]
+            gate = LowRankInitialize(state)
 
-            circuit.compose( schmidt(state).inverse(), reg, inplace=True )
+            circuit.compose(gate.inverse(), reg, inplace=True)
 
             circuit.x(list(range(log_lines)))
             circuit.mcp(arg[i], list(range(log_lines-1)), log_lines-1)
             circuit.x(list(range(log_lines)))
 
-            circuit.compose( schmidt(state), reg, inplace=True )
+            circuit.compose(gate, reg, inplace=True )
 
     return circuit
 
@@ -340,7 +341,7 @@ def _cnot_count_estimate_knill(iso, log_lines, log_cols):
     eigval, eigvec = np.linalg.eig(unitary)
     arg = np.angle(eigval)
 
-    from qclib.state_preparation.schmidt import cnot_count as schmidt_cnot_count # pylint: disable=import-outside-toplevel
+    from qclib.state_preparation.lowrank import cnot_count as schmidt_cnot_count # pylint: disable=import-outside-toplevel
 
     cnots = 0
     for i in range(2**log_lines):
