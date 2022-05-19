@@ -88,7 +88,8 @@ class MergeInitialize(InitializeSparse):
         else:
             q_circuit.append(MergeInitialize(state), qubits)
 
-    def _maximizing_difference_bit_search(self, b_strings, dif_qubits):
+    @staticmethod
+    def _maximizing_difference_bit_search(b_strings, dif_qubits):
         """
         Splits the set of bit strings into two (t_0 and t_1), by setting
         t_0 as the set of bit_strings with 0 in the bit_index position, and
@@ -123,7 +124,8 @@ class MergeInitialize(InitializeSparse):
 
         return bit_index, t_0, t_1
 
-    def _build_bit_string_set(self, b_strings, dif_qubits, dif_values):
+    @staticmethod
+    def _build_bit_string_set(b_strings, dif_qubits, dif_values):
         """
         Creates a new set of bit strings from b_strings, where the bits
         in the indexes in dif_qubits match the values in dif_values.
@@ -214,7 +216,8 @@ class MergeInitialize(InitializeSparse):
 
         return bitstr1, bitstr2, dif_qubit, dif_qubits
 
-    def _apply_operation_to_bit_string(self, b_string, operation, qubit_indexes):
+    @staticmethod
+    def _apply_operation_to_bit_string(b_string, operation, qubit_indexes):
         """
         Applies changes on binary strings according to the operation
         Args:
@@ -228,11 +231,11 @@ class MergeInitialize(InitializeSparse):
         assert operation in ['x', 'cx']
         compute_op = None
         if operation == 'x':
-            compute_op = lambda x, idx: \
+            def compute_op(x, idx): return\
                         x[:idx] + '1' + x[idx+1:] \
                         if x[idx] == '0' else x[0:idx] + '0' + x[idx+1:]
         elif operation == 'cx':
-            compute_op = lambda x, idx: \
+            def compute_op(x, idx): return\
                         x[:idx[1]] + "{}".format((not int(x[idx[1]])) * 1) + x[idx[1]+1:] \
                         if x[idx[0]] == '1' else x
 
@@ -357,7 +360,8 @@ class MergeInitialize(InitializeSparse):
 
         return bitstr1, bitstr2, state_dict, quantum_circuit
 
-    def _compute_angles(self, amplitude_1, amplitude_2):
+    @staticmethod
+    def _compute_angles(amplitude_1, amplitude_2):
         """
         Computes the angles for the adjoint of the merge matrix M
         that is going to map the dif qubit to zero e.g.:
