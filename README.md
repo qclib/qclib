@@ -20,13 +20,13 @@ $ python
 import numpy as np
 from qiskit import transpile
 from qiskit.providers.aer.backends import AerSimulator
-from qclib.state_preparation.schmidt import initialize
+from qclib.state_preparation.lowrank import initialize
 
 # Generate 3-qubit random input state vector
 n = 3
 rnd = np.random.RandomState(42)
-input_vector = rnd.rand(2**n) + rnd.rand(2**n) * 1j
-input_vector = input_vector/np.linalg.norm(input_vector)
+input_vector = rnd.rand(2 ** n) + rnd.rand(2 ** n) * 1j
+input_vector = input_vector / np.linalg.norm(input_vector)
 
 # Build a quantum circuit to initialize the input vector
 circuit = initialize(input_vector)
@@ -39,7 +39,7 @@ t_circuit = transpile(circuit, backend)
 t_circuit.save_statevector()
 state_vector = backend.run(t_circuit).result().get_statevector()
 print('Equal:', np.allclose(state_vector, input_vector))
-#Equal: True
+# Equal: True
 ```
 
 ## Authors

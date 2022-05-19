@@ -16,7 +16,8 @@
 
 import numpy as np
 import qiskit
-from qclib.state_preparation.schmidt import initialize as dense_init
+from qiskit import QuantumCircuit
+from qclib.state_preparation import LowRankInitialize
 
 # pylint: disable=maybe-no-member
 
@@ -62,7 +63,8 @@ class PivotStatePreparation:
             initialize_circ = qiskit.QuantumCircuit(1)
             initialize_circ.initialize(dense_state)
         else:
-            initialize_circ = dense_init(dense_state)
+            initialize_circ = QuantumCircuit(self.target_size)
+            LowRankInitialize.initialize(initialize_circ, dense_state)
 
         if self.aux:
             self.sp_circuit = qiskit.QuantumCircuit(anc, self.memory)

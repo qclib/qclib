@@ -140,5 +140,83 @@ def geometric_entanglement(state_vector: List[complex], return_product_state=Fal
     return min_fidelity_loss
 
 
+def _separation_matrix(n_qubits, state_vector, partition):
+    new_shape = (2 ** (n_qubits-len(partition)), 2 ** len(partition))
+
+    qubit_shape = tuple([2] * n_qubits)
+    # We need to swap qubits from their subsystem2 position to the end of the
+    # mode as we expect that we do LSB to be on the left-most side.
+    from_move = sorted(partition)
+    to_move = (n_qubits - np.arange(1, len(partition) + 1))[::-1]
+
+    sep_matrix = \
+        np.moveaxis(np.array(state_vector).reshape(qubit_shape),
+                    from_move, to_move).reshape(new_shape)
+    return sep_matrix
+
+
+def schmidt_decomposition(state_vector, partition):
+    """
+    Execute the Schmidt decomposition of a state vector.
+
+    Parameters
+    ----------
+    state_vector: list of complex
+        A unit vector representing a quantum state.
+        Values are amplitudes.
+
+    partition: list of int
+        Set of qubit indices that represent a part of the bipartition.
+        The other partition will be the relative complement of the full set of qubits
+        with respect to the set ``partition``.
+        The valid range for indexes is ``0 <= index < n_qubits``. The number of indexes
+        in the partition must be greater than or equal to ``1`` and less than or equal
+        to ``n_qubits//2`` (``n_qubits//2+1`` if ``n_qubits`` is odd).
+    """
+
+    n_qubits = _to_qubits(len(state_vector))
+
+    sep_matrix = _separation_matrix(n_qubits, state_vector, partition)
+
+    return np.linalg.svd(sep_matrix)
+
 def _to_qubits(n_state_vector):
     return int(np.ceil(np.log2(n_state_vector))) if n_state_vector > 0 else 0
+
+def _undo_separation_matrix(n_qubits, sep_matrix, partition):
+    new_shape = (2 ** n_qubits, )
+
+    qubit_shape = tuple([2] * n_qubits)
+
+    to_move = sorted(partition)
+    from_move = (n_qubits - np.arange(1, len(partition) + 1))[::-1]
+
+    state_vector = \
+        np.moveaxis(np.array(sep_matrix).reshape(qubit_shape),
+                    from_move, to_move).reshape(new_shape)
+    return state_vector
+
+
+def _effective_rank(singular_values):
+    return sum(j > 10**-7 for j in singular_values)
+
+
+def schmidt_composition(svd_u, svd_v, singular_values, partition):
+    """
+    Execute the Schmidt composition of a state vector.
+    The inverse of the Schmidt decomposition.
+
+    Returns
+    -------
+    state_vector: list of complex
+        A unit vector representing a quantum state.
+        Values are amplitudes.
+    """
+
+    n_qubits = _to_qubits(svd_u.shape[0]) + _to_qubits(svd_v.shape[1])
+
+    sep_matrix = (svd_u * singular_values) @ svd_v
+
+    state_vector = _undo_separation_matrix(n_qubits, sep_matrix, partition)
+
+    return state_vector

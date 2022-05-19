@@ -19,7 +19,7 @@ https://arxiv.org/abs/2111.03132
 
 import numpy as np
 from qiskit import QuantumCircuit
-from qclib.state_preparation import schmidt
+from qclib.state_preparation import LowRankInitialize
 from qclib.state_preparation.util.baa import adaptive_approximation
 
 def initialize(state_vector, max_fidelity_loss=0.0,
@@ -98,8 +98,14 @@ def initialize(state_vector, max_fidelity_loss=0.0,
 
     for vector, qubits, rank, partition in zip(node.vectors, node.qubits,
                                                 node.ranks, node.partitions):
-        qc_vec = schmidt.initialize(vector, rank, isometry_scheme, unitary_scheme, partition)
-        circuit.compose(qc_vec, qubits[::-1], inplace=True) # qiskit little-endian.
+
+        lr_params = {'iso_scheme': isometry_scheme,
+                     'unitary_scheme': unitary_scheme,
+                     'partition': partition,
+                     'lr': rank}
+
+        gate = LowRankInitialize(vector, lr_params=lr_params)
+        circuit.compose(gate, qubits[::-1], inplace=True)  # qiskit little-endian.
 
     if return_node:
         return circuit.reverse_bits(), node
