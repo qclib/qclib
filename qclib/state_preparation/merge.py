@@ -17,14 +17,27 @@ from qiskit.circuit.library import UGate
 from qclib.gates.mc_gate import mc_gate
 from qclib.state_preparation.initialize_sparse import InitializeSparse
 
+
 class MergeInitialize(InitializeSparse):
-    '''
+    """
     Gleinig et al algorithm for creating a quantum
     circuit that loads a sparse state.
     https://ieeexplore.ieee.org/document/9586240
-    '''
+    """
 
     def __init__(self, params, inverse=False, label=None):
+        """
+        Classical algorithm that creates a quantum circuit C that loads
+        a sparse quantum state, applying a sequence of operations maping
+        the desired state |sigma> to |0>. And then inverting C to obtain
+        the mapping of |0> to the desired state |sigma>.
+        Args:
+        params: A dictionary with the non-zero amplitudes corresponding to each state in
+                    format { '000': <value>, ... , '111': <value> }
+        Returns:
+        Creates a quantum gate that maps |0> to the desired state |params>
+        """
+
         self._name = 'merge'
 
         self._label = label
@@ -42,17 +55,6 @@ class MergeInitialize(InitializeSparse):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        """
-        Classical algorithm that creates a quantum circuit C that loads
-        a sparse quantum state, applying a sequence of operations maping
-        the desired state |sigma> to |0>. And then inverting C to obtain
-        the mapping of |0> to the desired state |sigma>.
-        Args:
-        state_dict: A dictionary with the non-zero amplitudes corresponting to each state in
-                    format { '000': <value>, ... , '111': <value> }
-        Returns:
-        Quantum circuit C^{-1} that maps |0> to the desired state |sigma>
-        """
 
         state_dict = dict(self.params)
 
@@ -142,7 +144,6 @@ class MergeInitialize(InitializeSparse):
 
         return bit_string_set
 
-
     def _bit_string_search(self, b_strings, dif_qubits, dif_values):
         """
         Searches for the bit strings with unique qubit values in `dif_values`
@@ -176,7 +177,6 @@ class MergeInitialize(InitializeSparse):
 
         return temp_strings, dif_qubits, dif_values
 
-
     def _select_strings(self, state_dict):
         """
         Searches for the states described by the bit strings bitstr1 and bitstr2 to be merged
@@ -195,8 +195,6 @@ class MergeInitialize(InitializeSparse):
         dif_qubits = []
         dif_values = []
         b_strings1 = b_strings2 = list(state_dict.keys())
-        bitstr1 = None
-        bitstr2 = None
 
         # Searching for bitstr1
         (b_strings1,
@@ -216,7 +214,6 @@ class MergeInitialize(InitializeSparse):
 
         return bitstr1, bitstr2, dif_qubit, dif_qubits
 
-
     def _apply_operation_to_bit_string(self, b_string, operation, qubit_indexes):
         """
         Applies changes on binary strings according to the operation
@@ -231,7 +228,7 @@ class MergeInitialize(InitializeSparse):
         assert operation in ['x', 'cx']
         compute_op = None
         if operation == 'x':
-            compute_op = lambda x, idx : \
+            compute_op = lambda x, idx: \
                         x[:idx] + '1' + x[idx+1:] \
                         if x[idx] == '0' else x[0:idx] + '0' + x[idx+1:]
         elif operation == 'cx':
@@ -241,8 +238,9 @@ class MergeInitialize(InitializeSparse):
 
         return compute_op(b_string, qubit_indexes)
 
-    def _update_state_dict_according_to_operation(self, state_dict, operation, qubit_indexes,
-                                                                        merge_strings=None):
+    def _update_state_dict_according_to_operation(self, state_dict,
+                                                  operation, qubit_indexes,
+                                                  merge_strings=None):
         """
         Updates the keys of the state_dict according to the operation being applied to the circuit
         Args:
@@ -275,7 +273,6 @@ class MergeInitialize(InitializeSparse):
 
         return new_state_dict
 
-
     def _equalize_bit_string_states(self, bitstr1, bitstr2, dif, state_dict, quantum_circuit):
         """
         Applies operations to the states represented by bit strings bitstr1 and bitstr2 equalizing
@@ -304,7 +301,6 @@ class MergeInitialize(InitializeSparse):
 
         return bitstr1, bitstr2, state_dict, quantum_circuit
 
-
     def _apply_not_gates_to_qubit_index_list(self, bitstr1, bitstr2, dif_qubits, state_dict, quantum_circuit):
         """
         Applies quantum not gate at the qubit at a given index, where the state represented by the
@@ -327,7 +323,6 @@ class MergeInitialize(InitializeSparse):
                 state_dict = self._update_state_dict_according_to_operation(
                     state_dict, 'x', b_index)
         return bitstr1, bitstr2, state_dict, quantum_circuit
-
 
     def _preprocess_states(self, bitstr1, bitstr2, dif, dif_qubits, state_dict, quantum_circuit):
         """
@@ -362,7 +357,6 @@ class MergeInitialize(InitializeSparse):
 
         return bitstr1, bitstr2, state_dict, quantum_circuit
 
-
     def _compute_angles(self, amplitude_1, amplitude_2):
         """
         Computes the angles for the adjoint of the merge matrix M
@@ -396,7 +390,6 @@ class MergeInitialize(InitializeSparse):
             theta = - 2 * np.arcsin(amplitude_2 / norm)
 
         return theta, phi, lamb
-
 
     def _merge(self, state_dict, quantum_circuit, bitstr1, bitstr2, dif_qubits, dif):
 
