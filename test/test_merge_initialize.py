@@ -19,14 +19,15 @@ Tests for the merge.py module.
 import unittest
 import numpy as np
 from qiskit import QuantumCircuit
-from qclib.state_preparation.merge import MergeInitialize
+from qclib.state_preparation import MergeInitialize
 from qclib.util import get_state, build_state_dict
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 
 
-class TestGleining(unittest.TestCase):
+class TestMergeInitialize(unittest.TestCase):
+    """ Teste MergeInitialize Gate"""
 
     def test_two_states_uniform(self):
         state_vector = 1 / np.sqrt(2) * np.array([1, 0, 0, 0, 0, 1, 0, 0])
