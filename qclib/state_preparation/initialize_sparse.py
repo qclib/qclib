@@ -17,15 +17,15 @@ from qclib.state_preparation.initialize import Initialize
 
 
 class InitializeSparse(Initialize):
-    '''
+    """
     Superclass dedicated for state preparation algorithms
     for initializing sparse states.
-    '''
+    """
 
     def _get_num_qubits(self, params):
         """
         Computes the number of qubits, based
-        on the number of 0 or 1 charachters in
+        on the number of 0 or 1 characters in
         the dictionary key.
         """
         bit_string = list(params.keys())[0]
@@ -33,16 +33,16 @@ class InitializeSparse(Initialize):
 
     def validate_parameter(self, parameter):
         """
-        Sparse peparation params are converted to a list of tuples when
+        Sparse preparation params are converted to a list of tuples when
         being validated, where each tuple contains the binary string
-        and the value wich represents the amplitude associated to the
+        and the value which represents the amplitude associated to the
         quantum state.
         """
         if isinstance(parameter, tuple):
             if not match('(0|1)+', parameter[0]):
                 raise Exception('Dictionary keys must be binary strings')
             validated_value = super().validate_parameter(parameter[1])
-            return (parameter[0], validated_value)
+            return parameter[0], validated_value
 
         raise Exception(''.join('Input param must be a dictionary ',
                                 'with pairs (binary_string, values)'))
