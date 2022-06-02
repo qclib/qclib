@@ -1,3 +1,18 @@
+# Copyright 2021 qclib project.
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#     http://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from math import log2
 from qiskit import QuantumCircuit
 from qiskit.circuit.gate import Gate
 import numpy as np
@@ -24,7 +39,7 @@ class Initialize(Gate):
         return inverse_gate
 
     def _get_num_qubits(self, params):
-        self.num_qubits = np.log2(len(params))
+        self.num_qubits = log2(len(params))
         if not self.num_qubits.is_integer():
             Exception("The number of amplitudes is not a power of 2")
         self.num_qubits = int(self.num_qubits)
@@ -36,4 +51,3 @@ class Initialize(Gate):
             return complex(parameter.item())
         else:
             raise Exception(f"invalid param type {type(parameter)} for instruction  {self.name}")
-
