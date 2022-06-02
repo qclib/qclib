@@ -13,14 +13,14 @@
 # limitations under the License.
 
 """
-Tests for the mottonen.py module.
+Tests for the topdown.py module.
 """
 
 from unittest import TestCase
 import numpy as np
 from qiskit import ClassicalRegister, execute
 from qiskit.providers.aer.backends import AerSimulator
-from qclib.state_preparation.mottonen import initialize
+from qclib.state_preparation import TopDownInitialize
 from qclib.util import get_state
 
 # pylint: disable=missing-function-docstring
@@ -51,7 +51,7 @@ class TestMottonen(TestCase):
 
     @staticmethod
     def mottonen_experiment(state):
-        circuit = initialize(state)
+        circuit = TopDownInitialize(state).definition
 
         n_qubits = int(np.log2(len(state)))
         classical_reg = ClassicalRegister(n_qubits)
@@ -63,7 +63,7 @@ class TestMottonen(TestCase):
         state_vector = np.random.rand(32)
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(state_vector)
+        circuit = TopDownInitialize(state_vector).definition
 
         state = get_state(circuit)
 
@@ -73,7 +73,7 @@ class TestMottonen(TestCase):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(state_vector)
+        circuit = TopDownInitialize(state_vector).definition
 
         state = get_state(circuit)
 
