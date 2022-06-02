@@ -40,10 +40,11 @@ class BaaLowRankInitialize(Initialize):
                 A unit vector representing a quantum state.
                 Values are amplitudes.
 
-            opt_params:
+            opt_params: Dictionary
                 max_fidelity_loss: float
-                    ``state`` allowed (fidelity) error for approximation (0 <= ``max_fidelity_loss`` <= 1).
-                    If ``max_fidelity_loss`` is not in the valid range, it will be ignored.
+                    ``state`` allowed (fidelity) error for approximation
+                    (0<=``max_fidelity_loss``<=1). If ``max_fidelity_loss`` is not in the valid
+                    range, it will be ignored.
 
                 isometry_scheme: string
                     Scheme used to decompose isometries.
@@ -71,12 +72,12 @@ class BaaLowRankInitialize(Initialize):
                     The default value is 0 (the size will be maximum for each level).
 
                 use_low_rank: bool
-                        If set to True, ``rank``>1 approximations are also considered. This is fine
-                        tuning for high-entanglement states and is slower.
-                        The default value is False.
+                    If set to True, ``rank``>1 approximations are also considered. This is fine
+                    tuning for high-entanglement states and is slower.
+                    The default value is False.
 
         """
-        self._name = 'baa_lrsp'
+        self._name = 'baa-lrsp'
         self._get_num_qubits(params)
 
         if opt_params is None:
@@ -116,11 +117,6 @@ class BaaLowRankInitialize(Initialize):
                 self.use_low_rank = False
             else:
                 self.use_low_rank = opt_params.get('use_low_rank')
-
-            if opt_params.get('return_node') is None:
-                self.return_node = False
-            else:
-                self.return_node = opt_params.get('return_node')
 
         if self.max_fidelity_loss < 0 or self.max_fidelity_loss > 1:
             self.max_fidelity_loss = 0.0
@@ -165,94 +161,3 @@ class BaaLowRankInitialize(Initialize):
             q_circuit.append(BaaLowRankInitialize(state, opt_params=opt_params), q_circuit.qubits)
         else:
             q_circuit.append(BaaLowRankInitialize(state, opt_params=opt_params), qubits)
-
-
-def initialize(state_vector, max_fidelity_loss=0.0,
-                        isometry_scheme='ccd', unitary_scheme='qsd',
-                        strategy='greedy', max_combination_size=0,
-                        use_low_rank=False, return_node=False):
-    """
-    State preparation using the bounded approximation algorithm via Schmidt
-    decomposition arXiv:1003.5760
-
-    For instance, to initialize the state a|00> + b|10> (|a|^2+|b|^2=1)
-        $ state = [a, 0, b, 0]
-        $ circuit = initialize(state)
-
-    Parameters
-    ----------
-    state_vector: list of float or array-like
-        A unit vector representing a quantum state.
-        Values are amplitudes.
-
-    max_fidelity_loss: float
-        ``state`` allowed (fidelity) error for approximation (0 <= ``max_fidelity_loss`` <= 1).
-        If ``max_fidelity_loss`` is not in the valid range, it will be ignored.
-
-    isometry_scheme: string
-        Scheme used to decompose isometries.
-        Possible values are ``'knill'`` and ``'ccd'`` (column-by-column decomposition).
-        Default is ``isometry_scheme='ccd'``.
-
-    unitary_scheme: string
-        Scheme used to decompose unitaries.
-        Possible values are ``'csd'`` (cosine-sine decomposition) and ``'qsd'`` (quantum
-        Shannon decomposition).
-        Default is ``unitary_scheme='qsd'``.
-
-    strategy: string
-        Method to search for the best approximation (``'brute_force'`` or ``'greedy'``).
-        For states larger than 2**8, the greedy strategy should preferably be used.
-        Default is ``strategy='greedy'``.
-
-    max_combination_size: int
-        Maximum size of the combination ``C(n_qubits, max_combination_size)``
-        between the qubits of an entangled subsystem of length ``n_qubits`` to
-        produce the possible bipartitions
-        (1 <= ``max_combination_size`` <= ``n_qubits``//2).
-        For example, if ``max_combination_size``==1, there will be ``n_qubits``
-        bipartitions between 1 and ``n_qubits``-1 qubits.
-        The default value is 0 (the size will be maximum for each level).
-
-    use_low_rank: bool
-            If set to True, ``rank``>1 approximations are also considered. This is fine
-            tuning for high-entanglement states and is slower.
-            The default value is False.
-
-    return_node: bool
-            If set to true, returns also the best node for the
-            decomposition/approximation
-
-    Returns
-    -------
-    circuit: QuantumCircuit or Tuple[QuantumCircuit, Node]
-        QuantumCircuit to initialize the state or if return_node==True, returns
-        a tuple with the QuantumCircuit and the best node for
-        decomposition/approximation.
-    """
-
-    if max_fidelity_loss < 0 or max_fidelity_loss > 1:
-        max_fidelity_loss = 0.0
-
-    node = adaptive_approximation(
-        state_vector, max_fidelity_loss, strategy, max_combination_size, use_low_rank
-    )
-
-    n_qubits = int(np.log2(len(state_vector)))
-    circuit = QuantumCircuit(n_qubits)
-
-    for vector, qubits, rank, partition in zip(node.vectors, node.qubits,
-                                                node.ranks, node.partitions):
-
-        lr_params = {'iso_scheme': isometry_scheme,
-                     'unitary_scheme': unitary_scheme,
-                     'partition': partition,
-                     'lr': rank}
-
-        gate = LowRankInitialize(vector, lr_params=lr_params)
-        circuit.compose(gate, qubits[::-1], inplace=True)  # qiskit little-endian.
-
-    if return_node:
-        return circuit.reverse_bits(), node
-
-    return circuit.reverse_bits()

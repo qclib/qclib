@@ -46,7 +46,7 @@ class TestBaaLowRank(TestCase):
 
         counts_with_zeros = {}
         for i in range(2**n_qubits):
-            pattern = '{:0{}b}'.format(i, n_qubits)
+            pattern = f'{i:0{n_qubits}b}'
             if pattern in counts:
                 counts_with_zeros[pattern] = counts[pattern]
             else:

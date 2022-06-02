@@ -41,7 +41,7 @@ class TestMottonen(TestCase):
 
         counts2 = {}
         for i in range(2**n_qubits):
-            pattern = '{:0{}b}'.format(i, n_qubits)
+            pattern = f'{i:0{n_qubits}b}'
             if pattern in counts:
                 counts2[pattern] = counts[pattern]
             else:
