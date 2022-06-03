@@ -44,5 +44,4 @@ class InitializeSparse(Initialize):
             validated_value = super().validate_parameter(parameter[1])
             return parameter[0], validated_value
 
-        raise Exception(''.join('Input param must be a dictionary ',
-                                'with pairs (binary_string, values)'))
+        raise Exception('Input param must be a dictionary with pairs (binary_string, values)')
