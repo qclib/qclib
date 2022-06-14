@@ -20,7 +20,7 @@ defined at https://arxiv.org/abs/1003.5760.
 from math import ceil, log2
 import numpy as np
 from qiskit import QuantumCircuit
-from qclib.state_preparation.mottonen import initialize as mottonen
+from qclib.state_preparation import TopDownInitialize
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
 from qclib.state_preparation.initialize import Initialize
@@ -31,7 +31,7 @@ from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_ran
 
 class LowRankInitialize(Initialize):
     """
-    Low-rank state preparation
+    Approximated quantum-state preparation with entanglement dependent complexity
     https://arxiv.org/abs/2111.03132
 
     This class implements a state preparation gate.
@@ -113,7 +113,7 @@ class LowRankInitialize(Initialize):
     def _define_initialize(self):
 
         if self.num_qubits < 2:
-            return mottonen(self.params)
+            return TopDownInitialize(self.params).definition
 
         circuit, reg_a, reg_b = self._create_quantum_circuit()
 
@@ -147,8 +147,6 @@ class LowRankInitialize(Initialize):
         """
         Appends a LowRankInitialize gate into the q_circuit
         """
-        if lr_params is None:
-            lr_params = {'lr': 0, 'iso_scheme': 'ccd', 'unitary_scheme': 'qsd', 'partition': None}
         if qubits is None:
             q_circuit.append(LowRankInitialize(state, lr_params=lr_params), q_circuit.qubits)
         else:

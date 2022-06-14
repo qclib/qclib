@@ -20,7 +20,7 @@ $ python
 import numpy as np
 from qiskit import transpile
 from qiskit.providers.aer.backends import AerSimulator
-from qclib.state_preparation.lowrank import initialize
+from qclib.state_preparation import LowRankInitialize
 
 # Generate 3-qubit random input state vector
 n = 3
@@ -29,7 +29,7 @@ input_vector = rnd.rand(2 ** n) + rnd.rand(2 ** n) * 1j
 input_vector = input_vector / np.linalg.norm(input_vector)
 
 # Build a quantum circuit to initialize the input vector
-circuit = initialize(input_vector)
+circuit = LowRankInitialize(input_vector).definition
 
 # Construct an ideal simulator
 backend = AerSimulator()
@@ -48,8 +48,7 @@ The first version of qclib was developed at [Centro de Informática](https://por
 Qclib is an active project, and [other people](https://github.com/qclib/qclib/graphs/contributors) have contributed.
 
 If you are doing research using qclib, please cite our project.
-We use a [CITATION.cff](https://citation-file-format.github.io/) file, so you can easily copy the citation 
-information from the repository landing page.
+We use a [CITATION.cff](https://citation-file-format.github.io/) file, so you can easily copy the citation information from the repository landing page.
 
 ## License
 

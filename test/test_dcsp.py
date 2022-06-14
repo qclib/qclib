@@ -18,11 +18,12 @@ from unittest import TestCase
 import numpy as np
 from qiskit import ClassicalRegister
 from qiskit.providers.aer.backends import AerSimulator
-from qclib.state_preparation.dcsp import initialize
+from qclib.state_preparation import DcspInitialize
 from .util import measurement
 
 backend = AerSimulator()
 SHOTS = 8192
+
 
 class TestInitialize(TestCase):
     """ Testing divide-and-conquer state preparation """
@@ -30,7 +31,7 @@ class TestInitialize(TestCase):
     @staticmethod
     def dcsp_experiment(state):
         """ Run divide-and-conquer state preparation """
-        circuit = initialize(state)
+        circuit = DcspInitialize(state).definition
 
         n_qubits = int(np.log2(len(state)))
         classical_register = ClassicalRegister(n_qubits)
@@ -45,4 +46,4 @@ class TestInitialize(TestCase):
 
         state = TestInitialize.dcsp_experiment(vector)
 
-        self.assertTrue(np.allclose( np.power(np.abs(vector),2), state, rtol=1e-01, atol=0.005))
+        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))

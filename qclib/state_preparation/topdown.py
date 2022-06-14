@@ -13,11 +13,10 @@
 # limitations under the License.
 
 """
-Bidirectional state preparation
-https://arxiv.org/abs/2108.10182
+        https://arxiv.org/abs/quant-ph/0407010
+        https://arxiv.org/abs/2108.10182
 """
 
-from math import ceil, log2
 import numpy as np
 from qiskit import QuantumCircuit
 
@@ -25,11 +24,13 @@ from qclib.state_preparation.initialize import Initialize
 from qclib.state_preparation.util.state_tree_preparation import Amplitude, state_decomposition
 from qclib.state_preparation.util.angle_tree_preparation import create_angles_tree
 from qclib.state_preparation.util.tree_register import add_register
-from qclib.state_preparation.util.tree_walk import top_down, bottom_up
+from qclib.state_preparation.util.tree_walk import top_down
 
-class BdspInitialize(Initialize):
+
+class TopDownInitialize(Initialize):
     """
-    Configurable sublinear circuits for quantum state preparation
+    Top-down state preparation
+    https://arxiv.org/abs/quant-ph/0407010
     https://arxiv.org/abs/2108.10182
 
     This class implements a state preparation gate.
@@ -43,22 +44,21 @@ class BdspInitialize(Initialize):
                 A unit vector representing a quantum state.
                 Values are amplitudes.
 
-            opt_params: {'split': split}
-                split: int
-                    Level (enumerated from bottom to top, where 1 ≤ s ≤ n)
-                    at which the angle tree is split.
-                    Default value is ``ceil(n_qubits/2)`` (sublinear).
+            opt_params: {'global_phase': global_phase}
+                global_phase: bool
+                    If ``True``, corrects the global phase.
+                    Default value is ``True``.
         """
-        if opt_params is None:
-            self.split = int(ceil(log2(len(params))/2)) # sublinear
-        else:
-            if opt_params.get('split') is None:
-                self.split = int(ceil(log2(len(params))/2)) # sublinear
-            else:
-                self.split = opt_params.get('split')
-
-        self._name = 'bdsp'
+        self._name = 'top-down'
         self._get_num_qubits(params)
+
+        if opt_params is None:
+            self.global_phase = True
+        else:
+            if opt_params.get('global_phase') is None:
+                self.global_phase = True
+            else:
+                self.global_phase = opt_params.get('global_phase')
 
         self._label = label
         if label is None:
@@ -73,36 +73,26 @@ class BdspInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        n_qubits = int(np.log2(len(self.params)))
         data = [Amplitude(i, a) for i, a in enumerate(self.params)]
 
-        state_tree = state_decomposition(n_qubits, data)
+        state_tree = state_decomposition(self.num_qubits, data)
         angle_tree = create_angles_tree(state_tree)
 
         circuit = QuantumCircuit()
-        add_register(circuit, angle_tree, n_qubits-self.split)
+        add_register(circuit, angle_tree, 0)
 
-        top_down(angle_tree, circuit, n_qubits-self.split)
-        bottom_up(angle_tree, circuit, n_qubits-self.split)
+        top_down(angle_tree, circuit, 0)
+        if self.global_phase:
+            circuit.global_phase += sum(np.angle(self.params))/len(self.params)
 
         return circuit
-
-    def _get_num_qubits(self, params):
-        n_qubits = log2(len(params))
-        if not n_qubits.is_integer():
-            Exception("The number of amplitudes is not a power of 2")
-        n_qubits = int(n_qubits)
-        # bottom-up qubits + top-down qubits
-        # top-down qubits: (number of sub-states) * (number of qubits per sub-state)
-        self.num_qubits = sum([2**i for i in range(n_qubits-self.split)]) + \
-                            2**(n_qubits-self.split) * self.split
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):
         """
-        Appends a BdspInitialize gate into the q_circuit
+        Appends a TopDownInitialize gate into the q_circuit
         """
         if qubits is None:
-            q_circuit.append(BdspInitialize(state, opt_params=opt_params), q_circuit.qubits)
+            q_circuit.append(TopDownInitialize(state, opt_params=opt_params), q_circuit.qubits)
         else:
-            q_circuit.append(BdspInitialize(state, opt_params=opt_params), qubits)
+            q_circuit.append(TopDownInitialize(state, opt_params=opt_params), qubits)

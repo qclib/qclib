@@ -18,12 +18,11 @@ from unittest import TestCase
 import numpy as np
 from qiskit import ClassicalRegister
 from qiskit.providers.aer.backends import AerSimulator
-from qclib.state_preparation.bdsp import initialize
+from qclib.state_preparation import BdspInitialize
 from .util import measurement
 
 backend = AerSimulator()
 SHOTS = 8192
-
 
 class TestBdsp(TestCase):
     """ Testing bdsp """
@@ -31,7 +30,8 @@ class TestBdsp(TestCase):
     @staticmethod
     def bdsp_experiment(state, split=None):
         """ Run bdsp experiment """
-        circuit = initialize(state, split)
+        opt_params = {'split': split}
+        circuit = BdspInitialize(state, opt_params=opt_params).definition
 
         n_qubits = int(np.log2(len(state)))
         classical_register = ClassicalRegister(n_qubits)

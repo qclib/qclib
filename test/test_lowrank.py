@@ -17,8 +17,8 @@ Tests for the lowrank.py module.
 """
 
 from unittest import TestCase
-import numpy as np
 from itertools import combinations
+import numpy as np
 from qiskit import QuantumCircuit, ClassicalRegister, execute, transpile
 from qiskit.providers.aer.backends import AerSimulator
 from qclib.state_preparation import LowRankInitialize
@@ -48,7 +48,7 @@ class TestSchmidt(TestCase):
 
         counts_with_zeros = {}
         for i in range(2**n_qubits):
-            pattern = '{:0{}b}'.format(i, n_qubits)
+            pattern = f'{i:0{n_qubits}b}'
             if pattern in counts:
                 counts_with_zeros[pattern] = counts[pattern]
             else:

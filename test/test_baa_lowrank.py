@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-Tests for the baa_schmidt.py module.
+Tests for the baa_lowrank.py module.
 """
 
 from unittest import TestCase
@@ -21,12 +21,12 @@ import numpy as np
 from qiskit import ClassicalRegister, execute
 from qiskit.providers.aer.backends import AerSimulator
 from qclib.util import get_state
-from qclib.state_preparation.baa_schmidt import initialize
+from qclib.state_preparation import BaaLowRankInitialize
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 
-class TestBaaSchmidt(TestCase):
+class TestBaaLowRank(TestCase):
     @staticmethod
     def fidelity(state1, state2):
         bra = np.conj(state1)
@@ -46,7 +46,7 @@ class TestBaaSchmidt(TestCase):
 
         counts_with_zeros = {}
         for i in range(2**n_qubits):
-            pattern = '{:0{}b}'.format(i, n_qubits)
+            pattern = f'{i:0{n_qubits}b}'
             if pattern in counts:
                 counts_with_zeros[pattern] = counts[pattern]
             else:
@@ -61,12 +61,15 @@ class TestBaaSchmidt(TestCase):
             state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
             state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(state_vector, max_fidelity_loss=fidelity_loss, strategy=strategy,
-                                                                    use_low_rank=use_low_rank)
+        opt_params = {'max_fidelity_loss':fidelity_loss,
+                        'strategy' : strategy,
+                        'use_low_rank':use_low_rank}
+
+        circuit = BaaLowRankInitialize(state_vector, opt_params=opt_params).definition
 
         state = get_state(circuit)
 
-        fidelity = TestBaaSchmidt.fidelity(state_vector, state)
+        fidelity = TestBaaLowRank.fidelity(state_vector, state)
 
         self.assertTrue(round(fidelity,2)>=round(1-fidelity_loss,2)*0.99)
 
@@ -128,7 +131,7 @@ class TestBaaSchmidt(TestCase):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(state_vector)
+        circuit = BaaLowRankInitialize(state_vector).definition
 
         state = get_state(circuit)
 
@@ -140,7 +143,7 @@ class TestBaaSchmidt(TestCase):
                         1, 1,-1,-1,1,-1, 1,-1,-1, 1,-1, 1,-1,-1,1,1]
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(state_vector)
+        circuit = BaaLowRankInitialize(state_vector).definition
 
         state = get_state(circuit)
 
@@ -150,9 +153,9 @@ class TestBaaSchmidt(TestCase):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = initialize(state_vector)
+        circuit = BaaLowRankInitialize(state_vector).definition
 
-        state = TestBaaSchmidt.get_counts(circuit)
+        state = TestBaaLowRank.get_counts(circuit)
 
         self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
                         rtol=1e-01, atol=0.005))
@@ -164,15 +167,17 @@ class TestBaaSchmidt(TestCase):
             state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
             state_vector = state_vector / np.linalg.norm(state_vector)
             for loss in range(10, 20):
-                circuit = initialize(state_vector, max_fidelity_loss=loss/100,
-                                                        strategy='brute_force')
-                state = get_state(circuit)
-                fidelity1 = TestBaaSchmidt.fidelity(state_vector, state)
+                opt_params = {'max_fidelity_loss' : loss/100, 'strategy' : 'brute_force'}
 
-                circuit = initialize(state_vector, max_fidelity_loss=loss/100,
-                                                        strategy='greedy')
+                circuit = BaaLowRankInitialize(state_vector, opt_params=opt_params).definition
                 state = get_state(circuit)
-                fidelity2 = TestBaaSchmidt.fidelity(state_vector, state)
+                fidelity1 = TestBaaLowRank.fidelity(state_vector, state)
+
+                opt_params = {'max_fidelity_loss' : loss/100, 'strategy' : 'greedy'}
+
+                circuit = BaaLowRankInitialize(state_vector, opt_params=opt_params).definition
+                state = get_state(circuit)
+                fidelity2 = TestBaaLowRank.fidelity(state_vector, state)
 
                 fidelities1.append(fidelity1)
                 fidelities2.append(fidelity2)
