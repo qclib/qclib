@@ -18,6 +18,7 @@ import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.util import _compute_matrix_angles
 
+
 class CVQRAM:
     """ https://arxiv.org/abs/2011.07977 """
     def __init__(self, nbits, data, mode='v-chain'):
@@ -44,28 +45,26 @@ class CVQRAM:
         self.memory = QuantumRegister(self.nbits, name='m')
 
 
-        if mode=='mct':
+        if mode == 'mct':
             self.qr_u0 = QuantumRegister(2, name='u0')
             self.circuit = QuantumCircuit(self.qr_u0, self.memory)
-        elif mode=='v-chain':
+        elif mode == 'v-chain':
             self.aux = QuantumRegister(nbits-1, name='anc')
             self.qr_u1 = QuantumRegister(1, name='u1')
             self.qr_u2 = QuantumRegister(1, name='u2')
             self.circuit = QuantumCircuit(self.qr_u1, self.qr_u2, self.memory, self.aux, )
-
 
     def _load_binary(self, binary_string, mode):
 
         for bit_index, bit in enumerate(binary_string):
 
             if bit == '1':
-                if mode=='v-chain':
+                if mode == 'v-chain':
                     self.circuit.cx(self.qr_u1[0], self.memory[bit_index])
-                elif mode=='mct':
+                elif mode == 'mct':
                     self.circuit.cx(self.qr_u1[1], self.memory[bit_index])
             elif bit == '0':
                 self.circuit.x(self.memory[bit_index])
-
 
     def load_superposition(self, feature, mode, norm, control):
         """
@@ -74,7 +73,7 @@ class CVQRAM:
 
         alpha, beta, phi = _compute_matrix_angles(feature, norm)
 
-        if mode =='v-chain':
+        if mode == 'v-chain':
 
             self.circuit.rccx(self.memory[control[0]],
                               self.memory[control[1]], self.aux[0])
@@ -94,7 +93,7 @@ class CVQRAM:
             self.circuit.rccx(self.memory[control[0]],
                               self.memory[control[1]], self.aux[0])
 
-        if mode =='mct':
+        if mode == 'mct':
             self.circuit.mct(self.memory, self.qr_u0[0])
             self.circuit.cu3(alpha, beta, phi, self.qr_u0[0], self.qr_u0[1])
             self.circuit.mct(self.memory, self.qr_u0[0])

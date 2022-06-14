@@ -20,8 +20,7 @@ from qclib.state_preparation.initialize_sparse import InitializeSparse
 
 class MergeInitialize(InitializeSparse):
     """
-    Gleinig et al algorithm for creating a quantum
-    circuit that loads a sparse state.
+    An Efficient Algorithm for Sparse Quantum State Preparation
     https://ieeexplore.ieee.org/document/9586240
     """
 

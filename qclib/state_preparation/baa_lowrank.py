@@ -17,11 +17,11 @@ Bounded Approximation version of Plesch's algorithm.
 https://arxiv.org/abs/2111.03132
 """
 
-import numpy as np
 from qiskit import QuantumCircuit
 from qclib.state_preparation.initialize import Initialize
 from qclib.state_preparation import LowRankInitialize
 from qclib.state_preparation.util.baa import adaptive_approximation
+
 
 class BaaLowRankInitialize(Initialize):
     """
@@ -84,7 +84,7 @@ class BaaLowRankInitialize(Initialize):
             self.max_fidelity_loss = 0.0
             self.isometry_scheme = 'ccd'
             self.unitary_scheme = 'qsd'
-            self.strategy='greedy'
+            self.strategy = 'greedy'
             self.max_combination_size = 0
             self.use_low_rank = False
         else:
@@ -135,12 +135,12 @@ class BaaLowRankInitialize(Initialize):
 
     def _define_initialize(self):
         node = adaptive_approximation(self.params, self.max_fidelity_loss, self.strategy,
-                                        self.max_combination_size, self.use_low_rank)
+                                      self.max_combination_size, self.use_low_rank)
 
         circuit = QuantumCircuit(self.num_qubits)
 
         for vector, qubits, rank, partition in zip(node.vectors, node.qubits,
-                                                    node.ranks, node.partitions):
+                                                   node.ranks, node.partitions):
 
             lr_params = {'iso_scheme': self.isometry_scheme,
                          'unitary_scheme': self.unitary_scheme,

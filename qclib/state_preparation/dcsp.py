@@ -29,9 +29,8 @@ from qclib.state_preparation.util.tree_walk import bottom_up
 
 class DcspInitialize(Initialize):
     """
-    Divide-and-conquer state preparation
+    A divide-and-conquer algorithm for quantum state preparation
     https://doi.org/10.1038/s41598-021-85474-1
-    https://arxiv.org/abs/2108.10182
 
     This class implements a state preparation gate.
     """

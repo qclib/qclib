@@ -63,8 +63,6 @@ class CVOQRAM:
                 control.append(k)
         return control
 
-
-
     def mcuvchain(self, alpha, beta, phi, control):
         """
          N-qubit controlled-unitary gate
@@ -131,6 +129,8 @@ def cvoqram_initialize(state, with_aux=True):
         A unit vector representing a quantum state.
         str: binary string
         float: amplitude
+    with_aux:
+        If True requires ancilla qubits.
 
     Returns
     -------

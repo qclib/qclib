@@ -217,8 +217,6 @@ class PivotStatePreparation:
         return PivotStatePreparation(state, aux).sp_circuit
 
 
-
-
 def mcxvchain(circuit, memory, anc, lst_ctrl, tgt):
     """ multi-controlled x gate with working qubits """
     circuit.rccx(memory[lst_ctrl[0]], memory[lst_ctrl[1]], anc[0])

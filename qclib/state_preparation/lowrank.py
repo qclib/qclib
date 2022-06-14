@@ -31,7 +31,7 @@ from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_ran
 
 class LowRankInitialize(Initialize):
     """
-    Low-rank state preparation
+    Approximated quantum-state preparation with entanglement dependent complexity
     https://arxiv.org/abs/2111.03132
 
     This class implements a state preparation gate.

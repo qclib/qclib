@@ -29,7 +29,7 @@ from qclib.state_preparation.util.tree_walk import top_down, bottom_up
 
 class BdspInitialize(Initialize):
     """
-    Bidirectional state preparation
+    Configurable sublinear circuits for quantum state preparation
     https://arxiv.org/abs/2108.10182
 
     This class implements a state preparation gate.

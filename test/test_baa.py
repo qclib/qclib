@@ -96,15 +96,15 @@ def initialize_loss(fidelity_loss, state_vector=None, n_qubits=5, strategy='brut
         state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-    opt_params = {'max_fidelity_loss':fidelity_loss,
-                    'strategy':strategy, 'use_low_rank':use_low_rank}
+    opt_params = {'max_fidelity_loss': fidelity_loss,
+                  'strategy': strategy, 'use_low_rank': use_low_rank}
     circuit = BaaLowRankInitialize(state_vector, opt_params=opt_params).definition
 
     state = get_state(circuit)
     fidelity = TestBaaLowRank.fidelity(state_vector, state)
 
     node = adaptive_approximation(state_vector, max_fidelity_loss=fidelity_loss,
-                                        strategy=strategy, use_low_rank=use_low_rank)
+                                  strategy=strategy, use_low_rank=use_low_rank)
 
     try:
         basis_circuit = qiskit.transpile(
@@ -335,7 +335,6 @@ class TestBaa(TestCase):
 
         """
 
-        import scipy.stats as stats
         from qclib.state_preparation.util import baa
 
         # geometric measure = 0.11600417225836746
@@ -360,7 +359,7 @@ class TestBaa(TestCase):
                  0.06088612, 0.03531675, 0.06851802, 0.05110969, 0.12273343, 0.11442741,
                  0.10130534, 0.11882721, 0.11411204, 0.05498105, 0.12025703, 0.09348119,
                  0.11437924, 0.12049476, 0.07178074, 0.04222706, 0.06077118, 0.08318802,
-                 0.11512578, 0.1180934 ]
+                 0.11512578, 0.1180934]
 
         node = baa.adaptive_approximation(state, use_low_rank=True, max_fidelity_loss=0.09, strategy='brute_force')
         fidelity = np.vdot(state, node.state_vector())**2

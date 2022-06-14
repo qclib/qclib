@@ -24,6 +24,7 @@ from .util import measurement
 backend = AerSimulator()
 SHOTS = 8192
 
+
 class TestInitialize(TestCase):
     """ Testing divide-and-conquer state preparation """
 
@@ -45,4 +46,4 @@ class TestInitialize(TestCase):
 
         state = TestInitialize.dcsp_experiment(vector)
 
-        self.assertTrue(np.allclose( np.power(np.abs(vector),2), state, rtol=1e-01, atol=0.005))
+        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))

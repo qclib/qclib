@@ -22,9 +22,10 @@ from qclib.state_preparation.initialize_sparse import InitializeSparse
 
 # pylint: disable=maybe-no-member
 
+
 class FnPointsInitialize(InitializeSparse):
     """
-    Ventura state preparation
+    Initializing the Amplitude Distribution of a Quantum State
     https://arxiv.org/abs/quant-ph/9807054
 
     This class implements a state preparation gate.
@@ -53,7 +54,7 @@ class FnPointsInitialize(InitializeSparse):
 
             Parameters
             ----------
-            state: dict of {int:float}
+            params: dict of {int:float}
                 A unit vector representing a quantum state.
                 Keys are function binary input values and values are function output values.
 
@@ -96,14 +97,14 @@ class FnPointsInitialize(InitializeSparse):
 
         circuit = QuantumCircuit(reg_x, reg_g, reg_c)
 
-        reg_x = reg_x[::-1] # qiskit reverse (qiskit little-endian)
+        reg_x = reg_x[::-1]  # qiskit reverse (qiskit little-endian)
 
         bits_z0 = [int(k) for k in f'{0:0{self.num_qubits}b}']
         for idx_p, (input_z, output_s) in list(enumerate(self.params))[::-1]:
             bits_z = [int(k) for k in input_z]
 
             circuit.x(reg_c[1])
-            for j,_ in enumerate(bits_z):
+            for j, _ in enumerate(bits_z):
                 if bits_z0[j] != bits_z[j]:
                     circuit.cx(reg_c[1], reg_x[j])
 
