@@ -32,6 +32,7 @@ from qiskit.aqua.algorithms.classifiers.vqc import return_probabilities
 #from qiskit.circuit.library import BlueprintCircuit
 from qiskit_machine_learning.circuit.library import RawFeatureVector
 from .baa_feature_vector import BaaFeatureVector  # pylint: disable=relative-beyond-top-level
+from .bdsp_feature_vector import BdspFeatureVector  # pylint: disable=relative-beyond-top-level
 
 # pylint: disable=invalid-name
 
@@ -65,7 +66,7 @@ class VQC(qiskit_vqc):
 
             # cannot transpile RawFeatureVector or BaaFeatureVector.
             # See the comment at the beginning of this file.
-            if isinstance(self._feature_map, (RawFeatureVector, BaaFeatureVector, )):
+            if isinstance(self._feature_map, (RawFeatureVector, BaaFeatureVector, BdspFeatureVector)):
             #if isinstance(self._feature_map, BlueprintCircuit):
                 feat_map_support = False
 
