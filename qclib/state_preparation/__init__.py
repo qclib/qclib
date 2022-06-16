@@ -5,3 +5,6 @@ from .lowrank import LowRankInitialize
 from .fnpoints import FnPointsInitialize
 from .baa_lowrank import BaaLowRankInitialize
 from .merge import MergeInitialize
+from .cvqram import CvqramInitialize
+from .cvoqram import CvoqramInitialize
+from .pivot import PivotInitialize
