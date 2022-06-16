@@ -21,6 +21,7 @@ from qclib.state_preparation.initialize_sparse import InitializeSparse
 
 # pylint: disable=maybe-no-member
 
+
 class CvqramInitialize(InitializeSparse):
     """
     Initializing the Amplitude Distribution of a Quantum State
@@ -75,12 +76,13 @@ class CvqramInitialize(InitializeSparse):
         for binary_string, amplitude in self.params:
             self._load_binary(circuit, binary_string, self.mode, memory, qr_u1)
             self._load_superposition(circuit, amplitude, self.mode,
-                                            control, memory, qr_u1, qr_u2, aux)
+                                     control, memory, qr_u1, qr_u2, aux)
             self._load_binary(circuit, binary_string, self.mode, memory, qr_u1)
 
         return circuit
 
-    def _load_binary(self, circuit, binary_string, mode, memory, qr_u1):
+    @staticmethod
+    def _load_binary(circuit, binary_string, mode, memory, qr_u1):
         for bit_index, bit in enumerate(binary_string):
             if bit == '1':
                 if mode == 'v-chain':
@@ -98,7 +100,7 @@ class CvqramInitialize(InitializeSparse):
         alpha, beta, phi = _compute_matrix_angles(feature, self.norm)
 
         if mode == 'mct':
-            circuit.mct(memory,qr_u1[0])
+            circuit.mct(memory, qr_u1[0])
             circuit.cu3(alpha, beta, phi, qr_u1[0], qr_u1[1])
             circuit.mct(memory, qr_u1[0])
         elif mode == 'v-chain':

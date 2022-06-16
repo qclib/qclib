@@ -22,6 +22,7 @@ from qclib.state_preparation.initialize_sparse import InitializeSparse
 
 # pylint: disable=maybe-no-member
 
+
 class CvoqramInitialize(InitializeSparse):
     """
     Initializing the Amplitude Distribution of a Quantum State
@@ -80,11 +81,13 @@ class CvoqramInitialize(InitializeSparse):
 
         return circuit
 
-    def _flip_flop(self, circuit, control, memory, aux):
+    @staticmethod
+    def _flip_flop(circuit, control, memory, aux):
         for k in control:
             circuit.cx(aux[0], memory[k])
 
-    def _select_controls(self, binary_string):
+    @staticmethod
+    def _select_controls(binary_string):
         control = []
         for k, bit in enumerate(binary_string[::-1]):
             if bit == '1':
@@ -100,15 +103,15 @@ class CvoqramInitialize(InitializeSparse):
         lst_ctrl = control
         lst_ctrl_reversed = list(reversed(lst_ctrl))
         circuit.rccx(memory[lst_ctrl_reversed[0]],
-                          memory[lst_ctrl_reversed[1]],
-                          anc[self.num_qubits-2])
+                     memory[lst_ctrl_reversed[1]],
+                     anc[self.num_qubits-2])
 
         tof = {}
         i = self.num_qubits-1
         for ctrl in lst_ctrl_reversed[2:]:
             circuit.rccx(anc[i-1],
-                              memory[ctrl],
-                              anc[i-2])
+                         memory[ctrl],
+                         anc[i-2])
             tof[ctrl] = [i-1, i-2]
             i -= 1
 
@@ -116,12 +119,12 @@ class CvoqramInitialize(InitializeSparse):
 
         for ctrl in lst_ctrl[:-2]:
             circuit.rccx(anc[tof[ctrl][0]],
-                              memory[ctrl],
-                              anc[tof[ctrl][1]])
+                         memory[ctrl],
+                         anc[tof[ctrl][1]])
 
         circuit.rccx(memory[lst_ctrl[-1]],
-                          memory[lst_ctrl[-2]],
-                          anc[self.num_qubits-2])
+                     memory[lst_ctrl[-2]],
+                     anc[self.num_qubits-2])
 
     def _load_superposition(self, circuit, feature, control, memory, anc, aux):
         """

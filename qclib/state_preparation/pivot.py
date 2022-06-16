@@ -22,6 +22,7 @@ from qclib.state_preparation.initialize_sparse import InitializeSparse
 
 # pylint: disable=maybe-no-member
 
+
 class PivotInitialize(InitializeSparse):
     """ Pivot State Preparation """
 
@@ -109,7 +110,8 @@ class PivotInitialize(InitializeSparse):
 
         return circuit
 
-    def _next_state(self, ctrl_state, index_differ, remain, target_cx, index_zero, next_state):
+    @staticmethod
+    def _next_state(ctrl_state, index_differ, remain, target_cx, index_zero, next_state):
         tab = {'0': '1', '1': '0'}
         new_state = {}
         for index, amp in next_state:
@@ -175,7 +177,7 @@ class PivotInitialize(InitializeSparse):
                 circuit.x(k)
 
         next_state = self._next_state(ctrl_state, index_differ, remain,
-                                        target_cx, index_zero, next_state)
+                                      target_cx, index_zero, next_state)
 
         return circuit, next_state
 
@@ -203,7 +205,8 @@ class PivotInitialize(InitializeSparse):
 
         return index_zero
 
-    def _get_index_nz(self, target_size, next_state):
+    @staticmethod
+    def _get_index_nz(target_size, next_state):
         index_nonzero = None
         for index, _ in next_state:
             if index[:target_size] != target_size * '0':
@@ -211,7 +214,8 @@ class PivotInitialize(InitializeSparse):
                 break
         return index_nonzero
 
-    def _mcxvchain(self, circuit, memory, anc, lst_ctrl, tgt):
+    @staticmethod
+    def _mcxvchain(circuit, memory, anc, lst_ctrl, tgt):
         """ multi-controlled x gate with working qubits """
         circuit.rccx(memory[lst_ctrl[0]], memory[lst_ctrl[1]], anc[0])
         for j in range(2, len(lst_ctrl)):
