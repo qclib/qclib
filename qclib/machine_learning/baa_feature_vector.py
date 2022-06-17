@@ -28,7 +28,7 @@ import numpy as np
 from qiskit.exceptions import QiskitError
 from qiskit.circuit import QuantumRegister, ParameterVector, Instruction
 from qiskit.circuit.library import BlueprintCircuit
-from ..state_preparation.baa_schmidt import initialize as baa_schmidt # pylint: disable=relative-beyond-top-level
+from ..state_preparation import BaaLowRankInitialize # pylint: disable=relative-beyond-top-level
 
 class BaaFeatureVector(BlueprintCircuit):
     """The BAA schmidt feature vector circuit.
@@ -196,7 +196,9 @@ class BaaParameterizedInitialize(Instruction):
         # normalize
         normalized = np.array(cleaned_params) / np.linalg.norm(cleaned_params)
 
-        circuit = baa_schmidt(normalized, max_fidelity_loss=self._max_fidelity_loss,
-                                          strategy=self._strategy,
-                                          use_low_rank=self._use_low_rank)
+        circuit = BaaLowRankInitialize(normalized,
+                                        opt_params={
+                                            'max_fidelity_loss':self._max_fidelity_loss,
+                                            'strategy':self._strategy,
+                                            'use_low_rank':self._use_low_rank}).definition
         self.definition = circuit

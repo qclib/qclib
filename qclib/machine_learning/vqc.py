@@ -65,7 +65,7 @@ class VQC(qiskit_vqc):
 
             # cannot transpile RawFeatureVector or BaaFeatureVector.
             # See the comment at the beginning of this file.
-            if isinstance(self._feature_map, (RawFeatureVector, BaaFeatureVector, )):
+            if isinstance(self._feature_map, (RawFeatureVector, BaaFeatureVector)):
             #if isinstance(self._feature_map, BlueprintCircuit):
                 feat_map_support = False
 
