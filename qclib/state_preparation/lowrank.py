@@ -23,6 +23,7 @@ from qiskit import QuantumCircuit
 from qclib.state_preparation import TopDownInitialize
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
+from qclib.isometry import _extend_to_unitary
 from qclib.state_preparation.initialize import Initialize
 from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_rank
 
@@ -138,7 +139,7 @@ class LowRankInitialize(Initialize):
 
         # Phase 3 and 4 encode gates U and V.T
         self._encode(svd_u, circuit, reg_b)
-        self._encode(svd_v.T, circuit, reg_a)
+        self._encode(svd_v.T, circuit, reg_a, second=True)
 
         return circuit.reverse_bits()
 
@@ -152,7 +153,7 @@ class LowRankInitialize(Initialize):
         else:
             q_circuit.append(LowRankInitialize(state, lr_params=lr_params), qubits)
 
-    def _encode(self, data, circuit, reg):
+    def _encode(self, data, circuit, reg, second=False):
         """
         Encodes data using the most appropriate method.
         """
@@ -169,8 +170,18 @@ class LowRankInitialize(Initialize):
                          'unitary_scheme': self.unitary_scheme}
             gate_u = LowRankInitialize(data[:, 0], lr_params=lr_params)
 
+        elif data.shape[0]//2 == data.shape[1]:
+            log_lines = int(np.log2(data.shape[0]))
+            log_cols = int(np.log2(data.shape[1]))
+            unitary = _extend_to_unitary(data, log_lines, log_cols)
+            gate_u = decompose_unitary(unitary, iso=True)
+
         elif data.shape[0] > data.shape[1]:
             gate_u = decompose_isometry(data, scheme=self.isometry_scheme)
+
+        elif second and (self.num_qubits % 2) == 1:
+            gate_u = decompose_unitary(data, iso=True)
+
         else:
             gate_u = decompose_unitary(data, decomposition=self.unitary_scheme)
 
