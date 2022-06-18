@@ -26,6 +26,7 @@ from qclib.util import get_state
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 
+
 class TestIsometry(TestCase):
 
     # scheme='knill' isometry tests
@@ -56,6 +57,9 @@ class TestIsometry(TestCase):
     def test_fixed_isometry_ccd(self):
         self._test_fixed_isometry('ccd')
 
+    def test_isometry_csd(self):
+        self._test_isometry('csd')
+
     # general functions for testing the schemes (knill and ccd).
 
     def _test_state_preparation_real(self, scheme):
@@ -79,9 +83,9 @@ class TestIsometry(TestCase):
         self.assertTrue(np.allclose(state_vector, state))
 
     def _test_isometry(self, scheme):
-        log_lines = 4
+        log_lines = 3
         log_cols = 2
-        isometry = unitary_group.rvs(2**log_lines)[:,:2**log_cols]
+        isometry = unitary_group.rvs(2**log_lines)[:, :2**log_cols]
 
         gate = decompose(isometry, scheme=scheme)
 
@@ -92,14 +96,14 @@ class TestIsometry(TestCase):
                 if bit == '1':
                     circuit.x(i)
 
-            circuit.append(gate, circuit.qubits)
+            circuit.append(gate.to_instruction(), circuit.qubits)
             state = get_state(circuit)
 
             self.assertTrue(np.allclose(isometry[:, j], state))
 
     def _test_fixed_isometry(self, scheme):
         isometry = np.copy([[-0.5391073,  -0.12662419, -0.73739705, -0.38674956],
-                            [ 0.15705405,  0.20566939,  0.32663193, -0.9090356 ],
+                            [0.15705405,  0.20566939,  0.32663193, -0.9090356],
                             [-0.77065035, -0.23739918,  0.59084039,  0.02544217],
                             [-0.30132273,  0.9409081,  -0.02155946,  0.15307435]])
 
@@ -111,18 +115,18 @@ class TestIsometry(TestCase):
 
         circuit = QuantumCircuit(2)
         circuit.x(0)
-        circuit.append(gate, circuit.qubits)
+        circuit.append(gate.to_instruction(), circuit.qubits)
         state = get_state(circuit)
         self.assertTrue(np.allclose(isometry[:, 1], state))
 
         circuit = QuantumCircuit(2)
         circuit.x(1)
-        circuit.append(gate, circuit.qubits)
+        circuit.append(gate.to_instruction(), circuit.qubits)
         state = get_state(circuit)
         self.assertTrue(np.allclose(isometry[:, 2], state))
 
         circuit = QuantumCircuit(2)
-        circuit.x([0,1])
-        circuit.append(gate, circuit.qubits)
+        circuit.x([0, 1])
+        circuit.append(gate.to_instruction(), circuit.qubits)
         state = get_state(circuit)
         self.assertTrue(np.allclose(isometry[:, 3], state))

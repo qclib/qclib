@@ -23,6 +23,7 @@ import scipy
 import qiskit.quantum_info as qi
 from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.extensions.quantum_initializer.uc import UCGate
+from qclib.unitary import unitary
 
 # pylint: disable=maybe-no-member
 
@@ -59,7 +60,13 @@ def decompose(isometry, scheme='ccd'):
     log_cols = int(log_cols)
 
     if scheme == 'csd':
-        pass
+        if lines//2 == cols:
+            unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
+        else:
+            raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
+
+        return unitary(unitary_gate, iso=True)
+
     if scheme == 'ccd':
         return _ccd(iso, log_lines, log_cols)
 
