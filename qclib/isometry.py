@@ -23,7 +23,7 @@ import scipy
 import qiskit.quantum_info as qi
 from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.extensions.quantum_initializer.uc import UCGate
-from qclib.unitary import unitary
+from qclib.unitary import unitary as decompose_unitary, cnot_count as unitary_cnot_count
 
 # pylint: disable=maybe-no-member
 
@@ -60,12 +60,7 @@ def decompose(isometry, scheme='ccd'):
     log_cols = int(log_cols)
 
     if scheme == 'csd':
-        if lines//2 == cols:
-            unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
-        else:
-            raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
-
-        return unitary(unitary_gate, iso=True)
+        return _csd(iso, log_lines, log_cols)
 
     if scheme == 'ccd':
         return _ccd(iso, log_lines, log_cols)
@@ -99,6 +94,20 @@ def _check_isometry(iso, log_lines, log_cols):
 def _is_isometry(iso, log_cols):
     identity = np.conj(iso.T).dot(iso)
     return np.allclose(identity, np.eye(int(2**log_cols)))
+
+
+
+# Cosine-Sine
+
+
+
+def _csd(iso, log_lines, log_cols):
+    if log_lines-1 == log_cols:
+        unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
+    else:
+        raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
+
+    return decompose_unitary(unitary_gate, decomposition='qsd', iso=True)
 
 
 
@@ -169,7 +178,7 @@ def _ccd(iso, log_lines, log_cols):
     reg = QuantumRegister(log_lines)
     circuit = QuantumCircuit(reg)
 
-    for k in range(2**log_cols): # iteration through columns (starting with the second column k=1).
+    for k in range(2**log_cols): # iteration through columns.
         g_k = _g_k(iso, log_lines, k)
         g_k.name = 'G'+str(k)
 
@@ -336,8 +345,19 @@ def _cnot_count_estimate(isometry, scheme='ccd'):
     if scheme == 'knill':
         return _cnot_count_estimate_knill(isometry, log_lines, log_cols)
 
+    if scheme == 'csd':
+        return _cnot_count_estimate_csd(isometry, log_lines, log_cols)
+
     # CCD
     return _cnot_count_estimate_ccd(log_lines, log_cols)
+
+def _cnot_count_estimate_csd(iso, log_lines, log_cols):
+    if log_lines-1 == log_cols:
+        unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
+    else:
+        raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
+
+    return unitary_cnot_count(unitary_gate, decomposition='qsd', iso=True)
 
 def _cnot_count_estimate_knill(iso, log_lines, log_cols):
     """

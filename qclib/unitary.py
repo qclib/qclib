@@ -18,17 +18,14 @@ implement generic quantum computations.
 """
 
 from math import ceil, log2
+import numpy as np
 import scipy as sp
 import qiskit
 from qiskit import transpile
 from qiskit.circuit.library import CXGate
-from qiskit.extensions import UnitaryGate
-from qiskit.extensions import UCRYGate, UCRZGate
+from qiskit.extensions import UnitaryGate, UCRYGate, UCRZGate
 from qiskit.extensions.quantum_initializer import UCGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
-
-import numpy as np
-
 
 def unitary(gate, decomposition='qsd', iso=False):
     """
@@ -46,7 +43,7 @@ def unitary(gate, decomposition='qsd', iso=False):
             sp.linalg.cossin(gate, size/2, size/2, separate=True)
 
         if iso:
-            gate_left = unitary(left_gates[0])
+            gate_left = unitary(left_gates[0], decomposition=decomposition)
             circuit = circuit.compose(gate_left, qubits[:-1])
         else:
             gate_left = _unitary(list(left_gates), n_qubits, decomposition)
@@ -54,7 +51,7 @@ def unitary(gate, decomposition='qsd', iso=False):
 
         gate_right = _unitary(list(right_gates), n_qubits, decomposition)
 
-        circuit.append(UCRYGate(list(2 * theta)), [n_qubits-1] + list(range(n_qubits-1)))
+        circuit.append(UCRYGate(list(2*theta)), [n_qubits-1] + list(range(n_qubits-1)))
 
         circuit = circuit.compose(gate_right, qubits)
 
@@ -87,8 +84,8 @@ def _unitary(gate_list, n_qubits, decomposition='qsd'):
 def _csd(gate_list, n_qubits):
     left, mid, right = _multiplexed_csd(gate_list)
 
-    gate_left = _unitary(left, n_qubits)
-    gate_right = _unitary(right, n_qubits)
+    gate_left = _unitary(left, n_qubits, decomposition='csd')
+    gate_right = _unitary(right, n_qubits, decomposition='csd')
 
     qubits = qiskit.QuantumRegister(n_qubits)
     circuit = qiskit.QuantumCircuit(qubits)
@@ -118,6 +115,9 @@ def _multiplexed_csd(gate_list):
         mid = mid + list(2 * theta)
 
     return left, mid, right
+
+
+# QSD decomposition
 
 
 def _qsd(gate1, gate2):
@@ -157,12 +157,12 @@ def _compute_gates(gate1, gate2):
     return list_d, gate_v, gate_w
 
 
-def cnot_count(gate, decomposition='csd', method='estimate'):
+def cnot_count(gate, decomposition='qsd', method='estimate', iso=False):
     """
     Count the number of CNOTs to decompose the unitary.
     """
     if method == 'estimate':
-        return _cnot_count_estimate(gate, decomposition)
+        return _cnot_count_estimate(gate, decomposition, iso)
 
     # Exact count
     circuit = unitary(gate, decomposition)
@@ -175,12 +175,15 @@ def cnot_count(gate, decomposition='csd', method='estimate'):
     return 0
 
 
-def _cnot_count_estimate(gate, decomposition='csd'):
+def _cnot_count_estimate(gate, decomposition='qsd', iso=False):
     """
     Estimate the number of CNOTs to decompose the unitary.
     """
     n_qubits = int(log2(gate.shape[0]))
-    if n_qubits == 1:
+
+    if iso:
+        n_qubits -= 1
+    if n_qubits <= 1:
         return 0
 
     if decomposition == 'csd':
