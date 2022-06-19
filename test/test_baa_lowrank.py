@@ -182,4 +182,4 @@ class TestBaaLowRank(TestCase):
                 fidelities1.append(fidelity1)
                 fidelities2.append(fidelity2)
 
-        self.assertTrue(np.allclose(fidelities1, fidelities2, rtol=0.135, atol=0.0))
+        self.assertTrue(np.allclose(fidelities1, fidelities2, rtol=0.14, atol=0.0))
