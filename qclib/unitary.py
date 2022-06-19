@@ -27,7 +27,7 @@ from qiskit.extensions import UnitaryGate, UCRYGate, UCRZGate
 from qiskit.extensions.quantum_initializer import UCGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
 
-def unitary(gate, decomposition='qsd', iso=False):
+def unitary(gate, decomposition='qsd', iso=0):
     """
     Implements a generic quantum computation from a
     unitary matrix gate using the cosine sine decomposition.
@@ -43,7 +43,7 @@ def unitary(gate, decomposition='qsd', iso=False):
             sp.linalg.cossin(gate, size/2, size/2, separate=True)
 
         if iso:
-            gate_left = unitary(left_gates[0], decomposition=decomposition)
+            gate_left = unitary(left_gates[0], decomposition=decomposition, iso=iso-1)
             circuit = circuit.compose(gate_left, qubits[:-1])
         else:
             gate_left = _unitary(list(left_gates), n_qubits, decomposition)
@@ -167,7 +167,7 @@ def cnot_count(gate, decomposition='qsd', method='estimate', iso=False):
     # Exact count
     circuit = unitary(gate, decomposition)
     transpiled_circuit = transpile(circuit, basis_gates=['u1', 'u2', 'u3', 'cx'],
-                                   optimization_level=0)
+                                            optimization_level=0)
     count_ops = transpiled_circuit.count_ops()
     if 'cx' in count_ops:
         return count_ops[CXGate()]
@@ -175,22 +175,27 @@ def cnot_count(gate, decomposition='qsd', method='estimate', iso=False):
     return 0
 
 
-def _cnot_count_estimate(gate, decomposition='qsd', iso=False):
+def _cnot_count_estimate(gate, decomposition='qsd', iso=0):
     """
     Estimate the number of CNOTs to decompose the unitary.
     """
     n_qubits = int(log2(gate.shape[0]))
 
-    if iso:
-        n_qubits -= 1
-    if n_qubits <= 1:
+    if n_qubits == 1:
         return 0
 
     if decomposition == 'csd':
         # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
         return int(ceil(4**n_qubits - 2*2**n_qubits))
 
+    if iso:
+        # Upper-bound expression for the CSD isometry decomposition without the optimizations.
+        # With the optimizations, it needs to be replaced.
+        # Expression (A22) from "Quantum Circuits for Isometries", Iten et al.
+        m_ebits = n_qubits-iso
+        return int(ceil((23/144)*(4**m_ebits+2*4**n_qubits)))
+
     # Upper-bound expression for the unitary decomposition QSD l=2 without the optimizations.
-    # With the optimizations, they need to be replaced.
+    # With the optimizations, it needs to be replaced.
     # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
     return int(ceil(9/16*2**(2*n_qubits) - 3/2 * 2**n_qubits))

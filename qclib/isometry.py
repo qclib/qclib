@@ -102,12 +102,12 @@ def _is_isometry(iso, log_cols):
 
 
 def _csd(iso, log_lines, log_cols):
-    if log_lines-1 == log_cols:
-        unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
-    else:
-        raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
+    #if log_lines-1 == log_cols:
+    unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
+    #else:
+    #    raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
 
-    return decompose_unitary(unitary_gate, decomposition='qsd', iso=True)
+    return decompose_unitary(unitary_gate, decomposition='qsd', iso=log_lines-log_cols)
 
 
 
@@ -143,7 +143,7 @@ def _knill(iso, log_lines, log_cols):
             circuit.mcp(arg[i], list(range(log_lines-1)), log_lines-1)
             circuit.x(list(range(log_lines)))
 
-            circuit.compose(gate, reg, inplace=True )
+            circuit.compose(gate, reg, inplace=True)
 
     return circuit
 
@@ -352,12 +352,12 @@ def _cnot_count_estimate(isometry, scheme='ccd'):
     return _cnot_count_estimate_ccd(log_lines, log_cols)
 
 def _cnot_count_estimate_csd(iso, log_lines, log_cols):
-    if log_lines-1 == log_cols:
-        unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
-    else:
-        raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
+    #if log_lines-1 == log_cols:
+    unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
+    #else:
+    #    raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
 
-    return unitary_cnot_count(unitary_gate, decomposition='qsd', iso=True)
+    return unitary_cnot_count(unitary_gate, decomposition='qsd', iso=log_lines-log_cols)
 
 def _cnot_count_estimate_knill(iso, log_lines, log_cols):
     """

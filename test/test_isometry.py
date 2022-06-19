@@ -57,10 +57,21 @@ class TestIsometry(TestCase):
     def test_fixed_isometry_ccd(self):
         self._test_fixed_isometry('ccd')
 
+    # scheme='csd' (cosine-sine decomposition) isometry tests
+
+    def test_state_preparation_real_csd(self):
+        self._test_state_preparation_real('csd')
+
+    def test_state_preparation_complex_csd(self):
+        self._test_state_preparation_complex('csd')
+
     def test_isometry_csd(self):
         self._test_isometry('csd')
 
-    # general functions for testing the schemes (knill and ccd).
+    def test_fixed_isometry_csd(self):
+        self._test_fixed_isometry('csd')
+
+    # general functions for testing the schemes (knill, csd and ccd).
 
     def _test_state_preparation_real(self, scheme):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
@@ -92,7 +103,7 @@ class TestIsometry(TestCase):
         for j in range(2**log_cols):
             circuit = QuantumCircuit(log_lines)
 
-            for i, bit in enumerate('{:0{}b}'.format(j, 1)[::-1]):
+            for i, bit in enumerate((f'{j:01b}')[::-1]):
                 if bit == '1':
                     circuit.x(i)
 
