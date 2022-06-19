@@ -23,12 +23,10 @@ from qiskit import QuantumCircuit
 from qclib.state_preparation import TopDownInitialize
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
-from qclib.isometry import _extend_to_unitary
 from qclib.state_preparation.initialize import Initialize
 from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_rank
 
 # pylint: disable=maybe-no-member
-
 
 class LowRankInitialize(Initialize):
     """
@@ -54,8 +52,8 @@ class LowRankInitialize(Initialize):
                     ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
                     If ``low_rank`` is not in the valid range, it will be ignored.
                     This parameter limits the rank of the Schmidt decomposition. If the Schmidt rank
-                    of the state decomposition is greater than ``low_rank``, a low-rank approximation
-                    is applied.
+                    of the state decomposition is greater than ``low_rank``, a low-rank
+                    approximation is applied.
 
                 iso_scheme: string
                     Scheme used to decompose isometries.
@@ -139,7 +137,7 @@ class LowRankInitialize(Initialize):
 
         # Phase 3 and 4 encode gates U and V.T
         self._encode(svd_u, circuit, reg_b)
-        self._encode(svd_v.T, circuit, reg_a, second=True)
+        self._encode(svd_v.T, circuit, reg_a)
 
         return circuit.reverse_bits()
 
@@ -153,34 +151,22 @@ class LowRankInitialize(Initialize):
         else:
             q_circuit.append(LowRankInitialize(state, lr_params=lr_params), qubits)
 
-    def _encode(self, data, circuit, reg, second=False):
+    def _encode(self, data, circuit, reg):
         """
         Encodes data using the most appropriate method.
         """
-        n_qubits = len(reg)
-        rank = 0
         if data.shape[1] == 1:
-            partition = _default_partition(n_qubits)
-            _, svals, _ = schmidt_decomposition(data[:, 0], partition)
-            rank = _effective_rank(svals)
-
-        if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4 or rank == 1):
             # state preparation
-            lr_params = {'iso_scheme': self.isometry_scheme,
-                         'unitary_scheme': self.unitary_scheme}
-            gate_u = LowRankInitialize(data[:, 0], lr_params=lr_params)
+            gate_u = LowRankInitialize(data[:, 0],
+                                        lr_params={'iso_scheme': self.isometry_scheme,
+                                                   'unitary_scheme': self.unitary_scheme})
 
         elif data.shape[0]//2 == data.shape[1]:
-            log_lines = int(np.log2(data.shape[0]))
-            log_cols = int(np.log2(data.shape[1]))
-            unitary = _extend_to_unitary(data, log_lines, log_cols)
-            gate_u = decompose_unitary(unitary, iso=True)
+            # isometry 2^(n-1) to 2^n.
+            gate_u = decompose_isometry(data, scheme='csd')
 
         elif data.shape[0] > data.shape[1]:
             gate_u = decompose_isometry(data, scheme=self.isometry_scheme)
-
-        elif second and (self.num_qubits % 2) == 1:
-            gate_u = decompose_unitary(data, iso=True)
 
         else:
             gate_u = decompose_unitary(data, decomposition=self.unitary_scheme)
@@ -204,20 +190,17 @@ def low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
     """
     Low-rank approximation from the SVD.
     """
-    rank = singular_values.shape[0]  # max rank
-
     effective_rank = _effective_rank(singular_values)
 
-    if 0 < low_rank < rank or effective_rank < rank:
-        if 0 < low_rank < effective_rank:
-            effective_rank = low_rank
+    if 0 < low_rank < effective_rank:
+        effective_rank = low_rank
 
-        # To use isometries, the rank needs to be a power of 2.
-        rank = int(2**ceil(log2(effective_rank)))
+    # To use isometries, the rank needs to be a power of 2.
+    rank = int(2**ceil(log2(effective_rank)))
 
-        svd_u = svd_u[:, :rank]
-        svd_v = svd_v[:rank, :]
-        singular_values = singular_values[:rank]
+    svd_u = svd_u[:, :rank]
+    svd_v = svd_v[:rank, :]
+    singular_values = singular_values[:rank]
 
     return rank, svd_u, svd_v, singular_values
 
@@ -266,17 +249,12 @@ def cnot_count(state_vector, low_rank=0, isometry_scheme='ccd', unitary_scheme='
 
 
 def _cnots(data, iso_scheme='ccd', uni_scheme='qsd', method='estimate'):
-    n_qubits = _to_qubits(data.shape[0])
-
-    rank = 0
     if data.shape[1] == 1:
-        partition = _default_partition(n_qubits)
-        _, svals, _ = schmidt_decomposition(data[:, 0], partition)
-        rank = _effective_rank(svals)
-
-    if data.shape[1] == 1 and (n_qubits % 2 == 0 or n_qubits < 4 or rank == 1):
         return cnot_count(data[:, 0], isometry_scheme=iso_scheme,
                           unitary_scheme=uni_scheme, method=method)
+
+    if data.shape[0]//2 == data.shape[1]:
+        return cnots_isometry(data, scheme='csd', method=method)
 
     if data.shape[0] > data.shape[1]:
         return cnots_isometry(data, scheme=iso_scheme, method=method)
