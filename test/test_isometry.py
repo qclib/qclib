@@ -18,6 +18,7 @@ Tests for the isometry.py module.
 
 from unittest import TestCase
 import numpy as np
+import scipy
 from qiskit import QuantumCircuit
 from scipy.stats import unitary_group
 from qclib.isometry import decompose
@@ -42,6 +43,9 @@ class TestIsometry(TestCase):
 
     def test_fixed_isometry_knill(self):
         self._test_fixed_isometry('knill')
+
+    def test_null_space_knill(self):
+        self._test_null_space('knill')
 
     # scheme='ccd' (column-by-column decomposition) isometry tests
 
@@ -111,6 +115,27 @@ class TestIsometry(TestCase):
             state = get_state(circuit)
 
             self.assertTrue(np.allclose(isometry[:, j], state))
+
+    def _test_null_space(self, scheme):
+        log_lines = 3
+        log_cols = 2
+        isometry = unitary_group.rvs(2**log_lines)[:, :2**log_cols]
+
+        gate = decompose(isometry, scheme=scheme)
+
+        for j in range(2**log_cols, 2**log_lines):
+            circuit = QuantumCircuit(log_lines)
+
+            for i, bit in enumerate((f'{j:01b}')[::-1]):
+                if bit == '1':
+                    circuit.x(i)
+
+            circuit.append(gate.to_instruction(), circuit.qubits)
+            state = get_state(circuit)
+
+            null_space = np.conj(scipy.linalg.null_space(isometry.T))
+
+            self.assertTrue(np.allclose(null_space[:, j-2**log_cols], state))
 
     def _test_fixed_isometry(self, scheme):
         isometry = np.copy([[-0.5391073,  -0.12662419, -0.73739705, -0.38674956],
