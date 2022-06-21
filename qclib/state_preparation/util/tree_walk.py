@@ -16,6 +16,8 @@
 https://arxiv.org/abs/2108.10182
 """
 
+from qiskit.circuit.library import RYGate, RZGate
+from qclib.gates.multiplexor import rotation_multiplexor
 from qclib.state_preparation.util.tree_utils import leftmost, children
 
 def bottom_up(angle_tree, circuit, start_level):
@@ -50,9 +52,16 @@ def top_down(angle_tree, circuit, start_level, control_nodes=None, target_nodes=
             angles_z = [float(node.angle_z) for node in target_nodes]
             target_qubit = target_nodes[0].qubit
             control_qubits = [node.qubit for node in control_nodes]
-            circuit.ucry(angles_y, control_qubits[::-1], target_qubit)     # qiskit reverse
-            if any(angles_z) != 0.0:
-                circuit.ucrz(angles_z, control_qubits[::-1], target_qubit) # qiskit reverse
+
+            # If both multiplexors are used (RY and RZ), we can save two CNOTs.
+            # That is why the RZ multiplexor is reversed.
+            if any(angles_y):
+                mult = rotation_multiplexor(RYGate, angles_y, not any(angles_z))
+                circuit.append(mult, [target_qubit]+control_qubits[::-1])
+
+            if any(angles_z):
+                mult = rotation_multiplexor(RZGate, angles_z, not any(angles_y))
+                circuit.append(mult.reverse_ops(), [target_qubit]+control_qubits[::-1])
 
             control_nodes.append(angle_tree)                 # add current node to the controls list
 
