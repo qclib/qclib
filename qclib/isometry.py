@@ -102,10 +102,7 @@ def _is_isometry(iso, log_cols):
 
 
 def _csd(iso, log_lines, log_cols):
-    #if log_lines-1 == log_cols:
     unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
-    #else:
-    #    raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
 
     return decompose_unitary(unitary_gate, decomposition='qsd', iso=log_lines-log_cols)
 
@@ -193,9 +190,9 @@ def _ccd(iso, log_lines, log_cols):
     return circuit.inverse()
 
 def _g_k(iso, log_lines, col_index):
-    g_k = QuantumCircuit(log_lines)                   # Gate G columns index k, to be created.
-    k_bin = '{:0{}b}'.format(col_index, log_lines)    # Binary representation of column index k.
-    for i in range(log_lines):                        # G_k's subgate bit index i (s in the paper).
+    g_k = QuantumCircuit(log_lines)         # Gate G columns index k, to be created.
+    k_bin = f'{col_index:0{log_lines}b}'    # Binary representation of column index k.
+    for i in range(log_lines):              # G_k's subgate bit index i (s in the paper).
         target = log_lines - i - 1
         control = list(range(target))
         ancilla = list(range(target+1, log_lines))
@@ -352,10 +349,7 @@ def _cnot_count_estimate(isometry, scheme='ccd'):
     return _cnot_count_estimate_ccd(log_lines, log_cols)
 
 def _cnot_count_estimate_csd(iso, log_lines, log_cols):
-    #if log_lines-1 == log_cols:
     unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
-    #else:
-    #    raise ValueError('This isometry csd implementation only works with n x (n//2) matrices')
 
     return unitary_cnot_count(unitary_gate, decomposition='qsd', iso=log_lines-log_cols)
 
@@ -392,7 +386,7 @@ def _cnot_count_estimate_ccd(log_lines, log_cols):
     """
     cnots = 0
     for k in range(2**log_cols):
-        k_bin = '{:0{}b}'.format(k, log_lines)
+        k_bin = f'{k:0{log_lines}b}'
         # G_K
         for i in range(log_lines):
             target = log_lines - i - 1
