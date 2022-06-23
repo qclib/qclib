@@ -28,7 +28,6 @@ from qiskit.extensions.quantum_initializer import UCGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
 from qclib.gates.ucr import ucr
 
-# pylint: disable=maybe-no-member
 
 def unitary(gate, decomposition='qsd', iso=0):
     """
@@ -54,12 +53,13 @@ def unitary(gate, decomposition='qsd', iso=0):
             circuit.compose(gate_left, qubits, inplace=True)
 
         # Middle circuit
-        ucry = ucr(RYGate, list(2*theta), CZGate, False) # Last CZGate is ommited and absorved
-                                                         # into the neighboring multiplexor.
+        # Last CZGate is ommited and absorved into the neighboring multiplexor.
+        ucry = ucr(RYGate, list(2*theta), CZGate, False)
+
         circuit.append(ucry, [n_qubits-1] + list(range(n_qubits-1)))
         # Optimization A.1 from "Synthesis of Quantum Logic Circuits".
         # Last CZGate from ucry is absorbed here.
-        right_gates[1][:,len(theta)//2:] = -right_gates[1][:,len(theta)//2:]
+        right_gates[1][:, len(theta)//2:] = -right_gates[1][:, len(theta)//2:]
 
         # Right circuit
         gate_right = _unitary(list(right_gates), n_qubits, decomposition)
@@ -181,7 +181,7 @@ def cnot_count(gate, decomposition='qsd', method='estimate', iso=False):
     # Exact count
     circuit = unitary(gate, decomposition, iso)
     transpiled_circuit = transpile(circuit, basis_gates=['u1', 'u2', 'u3', 'cx'],
-                                            optimization_level=0)
+                                   optimization_level=0)
     count_ops = transpiled_circuit.count_ops()
     if 'cx' in count_ops:
         return count_ops[CXGate()]
