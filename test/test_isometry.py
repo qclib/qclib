@@ -19,7 +19,7 @@ Tests for the isometry.py module.
 from unittest import TestCase
 import numpy as np
 import scipy
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, transpile
 from scipy.stats import unitary_group
 from qclib.isometry import decompose
 from qclib.util import get_state
@@ -41,6 +41,9 @@ class TestIsometry(TestCase):
     def test_isometry_knill(self):
         self._test_isometry('knill')
 
+    def test_unitary_knill(self):
+        self._test_unitary('knill')
+
     def test_fixed_isometry_knill(self):
         self._test_fixed_isometry('knill')
 
@@ -58,6 +61,9 @@ class TestIsometry(TestCase):
     def test_isometry_ccd(self):
         self._test_isometry('ccd')
 
+    def test_unitary_ccd(self):
+        self._test_unitary('ccd')
+
     def test_fixed_isometry_ccd(self):
         self._test_fixed_isometry('ccd')
 
@@ -71,6 +77,9 @@ class TestIsometry(TestCase):
 
     def test_isometry_csd(self):
         self._test_isometry('csd')
+
+    def test_unitary_csd(self):
+        self._test_unitary('csd')
 
     def test_fixed_isometry_csd(self):
         self._test_fixed_isometry('csd')
@@ -103,7 +112,7 @@ class TestIsometry(TestCase):
         isometry = unitary_group.rvs(2**log_lines)[:, :2**log_cols]
 
         gate = decompose(isometry, scheme=scheme)
-
+        gate = transpile(gate, basis_gates=['u', 'cx'])
         for j in range(2**log_cols):
             circuit = QuantumCircuit(log_lines)
 
@@ -115,6 +124,23 @@ class TestIsometry(TestCase):
             state = get_state(circuit)
 
             self.assertTrue(np.allclose(isometry[:, j], state))
+
+    def _test_unitary(self, scheme):
+        n_qubits = 3
+        unitary_matrix = unitary_group.rvs(2**n_qubits)
+        gate = decompose(unitary_matrix, scheme=scheme)
+        gate = transpile(gate, basis_gates=['u', 'cx'])
+
+        for i in range(2**n_qubits):
+            circuit = QuantumCircuit(n_qubits)
+
+            for j, bit in enumerate(f'{i:0{n_qubits}b}'[::-1]):
+                if bit == '1':
+                    circuit.x(j)
+
+            circuit.append(gate.to_instruction(), circuit.qubits)
+            state = get_state(circuit)
+            self.assertTrue(np.allclose(unitary_matrix[:, i], state))
 
     def _test_null_space(self, scheme):
         log_lines = 3

@@ -28,7 +28,7 @@ from qclib.util import get_state
 # pylint: disable=missing-class-docstring
 
 
-class TestSchmidt(TestCase):
+class TestLowRank(TestCase):
     @staticmethod
     def mae(state, ideal):
         """
@@ -58,29 +58,41 @@ class TestSchmidt(TestCase):
         return [value/sum_values for (key, value) in counts_with_zeros.items()]
 
     def _test_initialize_mae(self, rank=0, max_mae=10**-15):
-        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        n_qubits = 5
+        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        qubits = list(range(5))
-        partitions = combinations(qubits, 3)
+        qubits = list(range(n_qubits))
+        partitions = combinations(qubits, (n_qubits+1)//2)
         for partition in partitions:
-            circuit = QuantumCircuit(5)
+            circuit = QuantumCircuit(n_qubits)
             lr_params = {'lr': rank, 'partition': partition}
             LowRankInitialize.initialize(circuit, state_vector, lr_params=lr_params)
 
             state = get_state(circuit)
 
-            self.assertTrue(TestSchmidt.mae(state, state_vector) < max_mae)
+            self.assertTrue(TestLowRank.mae(state, state_vector) < max_mae)
 
-    def test_initialize_full_rank(self):
-        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+    def _test_initialize_full_rank(self, n_qubits):
+        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
-        circuit = QuantumCircuit(5)
-        LowRankInitialize.initialize(circuit, state_vector)
 
-        state = get_state(circuit)
+        qubits = list(range(n_qubits))
+        partitions = combinations(qubits, (n_qubits+1)//2)
+        for partition in partitions:
+            circuit = QuantumCircuit(n_qubits)
+            lr_params = {'partition': partition}
+            LowRankInitialize.initialize(circuit, state_vector, lr_params=lr_params)
 
-        self.assertTrue(np.allclose(state_vector, state))
+            state = get_state(circuit)
+
+            self.assertTrue(np.allclose(state_vector, state))
+
+    def test_initialize_full_rank_7(self):
+        self._test_initialize_full_rank(7)
+
+    def test_initialize_full_rank_6(self):
+        self._test_initialize_full_rank(6)
 
     def test_initialize_rank_5(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
