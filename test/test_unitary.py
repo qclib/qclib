@@ -23,54 +23,54 @@ from qclib.util import get_state
 
 class TestUnitary(TestCase):
     """ Testing qclib.unitary """
+    def _test_unitary(self, decomposition, n_qubits):
+        """ Testing qclib.unitary gate """
+        unitary_matrix = unitary_group.rvs(2**n_qubits)
+        gate = unitary(unitary_matrix, decomposition)
+        gate = qiskit.transpile(gate, basis_gates=['u', 'cx'])
+
+        for i in range(2**n_qubits):
+            circuit = qiskit.QuantumCircuit(n_qubits)
+
+            for j, bit in enumerate(f'{i:0{n_qubits}b}'[::-1]):
+                if bit == '1':
+                    circuit.x(j)
+
+            circuit.append(gate.to_instruction(), circuit.qubits)
+            state = get_state(circuit)
+            self.assertTrue(np.allclose(unitary_matrix[:, i], state))
+
     def test_unitary_csd_2qubits(self):
         """ Testing qclib.unitary with 2 qubits gate"""
-        unitary_matrix = unitary_group.rvs(4)
-        gate = unitary(unitary_matrix)
-        state = get_state(gate)
+        self._test_unitary('csd', 2)
 
-        self.assertTrue(np.allclose(unitary_matrix[:, 0], state))
+    def test_unitary_csd_3qubits(self):
+        """ Testing qclib.unitary 3 qubits gate"""
+        self._test_unitary('csd', 3)
 
-    def test_unitary_csd_5qubits(self):
-        """ Testing qclib.unitary 5 qubits gate"""
-        unitary_matrix = unitary_group.rvs(32)
-        gate = unitary(unitary_matrix)
-        state = get_state(gate)
-        self.assertTrue(np.allclose(unitary_matrix[:, 0], state))
+    def test_unitary_csd_4qubits(self):
+        """ Testing qclib.unitary 4 qubits gate"""
+        self._test_unitary('csd', 4)
+
+    def test_unitary_qsd_2qubits(self):
+        """ Testing qclib.unitary 2 qubits gate qsd"""
+        self._test_unitary('qsd', 2)
+
+    def test_unitary_qsd_3qubits(self):
+        """ Testing qclib.unitary 3 qubits gate qsd"""
+        self._test_unitary('qsd', 3)
 
     def test_unitary_qsd_4qubits(self):
         """ Testing qclib.unitary 4 qubits gate qsd"""
+        self._test_unitary('qsd', 4)
+
+    def test_unitary_qsd_count(self):
+        """ Testing qclib.unitary 4 qubits gate qsd"""
         unitary_matrix = unitary_group.rvs(16)
         gate = unitary(unitary_matrix, 'qsd')
+        gate = qiskit.transpile(gate, basis_gates=['u', 'cx'])
         state = get_state(gate)
-        self.assertTrue(np.allclose(unitary_matrix[:, 0], state))
-
-        circuit = qiskit.QuantumCircuit(4)
-        circuit.x(0)
-        circuit.append(gate, circuit.qubits)
-        state = get_state(circuit)
-        self.assertTrue(np.allclose(unitary_matrix[:, 1], state))
-
-        circuit = qiskit.QuantumCircuit(4)
-        circuit.x(1)
-        circuit.append(gate, circuit.qubits)
-        state = get_state(circuit)
-        self.assertTrue(np.allclose(unitary_matrix[:, 2], state))
-
-        circuit = qiskit.QuantumCircuit(4)
-
-        circuit.x([0, 1, 2, 3])
-        circuit.append(gate, circuit.qubits)
-        state = get_state(circuit)
-        self.assertTrue(np.allclose(unitary_matrix[:, 15], state))
-
-    def test_unitary_qsd_5qubits(self):
-        """ Testing qclib.unitary 5 qubits gate qsd"""
-        unitary_matrix = unitary_group.rvs(16)
-        gate = unitary(unitary_matrix, 'qsd')
-        state = get_state(gate)
-        transpiled_circuit = qiskit.transpile(gate, basis_gates=['u', 'cx'])
-        n_cx = transpiled_circuit.count_ops()['cx']
+        n_cx = gate.count_ops()['cx']
         self.assertTrue(n_cx <= 120)
         self.assertTrue(np.allclose(unitary_matrix[:, 0], state))
 
