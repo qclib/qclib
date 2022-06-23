@@ -22,7 +22,8 @@ import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import RZGate, RYGate, CXGate, CZGate
 
-def ucr(r_gate:Union[RZGate,RYGate], angles:List[float], c_gate:Union[CXGate,CZGate]=CXGate, last_control=True) -> QuantumCircuit():
+def ucr(r_gate:Union[RZGate,RYGate], angles:List[float],
+        c_gate:Union[CXGate,CZGate]=CXGate, last_control=True) -> QuantumCircuit:
     """
     Constructs a multiplexor rotation gate.
 
@@ -54,7 +55,6 @@ def ucr(r_gate:Union[RZGate,RYGate], angles:List[float], c_gate:Union[CXGate,CZG
     mult = ucr(r_gate, multiplexed_angles[:size//2], c_gate, False)
     circuit.append(mult, reg[0:-1])
 
-    #circuit.cx(control, target)
     circuit.append(c_gate(), [control, target])
 
     mult = ucr(r_gate, multiplexed_angles[size//2:], c_gate, False)
@@ -66,7 +66,6 @@ def ucr(r_gate:Union[RZGate,RYGate], angles:List[float], c_gate:Union[CXGate,CZG
     # last CNOT of the first multiplexer. In this condition, both last CNOTs are
     # unnecessary.
     if last_control:
-        #circuit.cx(control, target)
         circuit.append(c_gate(), [control, target])
 
     return circuit
