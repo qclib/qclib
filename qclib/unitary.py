@@ -22,10 +22,13 @@ import numpy as np
 import scipy as sp
 import qiskit
 from qiskit import transpile
-from qiskit.circuit.library import CXGate
+from qiskit.circuit.library import CXGate, RYGate, CZGate
 from qiskit.extensions import UnitaryGate, UCRYGate, UCRZGate
 from qiskit.extensions.quantum_initializer import UCGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
+from qclib.gates.ucr import ucr
+
+# pylint: disable=maybe-no-member
 
 def unitary(gate, decomposition='qsd', iso=0):
     """
@@ -42,18 +45,25 @@ def unitary(gate, decomposition='qsd', iso=0):
         right_gates, theta, left_gates = \
             sp.linalg.cossin(gate, size/2, size/2, separate=True)
 
+        # Left circuit
         if iso:
             gate_left = unitary(left_gates[0], decomposition=decomposition, iso=iso-1)
             circuit = circuit.compose(gate_left, qubits[:-1])
         else:
             gate_left = _unitary(list(left_gates), n_qubits, decomposition)
-            circuit = circuit.compose(gate_left, qubits)
+            circuit.compose(gate_left, qubits, inplace=True)
 
+        # Middle circuit
+        ucry = ucr(RYGate, list(2*theta), CZGate, False) # Last CZGate is ommited and absorved
+                                                         # into the neighboring multiplexor.
+        circuit.append(ucry, [n_qubits-1] + list(range(n_qubits-1)))
+        # Optimization A.1 from "Synthesis of Quantum Logic Circuits".
+        # Last CZGate from ucry is absorbed here.
+        right_gates[1][:,len(theta)//2:] = -right_gates[1][:,len(theta)//2:]
+
+        # Right circuit
         gate_right = _unitary(list(right_gates), n_qubits, decomposition)
-
-        circuit.append(UCRYGate(list(2*theta)), [n_qubits-1] + list(range(n_qubits-1)))
-
-        circuit = circuit.compose(gate_right, qubits)
+        circuit.compose(gate_right, qubits, inplace=True)
 
         return circuit
 
@@ -65,13 +75,13 @@ def unitary(gate, decomposition='qsd', iso=0):
 
 def _unitary(gate_list, n_qubits, decomposition='qsd'):
 
-    if len(gate_list[0]) == 2:
-        qubits = qiskit.QuantumRegister(n_qubits)
-        circuit = qiskit.QuantumCircuit(qubits)
-        circuit.append(UCGate(gate_list), qubits[[0]] + qubits[1:])
-        return circuit
-
     if decomposition == 'csd':
+        if len(gate_list[0]) == 2:
+            qubits = qiskit.QuantumRegister(n_qubits)
+            circuit = qiskit.QuantumCircuit(qubits)
+            circuit.append(UCGate(gate_list), qubits[[0]] + qubits[1:])
+            return circuit
+
         return _csd(gate_list, n_qubits)
 
     # QSD
@@ -122,18 +132,22 @@ def _multiplexed_csd(gate_list):
 
 def _qsd(gate1, gate2):
     n_qubits = int(log2(len(gate1))) + 1
-
-    list_d, gate_v, gate_w = _compute_gates(gate1, gate2)
-
-    left_gate = unitary(gate_w, 'qsd')
-    right_gate = unitary(gate_v, 'qsd')
-
     qubits = qiskit.QuantumRegister(n_qubits)
     circuit = qiskit.QuantumCircuit(qubits)
 
+    list_d, gate_v, gate_w = _compute_gates(gate1, gate2)
+
+    # Left circuit
+    left_gate = unitary(gate_w, 'qsd')
     circuit = circuit.compose(left_gate, qubits[0:-1])
+
+    # Middle circuit
     circuit.append(UCRZGate(list(-2*np.angle(list_d))), qubits[[-1]] + qubits[0:-1])
+
+    # Right circuit
+    right_gate = unitary(gate_v, 'qsd')
     circuit = circuit.compose(right_gate, qubits[0:-1])
+
     return circuit
 
 
@@ -165,7 +179,7 @@ def cnot_count(gate, decomposition='qsd', method='estimate', iso=False):
         return _cnot_count_estimate(gate, decomposition, iso)
 
     # Exact count
-    circuit = unitary(gate, decomposition)
+    circuit = unitary(gate, decomposition, iso)
     transpiled_circuit = transpile(circuit, basis_gates=['u1', 'u2', 'u3', 'cx'],
                                             optimization_level=0)
     count_ops = transpiled_circuit.count_ops()

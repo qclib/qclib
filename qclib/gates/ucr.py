@@ -20,10 +20,9 @@ from math import log2
 from typing import List, Union
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
-from qiskit.circuit.library import RZGate, RYGate
-from qiskit.circuit.gate import Instruction
+from qiskit.circuit.library import RZGate, RYGate, CXGate, CZGate
 
-def rotation_multiplexor(gate:Union[RZGate,RYGate], angles:List[float], last_cnot=True) -> Instruction:
+def ucr(r_gate:Union[RZGate,RYGate], angles:List[float], c_gate:Union[CXGate,CZGate]=CXGate, last_control=True) -> QuantumCircuit():
     """
     Constructs a multiplexor rotation gate.
 
@@ -34,13 +33,14 @@ def rotation_multiplexor(gate:Union[RZGate,RYGate], angles:List[float], last_cno
     n_qubits = int(log2(size)) + 1
 
     reg = QuantumRegister(n_qubits)
-    circuit = QuantumCircuit(reg, name="rot_multiplexor")
+    circuit = QuantumCircuit(reg)
 
     target = reg[0]
     control = reg[n_qubits-1]
 
     if n_qubits == 1:
-        circuit.append(gate(angles[0]), [target])
+        if abs(angles[0]) > 10**-8:
+            circuit.append(r_gate(angles[0]), [target])
         return circuit
 
     angle_multiplexor = np.kron([[0.5, 0.5], [0.5, -0.5]], np.identity(2**(n_qubits-2)))
@@ -51,12 +51,13 @@ def rotation_multiplexor(gate:Union[RZGate,RYGate], angles:List[float], last_cno
     #   The boxed CNOT gates may be canceled.
     # This is why "last_cnot=False" in both calls of "rotation_multiplexor()" and
     # also why the multiplexer in the second "circuit.append()" is reversed.
-    mult = rotation_multiplexor(gate, multiplexed_angles[:size//2], False)
+    mult = ucr(r_gate, multiplexed_angles[:size//2], c_gate, False)
     circuit.append(mult, reg[0:-1])
 
-    circuit.cx(control, target)
+    #circuit.cx(control, target)
+    circuit.append(c_gate(), [control, target])
 
-    mult = rotation_multiplexor(gate, multiplexed_angles[size//2:], False)
+    mult = ucr(r_gate, multiplexed_angles[size//2:], c_gate, False)
     circuit.append(mult.reverse_ops(), reg[0:-1])
 
     # The following condition allows saving CNOTs when two multiplexors are used
@@ -64,7 +65,8 @@ def rotation_multiplexor(gate:Union[RZGate,RYGate], angles:List[float], last_cno
     # the second multiplexor is reverted, its last CNOT will be cancelled by the
     # last CNOT of the first multiplexer. In this condition, both last CNOTs are
     # unnecessary.
-    if last_cnot:
-        circuit.cx(control, target)
+    if last_control:
+        #circuit.cx(control, target)
+        circuit.append(c_gate(), [control, target])
 
-    return circuit.to_instruction()
+    return circuit
