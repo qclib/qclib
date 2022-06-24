@@ -24,7 +24,7 @@ import qiskit
 from qiskit import transpile
 from qiskit.circuit.library import CXGate, RYGate, CZGate
 from qiskit.extensions import UnitaryGate, UCRYGate, UCRZGate
-from qiskit.extensions.quantum_initializer import UCGate
+from qclib.gates.uc_gate import UCGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
 from qclib.gates.ucr import ucr
 
@@ -56,7 +56,7 @@ def unitary(gate, decomposition='qsd', iso=0):
         # Last CZGate is ommited and absorved into the neighboring multiplexor.
         ucry = ucr(RYGate, list(2*theta), CZGate, False)
 
-        circuit.append(ucry, [n_qubits-1] + list(range(n_qubits-1)))
+        circuit.append(ucry.to_instruction(), [n_qubits-1] + list(range(n_qubits-1)))
         # Optimization A.1 from "Synthesis of Quantum Logic Circuits".
         # Last CZGate from ucry is absorbed here.
         right_gates[1][:, len(theta)//2:] = -right_gates[1][:, len(theta)//2:]
