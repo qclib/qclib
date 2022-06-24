@@ -29,11 +29,12 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.aqua.algorithms import VQC as qiskit_vqc
 from qiskit.aqua.algorithms.classifiers.vqc import return_probabilities
-#from qiskit.circuit.library import BlueprintCircuit
+# from qiskit.circuit.library import BlueprintCircuit
 from qiskit_machine_learning.circuit.library import RawFeatureVector
 from .baa_feature_vector import BaaFeatureVector  # pylint: disable=relative-beyond-top-level
 
 # pylint: disable=invalid-name
+
 
 class VQC(qiskit_vqc):
     """
@@ -66,7 +67,6 @@ class VQC(qiskit_vqc):
             # cannot transpile RawFeatureVector or BaaFeatureVector.
             # See the comment at the beginning of this file.
             if isinstance(self._feature_map, (RawFeatureVector, BaaFeatureVector)):
-            #if isinstance(self._feature_map, BlueprintCircuit):
                 feat_map_support = False
 
             if var_form_support and feat_map_support and self._parameterized_circuits is None:

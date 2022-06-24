@@ -16,6 +16,7 @@
 
 import numpy as np
 
+
 def initialize(circuit, pattern, q_memory, q_auxiliary, is_classical_pattern=False):
     r"""
     Prepares a circuit which the output is determined by a probability distribution on the memory
@@ -50,25 +51,25 @@ def initialize(circuit, pattern, q_memory, q_auxiliary, is_classical_pattern=Fal
     circuit.h(q_auxiliary)
 
     if is_classical_pattern:
-        for k, q_m in enumerate(q_memory): # classical pattern register
-            if pattern[k]==1:
+        for k, q_m in enumerate(q_memory):  # classical pattern register
+            if pattern[k] == 1:
                 circuit.x(q_m)
     else:
-        for k, q_m in enumerate(q_memory): # quantum pattern register
+        for k, q_m in enumerate(q_memory):  # quantum pattern register
             circuit.cx(pattern[k], q_m)
 
     for k, q_m in enumerate(q_memory):
         circuit.p(-np.pi / (2 * size), q_m)
 
     for k, q_m in enumerate(q_memory):
-        circuit.cp( np.pi / size, q_auxiliary, q_m)
+        circuit.cp(np.pi / size, q_auxiliary, q_m)
 
     if is_classical_pattern:
-        for k, q_m in list(enumerate(q_memory))[::-1]: # classical pattern register
-            if pattern[k]==1:
+        for k, q_m in list(enumerate(q_memory))[::-1]:  # classical pattern register
+            if pattern[k] == 1:
                 circuit.x(q_m)
     else:
-        for k, q_m in list(enumerate(q_memory))[::-1]: # quantum pattern register
+        for k, q_m in list(enumerate(q_memory))[::-1]:  # quantum pattern register
             circuit.cx(pattern[k], q_m)
 
     circuit.h(q_auxiliary)

@@ -28,6 +28,7 @@ from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_ran
 
 # pylint: disable=maybe-no-member
 
+
 class LowRankInitialize(Initialize):
     """
     Approximated quantum-state preparation with entanglement dependent complexity
@@ -158,8 +159,8 @@ class LowRankInitialize(Initialize):
         if data.shape[1] == 1:
             # state preparation
             gate_u = LowRankInitialize(data[:, 0],
-                                        lr_params={'iso_scheme': self.isometry_scheme,
-                                                   'unitary_scheme': self.unitary_scheme})
+                                       lr_params={'iso_scheme': self.isometry_scheme,
+                                                  'unitary_scheme': self.unitary_scheme})
 
         elif data.shape[0]//2 == data.shape[1]:
             # isometry 2^(n-1) to 2^n.

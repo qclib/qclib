@@ -27,6 +27,7 @@ from qclib.state_preparation.util.angle_tree_preparation import create_angles_tr
 from qclib.state_preparation.util.tree_register import add_register
 from qclib.state_preparation.util.tree_walk import top_down, bottom_up
 
+
 class BdspInitialize(Initialize):
     """
     Configurable sublinear circuits for quantum state preparation
@@ -50,10 +51,10 @@ class BdspInitialize(Initialize):
                     Default value is ``ceil(n_qubits/2)`` (sublinear).
         """
         if opt_params is None:
-            self.split = int(ceil(log2(len(params))/2)) # sublinear
+            self.split = int(ceil(log2(len(params))/2))  # sublinear
         else:
             if opt_params.get('split') is None:
-                self.split = int(ceil(log2(len(params))/2)) # sublinear
+                self.split = int(ceil(log2(len(params))/2))  # sublinear
             else:
                 self.split = opt_params.get('split')
 
@@ -94,8 +95,8 @@ class BdspInitialize(Initialize):
         n_qubits = int(n_qubits)
         # bottom-up qubits + top-down qubits
         # top-down qubits: (number of sub-states) * (number of qubits per sub-state)
-        self.num_qubits = sum([2**i for i in range(n_qubits-self.split)]) + \
-                            2**(n_qubits-self.split) * self.split
+        self.num_qubits = sum([2**i for i in range(n_qubits-self.split)])
+        self.num_qubits += 2**(n_qubits-self.split) * self.split
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):

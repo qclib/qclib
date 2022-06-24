@@ -155,16 +155,17 @@ def random_sparse(nbits, density):
     bin_data.sort(key=_count_ones)
     return bin_data
 
+
 def _double_sparse_binary(nbits, log_size, p_1, p_0):
 
     bin_data = []
-    while len(bin_data)< 2**log_size:
+    while len(bin_data) < 2**log_size:
         lst = np.random.choice(2, nbits, p=[p_1, p_0]).tolist()
 
         if lst not in bin_data:
             bin_data.append(lst)
 
-    return  bin_data
+    return bin_data
 
 
 def double_sparse(nbits, log_size, p_1):
@@ -224,6 +225,7 @@ def _compute_matrix_angles(feature, norm):
         alpha = 2 * (np.arcsin(sin_value))
 
     return alpha, beta, phi
+
 
 def build_state_dict(state):
     """

@@ -82,8 +82,8 @@ def _gate_u(agate, coef, signal):
     param = 1/np.abs(coef)
 
     values, vectors = np.linalg.eig(agate)
-    gate = np.power(values[0]+0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T + \
-           np.power(values[1]+0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
+    gate = np.power(values[0]+0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T
+    gate = gate + np.power(values[1]+0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
 
     if signal < 0:
         gate = np.linalg.inv(gate)
