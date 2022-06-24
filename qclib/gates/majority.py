@@ -17,6 +17,7 @@
 from itertools import combinations
 import numpy as np
 
+
 def operate(circuit, controls, target):
     """ Apply a majority gate """
 
@@ -26,8 +27,7 @@ def operate(circuit, controls, target):
     n_min = int(np.ceil(size_controls/2))
     n_max = 2**log_n
 
-    n_controls = []
-    n_controls.append(n_min)
+    n_controls = [n_min]
 
     if n_min != n_max:
         if n_min % 2 != 0:

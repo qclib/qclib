@@ -303,7 +303,9 @@ class MergeInitialize(InitializeSparse):
 
         return bitstr1, bitstr2, state_dict, quantum_circuit
 
-    def _apply_not_gates_to_qubit_index_list(self, bitstr1, bitstr2, dif_qubits, state_dict, quantum_circuit):
+    def _apply_not_gates_to_qubit_index_list(self, bitstr1, bitstr2,
+                                             dif_qubits, state_dict,
+                                             quantum_circuit):
         """
         Applies quantum not gate at the qubit at a given index, where the state represented by the
         bit string bitstr2 is different than '1' at index in diff_qubits.
@@ -411,4 +413,3 @@ class MergeInitialize(InitializeSparse):
         )
 
         return state_dict, quantum_circuit
-  

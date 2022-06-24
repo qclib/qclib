@@ -21,7 +21,7 @@ import numpy as np
 class Initialize(Gate):
 
     @staticmethod
-    def initialize(q_circuit, state, qubits):
+    def initialize(q_circuit, state, qubits=None):
         pass
 
     def inverse(self):

@@ -27,6 +27,7 @@ from qclib.state_preparation.util.angle_tree_preparation import create_angles_tr
 from qclib.state_preparation.util.tree_register import add_register
 from qclib.state_preparation.util.tree_walk import bottom_up
 
+
 class DcspInitialize(Initialize):
     """
     A divide-and-conquer algorithm for quantum state preparation

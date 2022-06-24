@@ -17,13 +17,16 @@ Constructs a multiplexor gate.
 """
 
 from math import log2
-from typing import List, Union
+from typing import List, Union, Type
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import RZGate, RYGate, CXGate, CZGate
 
-def ucr(r_gate:Union[RZGate,RYGate], angles:List[float],
-        c_gate:Union[CXGate,CZGate]=CXGate, last_control=True) -> QuantumCircuit:
+
+def ucr(r_gate: Union[Type[RZGate], Type[RYGate]],
+        angles: List[float],
+        c_gate: Union[Type[CXGate], Type[CZGate]]=CXGate,
+        last_control=True) -> QuantumCircuit:
     """
     Constructs a multiplexor rotation gate.
 
@@ -53,12 +56,12 @@ def ucr(r_gate:Union[RZGate,RYGate], angles:List[float],
     # This is why "last_cnot=False" in both calls of "rotation_multiplexor()" and
     # also why the multiplexer in the second "circuit.append()" is reversed.
     mult = ucr(r_gate, multiplexed_angles[:size//2], c_gate, False)
-    circuit.append(mult, reg[0:-1])
+    circuit.append(mult.to_instruction(), reg[0:-1])
 
     circuit.append(c_gate(), [control, target])
 
     mult = ucr(r_gate, multiplexed_angles[size//2:], c_gate, False)
-    circuit.append(mult.reverse_ops(), reg[0:-1])
+    circuit.append(mult.reverse_ops().to_instruction(), reg[0:-1])
 
     # The following condition allows saving CNOTs when two multiplexors are used
     # in sequence. Any multiplexor can have its operation reversed. Therefore, if

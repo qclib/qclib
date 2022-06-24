@@ -28,7 +28,10 @@ import numpy as np
 from qiskit.exceptions import QiskitError
 from qiskit.circuit import QuantumRegister, ParameterVector, Instruction
 from qiskit.circuit.library import BlueprintCircuit
-from ..state_preparation import BaaLowRankInitialize # pylint: disable=relative-beyond-top-level
+from ..state_preparation import BaaLowRankInitialize
+
+# pylint: disable=relative-beyond-top-level
+
 
 class BaaFeatureVector(BlueprintCircuit):
     """The BAA schmidt feature vector circuit.
@@ -75,9 +78,10 @@ class BaaFeatureVector(BlueprintCircuit):
 
     """
 
-    def __init__(self, feature_dimension: Optional[int], strategy: str = 'greedy',
-                                                         max_fidelity_loss: float = 0.0,
-                                                         use_low_rank: bool = False) -> None:
+    def __init__(self, feature_dimension: Optional[int],
+                 strategy: str = 'greedy',
+                 max_fidelity_loss: float = 0.0,
+                 use_low_rank: bool = False) -> None:
         """
         Args:
             feature_dimension: The feature dimension from which the number of
@@ -136,7 +140,7 @@ class BaaFeatureVector(BlueprintCircuit):
         if self.num_qubits != num_qubits:
             # invalidate the circuit
             self._invalidate()
-            self.qregs: List[QuantumRegister] = []
+            self.qregs = []
             if num_qubits is not None and num_qubits > 0:
                 self.qregs = [QuantumRegister(num_qubits, name="q")]
 
@@ -166,6 +170,7 @@ class BaaFeatureVector(BlueprintCircuit):
         if num_qubits != self.num_qubits:
             self._invalidate()
             self.num_qubits = int(num_qubits)
+
 
 class BaaParameterizedInitialize(Instruction):
     """A normalized parameterized initialize instruction."""
@@ -197,8 +202,8 @@ class BaaParameterizedInitialize(Instruction):
         normalized = np.array(cleaned_params) / np.linalg.norm(cleaned_params)
 
         circuit = BaaLowRankInitialize(normalized,
-                                        opt_params={
-                                            'max_fidelity_loss':self._max_fidelity_loss,
-                                            'strategy':self._strategy,
-                                            'use_low_rank':self._use_low_rank}).definition
+                                       opt_params={
+                                           'max_fidelity_loss': self._max_fidelity_loss,
+                                           'strategy': self._strategy,
+                                           'use_low_rank': self._use_low_rank}).definition
         self.definition = circuit

@@ -22,6 +22,7 @@ import tensorly as tl
 from tensorly.decomposition import parafac
 from tensorly.cp_tensor import CPTensor
 
+
 def _get_iota(qubit_idx: int, qubits: int, selector_bit: int, basis_state: int):
     assert selector_bit in [0, 1]
     full_mask = 2**qubits - 1
@@ -126,9 +127,8 @@ def geometric_entanglement(state_vector: List[complex], return_product_state=Fal
     # The Tucker decomposition is actually a randomized algorithm.
     # We take four shots and take the min of it.
 
-
     for _ in range(4):
-        decomp_tensor: CPTensor = parafac(tensor, rank=1, normalize_factors=True, init='random')
+        decomp_tensor = parafac(tensor, rank=1, normalize_factors=True, init='random')
         fidelity_loss = 1 - np.abs(decomp_tensor.weights[0]) ** 2
         results[fidelity_loss] = decomp_tensor
 
@@ -180,8 +180,10 @@ def schmidt_decomposition(state_vector, partition):
 
     return np.linalg.svd(sep_matrix)
 
+
 def _to_qubits(n_state_vector):
     return int(np.ceil(np.log2(n_state_vector))) if n_state_vector > 0 else 0
+
 
 def _undo_separation_matrix(n_qubits, sep_matrix, partition):
     new_shape = (2 ** n_qubits, )

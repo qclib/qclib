@@ -151,17 +151,18 @@ class FnPointsInitialize(InitializeSparse):
         return circuit
 
     def _apply_smatrix(self, circuit, idx_p, n_output_values, output_s, reg_c):
-        theta = -2 * np.arccos(np.sqrt(idx_p / (idx_p + 1)))  # This sign is here for the smaller
-                                                            # values of "s" to be represented by
-                                                            # negative amplitudes and the larger
-                                                            # ones by positive amplitudes.
-        lamb = -output_s * 2 * np.pi / n_output_values        # In the paper this negative sign is
-                                                            # missing. Without it the matrix S
-                                                            # is not unitary.
+        theta = -2 * np.arccos(np.sqrt(idx_p / (idx_p + 1)))
+        # This sign is here for the smaller values of "s" to be represented by
+        # negative amplitudes and the larger ones by positive amplitudes.
+        # In the paper this negative sign is missing. Without it the matrix S
+        # is not unitary.
+        lamb = -output_s * 2 * np.pi / n_output_values
+
         phi = -lamb
         circuit.cu(theta, phi, lamb, 0, reg_c[0], reg_c[1])
 
-    def _flipflop01(self, bits_z, circuit, reg_x):
+    @staticmethod
+    def _flipflop01(bits_z, circuit, reg_x):
         if bits_z[0] == 0:
             circuit.x(reg_x[0])
         if bits_z[1] == 0:
