@@ -98,7 +98,7 @@ def _is_isometry(iso, log_cols):
 def _csd(iso, log_lines, log_cols):
     unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
 
-    return decompose_unitary(unitary_gate, decomposition='qsd', iso=log_lines - log_cols)
+    return decompose_unitary(unitary_gate, decomposition='qsd', iso=log_lines - log_cols, apply_a2=False)
 
 
 #   Knill
