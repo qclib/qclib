@@ -361,7 +361,7 @@ def _cnot_count_estimate(isometry, scheme='ccd'):
 def _cnot_count_estimate_csd(iso, log_lines, log_cols):
     unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
 
-    return unitary_cnot_count(unitary_gate, decomposition='qsd', iso=log_lines - log_cols)
+    return unitary_cnot_count(unitary_gate, decomposition='qsd', iso=log_lines - log_cols, apply_a2=False)
 
 
 def _cnot_count_estimate_knill(iso, log_lines, log_cols):

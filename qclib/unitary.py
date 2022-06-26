@@ -20,23 +20,28 @@ implement generic quantum computations.
 from math import ceil, log2
 import numpy as np
 import scipy as sp
-import qiskit
+from qiskit import QuantumCircuit, QuantumRegister
 from qiskit import transpile
-from qiskit.circuit.library import CXGate, RYGate, CZGate
+from qiskit.circuit.library import RYGate, CZGate
 from qiskit.extensions import UnitaryGate, UCRYGate, UCRZGate
-from qclib.gates.uc_gate import UCGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
-from qclib.gates.ucr import ucr
 from qiskit.quantum_info.synthesis import two_qubit_decompose
+from qiskit.quantum_info import Operator
+from qclib.gates.ucr import ucr
+from qclib.gates.uc_gate import UCGate
 from qclib.decompose2q import TwoQubitDecomposeUpToDiagonal
 
 
 def unitary(gate, decomposition='qsd', iso=0, apply_a2=True):
+    """
+    Implements a generic quantum computation from a
+    unitary matrix gate using the cosine sine decomposition.
+    """
     circuit = build_unitary(gate, decomposition, iso)
     if decomposition == 'qsd' and apply_a2:
         return _apply_a2(circuit)
-    else:
-        return circuit
+
+    return circuit
 
 
 def build_unitary(gate, decomposition='qsd', iso=0):
@@ -48,8 +53,8 @@ def build_unitary(gate, decomposition='qsd', iso=0):
     if size > 4:
         n_qubits = int(log2(size))
 
-        qubits = qiskit.QuantumRegister(n_qubits)
-        circuit = qiskit.QuantumCircuit(qubits)
+        qubits = QuantumRegister(n_qubits)
+        circuit = QuantumCircuit(qubits)
 
         right_gates, theta, left_gates = \
             sp.linalg.cossin(gate, size/2, size/2, separate=True)
@@ -77,7 +82,7 @@ def build_unitary(gate, decomposition='qsd', iso=0):
 
         return circuit
 
-    circuit = qiskit.QuantumCircuit(int(log2(size)), name="qsd2q")
+    circuit = QuantumCircuit(int(log2(size)), name="qsd2q")
     circuit.append(UnitaryGate(gate), circuit.qubits)
 
     return circuit
@@ -87,8 +92,8 @@ def _unitary(gate_list, n_qubits, decomposition='qsd'):
 
     if decomposition == 'csd':
         if len(gate_list[0]) == 2:
-            qubits = qiskit.QuantumRegister(n_qubits)
-            circuit = qiskit.QuantumCircuit(qubits)
+            qubits = QuantumRegister(n_qubits)
+            circuit = QuantumCircuit(qubits)
             circuit.append(UCGate(gate_list), qubits[[0]] + qubits[1:])
             return circuit
 
@@ -107,8 +112,8 @@ def _csd(gate_list, n_qubits):
     gate_left = _unitary(left, n_qubits, decomposition='csd')
     gate_right = _unitary(right, n_qubits, decomposition='csd')
 
-    qubits = qiskit.QuantumRegister(n_qubits)
-    circuit = qiskit.QuantumCircuit(qubits)
+    qubits = QuantumRegister(n_qubits)
+    circuit = QuantumCircuit(qubits)
 
     circuit = circuit.compose(gate_left, qubits)
 
@@ -142,8 +147,8 @@ def _multiplexed_csd(gate_list):
 
 def _qsd(gate1, gate2):
     n_qubits = int(log2(len(gate1))) + 1
-    qubits = qiskit.QuantumRegister(n_qubits)
-    circuit = qiskit.QuantumCircuit(qubits)
+    qubits = QuantumRegister(n_qubits)
+    circuit = QuantumCircuit(qubits)
 
     list_d, gate_v, gate_w = _compute_gates(gate1, gate2)
 
@@ -181,25 +186,25 @@ def _compute_gates(gate1, gate2):
     return list_d, gate_v, gate_w
 
 
-def cnot_count(gate, decomposition='qsd', method='estimate', iso=False):
+def cnot_count(gate, decomposition='qsd', method='estimate', iso=0, apply_a2=True):
     """
     Count the number of CNOTs to decompose the unitary.
     """
     if method == 'estimate':
-        return _cnot_count_estimate(gate, decomposition, iso)
+        return _cnot_count_estimate(gate, decomposition, iso, apply_a2)
 
     # Exact count
-    circuit = build_unitary(gate, decomposition, iso)
+    circuit = unitary(gate, decomposition, iso, apply_a2)
     transpiled_circuit = transpile(circuit, basis_gates=['u1', 'u2', 'u3', 'cx'],
                                    optimization_level=0)
     count_ops = transpiled_circuit.count_ops()
     if 'cx' in count_ops:
-        return count_ops[CXGate()]
+        return count_ops['cx']
 
     return 0
 
 
-def _cnot_count_estimate(gate, decomposition='qsd', iso=0):
+def _cnot_count_estimate(gate, decomposition='qsd', iso=0, apply_a2=True):
     """
     Estimate the number of CNOTs to decompose the unitary.
     """
@@ -208,9 +213,12 @@ def _cnot_count_estimate(gate, decomposition='qsd', iso=0):
     if n_qubits == 1:
         return 0
 
+    if n_qubits == 2:
+        return 3
+
     if decomposition == 'csd':
         # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
-        return int(ceil(4**n_qubits - 2*2**n_qubits))
+        return int(ceil(4**n_qubits - 2*2**n_qubits))-1
 
     if iso:
         # Upper-bound expression for the CSD isometry decomposition without the optimizations.
@@ -219,10 +227,14 @@ def _cnot_count_estimate(gate, decomposition='qsd', iso=0):
         m_ebits = n_qubits-iso
         return int(ceil((23/144)*(4**m_ebits+2*4**n_qubits)))
 
-    # Upper-bound expression for the unitary decomposition QSD l=2 without the optimizations.
-    # With the optimizations, it needs to be replaced.
+    # Upper-bound expression for the unitary decomposition QSD
     # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
-    return int(ceil(9/16*2**(2*n_qubits) - 3/2 * 2**n_qubits))
+    if apply_a2:
+        # l=2 with optimizations.
+        return int(ceil((23/48)*2**(2*n_qubits) - 3/2 * 2**n_qubits + 4/3))
+
+    #  l=2 without optimizations.
+    return int(ceil((9/16)*2**(2*n_qubits) - 3/2 * 2**n_qubits))
 
 
 def _apply_a2(circ):
@@ -238,11 +250,11 @@ def _apply_a2(circ):
     # copyright notice, and modified files need to carry a notice indicating
     # that they have been altered from the originals.
 
-    from qiskit import transpile
-    from qiskit.quantum_info import Operator
+    #from qiskit import transpile
+    #from qiskit.quantum_info import Operator
 
     # from qiskit.extensions.unitary import UnitaryGate
-    import qiskit.extensions.unitary
+    #import qiskit.extensions.unitary
 
     decomposer = TwoQubitDecomposeUpToDiagonal()
     ccirc = transpile(circ, basis_gates=["u", "cx", "qsd2q"], optimization_level=0)
@@ -268,7 +280,8 @@ def _apply_a2(circ):
         dmat, qc2cx = decomposer(mat1)
         ccirc.data[ind1] = (qc2cx.to_gate(), qargs, cargs)
         mat2 = mat2 @ dmat
-        ccirc.data[ind2] = (qiskit.extensions.unitary.UnitaryGate(mat2), qargs, cargs)
+        #ccirc.data[ind2] = (qiskit.extensions.unitary.UnitaryGate(mat2), qargs, cargs)
+        ccirc.data[ind2] = (UnitaryGate(mat2), qargs, cargs)
     if mat2 is not None:
         qc3 = two_qubit_decompose.two_qubit_cnot_decompose(mat2)
         ccirc.data[ind2] = (qc3.to_gate(), qargs, cargs)
