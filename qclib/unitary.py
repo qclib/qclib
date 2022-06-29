@@ -72,7 +72,7 @@ def build_unitary(gate, decomposition='qsd', iso=0):
         ucry = ucr(RYGate, list(2*theta), CZGate, False)
 
         circuit.append(ucry.to_instruction(), [n_qubits-1] + list(range(n_qubits-1)))
-        # Optimization A.1 from "Synthesis of Quantum Logic Circuits".
+        # Optimization (A.1) from "Synthesis of Quantum Logic Circuits".
         # Last CZGate from ucry is absorbed here.
         right_gates[1][:, len(theta)//2:] = -right_gates[1][:, len(theta)//2:]
 
@@ -195,7 +195,7 @@ def cnot_count(gate, decomposition='qsd', method='estimate', iso=0, apply_a2=Tru
 
     # Exact count
     circuit = unitary(gate, decomposition, iso, apply_a2)
-    transpiled_circuit = transpile(circuit, basis_gates=['u1', 'u2', 'u3', 'cx'],
+    transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'],
                                    optimization_level=0)
     count_ops = transpiled_circuit.count_ops()
     if 'cx' in count_ops:
@@ -221,20 +221,20 @@ def _cnot_count_estimate(gate, decomposition='qsd', iso=0, apply_a2=True):
         return int(ceil(4**n_qubits - 2*2**n_qubits))-1
 
     if iso:
-        # Upper-bound expression for the CSD isometry decomposition without the optimizations.
-        # With the optimizations, it needs to be replaced.
-        # Expression (A22) from "Quantum Circuits for Isometries", Iten et al.
-        m_ebits = n_qubits-iso
-        return int(ceil((23/144)*(4**m_ebits+2*4**n_qubits)))
+        # TODO
+        # We don't have an expression to estimate this count.
+        # It is important to replace it with the correct expression.
+        return cnot_count(gate, decomposition, 'exact', iso, apply_a2)
 
     # Upper-bound expression for the unitary decomposition QSD
     # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
     if apply_a2:
-        # l=2 with optimizations.
+        # l=2 with optimizations (A.1) and (A.2) from "Synthesis of Quantum Logic Circuits".
         return int(ceil((23/48)*2**(2*n_qubits) - 3/2 * 2**n_qubits + 4/3))
 
-    #  l=2 without optimizations.
-    return int(ceil((9/16)*2**(2*n_qubits) - 3/2 * 2**n_qubits))
+    # l=2 only with optimization (A.1).
+    # Optimization (A.2) counts 4**(n_qubits-2)-1 CNOT gates.
+    return 4**(n_qubits-2)-1 + int(ceil((23/48)*2**(2*n_qubits) - 3/2 * 2**n_qubits + 4/3))
 
 
 def _apply_a2(circ):
