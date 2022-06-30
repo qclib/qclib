@@ -24,7 +24,7 @@ setuptools.setup(
     python_requires='>=3.7',
     install_requires=[
         'scipy>=1.7.1',
-        'qiskit>=0.34.0',
+        'qiskit>=0.36.0',
         'qiskit-aqua>=0.9.5',
         'qiskit-machine-learning>=0.3.1',
         'deprecation',
