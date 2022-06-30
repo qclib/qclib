@@ -47,6 +47,9 @@ class TestIsometry(TestCase):
     def test_fixed_isometry_knill(self):
         self._test_fixed_isometry('knill')
 
+    def test_counting_knill(self):
+        self._test_counting('knill')
+
     def test_null_space_knill(self):
         self._test_null_space('knill')
 
