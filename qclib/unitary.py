@@ -221,10 +221,9 @@ def _cnot_count_estimate(gate, decomposition='qsd', iso=0, apply_a2=True):
         return int(ceil(4**n_qubits - 2*2**n_qubits))-1
 
     if iso:
-        # TODO
-        # We don't have an expression to estimate this count.
-        # It is important to replace it with the correct expression.
-        return cnot_count(gate, decomposition, 'exact', iso, apply_a2)
+        # TODO: Replace this recursion with a mathematical expression.
+        diag = 2 ** n_qubits - 2 if apply_a2 else 0
+        return _cnot_count_iso(n_qubits, iso, apply_a2) + diag
 
     # Upper-bound expression for the unitary decomposition QSD
     # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
@@ -236,6 +235,38 @@ def _cnot_count_estimate(gate, decomposition='qsd', iso=0, apply_a2=True):
     # Optimization (A.2) counts 4**(n_qubits-2)-1 CNOT gates.
     return 4**(n_qubits-2)-1 + int(ceil((23/48)*2**(2*n_qubits) - 3/2 * 2**n_qubits + 4/3))
 
+def _cnot_count_iso(n_qubits, iso, apply_a2=True):
+    if n_qubits > 2:
+        # Left circuit
+        if iso:
+            gate_left = _cnot_count_iso(n_qubits-1, iso-1, apply_a2)
+        else:
+            gate_left = _cnot_count_iso_qsd(n_qubits, apply_a2)
+
+        # Middle circuit
+        ucry = 2**(n_qubits-1)-1
+
+        # Right circuit
+        gate_right = _cnot_count_iso_qsd(n_qubits, apply_a2)
+
+        return gate_left + ucry + gate_right
+
+    if apply_a2:
+        return 2
+
+    return 3
+
+def _cnot_count_iso_qsd(n_qubits, apply_a2):
+    # Left circuit
+    left_gate = _cnot_count_iso(n_qubits-1, 0, apply_a2)
+
+    # Middle circuit
+    middle_gate = 2**(n_qubits-1)
+
+    # Right circuit
+    right_gate = _cnot_count_iso(n_qubits-1, 0, apply_a2)
+
+    return left_gate + middle_gate + right_gate
 
 def _apply_a2(circ):
     # This code is part of Qiskit.
