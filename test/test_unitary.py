@@ -18,15 +18,15 @@ from unittest import TestCase
 from scipy.stats import unitary_group
 import numpy as np
 import qiskit
-from qclib.unitary import unitary, _compute_gates
+from qclib.unitary import unitary, _compute_gates, cnot_count
 from qclib.util import get_state
 
 class TestUnitary(TestCase):
     """ Testing qclib.unitary """
-    def _test_unitary(self, decomposition, n_qubits):
+    def _test_unitary(self, decomposition, n_qubits, iso=0, apply_a2=False):
         """ Testing qclib.unitary gate """
         unitary_matrix = unitary_group.rvs(2**n_qubits)
-        gate = unitary(unitary_matrix, decomposition)
+        gate = unitary(unitary_matrix, decomposition, iso, apply_a2)
         gate = qiskit.transpile(gate, basis_gates=['u', 'cx'])
 
         for i in range(2**n_qubits):
@@ -40,42 +40,16 @@ class TestUnitary(TestCase):
             state = get_state(circuit)
             self.assertTrue(np.allclose(unitary_matrix[:, i], state))
 
-    def test_unitary_csd_2qubits(self):
-        """ Testing qclib.unitary with 2 qubits gate"""
-        self._test_unitary('csd', 2)
+    def _test_counting(self, decomposition, n_qubits, iso=0, apply_a2=False):
+        unitary_matrix = unitary_group.rvs(2**n_qubits)
 
-    def test_unitary_csd_3qubits(self):
-        """ Testing qclib.unitary 3 qubits gate"""
-        self._test_unitary('csd', 3)
+        n_cx_exact = cnot_count(unitary_matrix, decomposition, 'exact', iso, apply_a2)
+        n_cx_estimate = cnot_count(unitary_matrix, decomposition, 'estimate', iso, apply_a2)
 
-    def test_unitary_csd_4qubits(self):
-        """ Testing qclib.unitary 4 qubits gate"""
-        self._test_unitary('csd', 4)
-
-    def test_unitary_qsd_2qubits(self):
-        """ Testing qclib.unitary 2 qubits gate qsd"""
-        self._test_unitary('qsd', 2)
-
-    def test_unitary_qsd_3qubits(self):
-        """ Testing qclib.unitary 3 qubits gate qsd"""
-        self._test_unitary('qsd', 3)
-
-    def test_unitary_qsd_4qubits(self):
-        """ Testing qclib.unitary 4 qubits gate qsd"""
-        self._test_unitary('qsd', 4)
-
-    def test_unitary_qsd_count(self):
-        """ Testing qclib.unitary 4 qubits gate qsd"""
-        unitary_matrix = unitary_group.rvs(16)
-        gate = unitary(unitary_matrix, 'qsd')
-        gate = qiskit.transpile(gate, basis_gates=['u', 'cx'])
-        state = get_state(gate)
-        n_cx = gate.count_ops()['cx']
-        self.assertTrue(n_cx <= 120)
-        self.assertTrue(np.allclose(unitary_matrix[:, 0], state))
+        self.assertTrue(n_cx_exact == n_cx_estimate)
 
     def test_compute_gates(self):
-        """ test auxiliar funciont compute gates"""
+        """ test auxiliar function compute gates"""
         gate1 = unitary_group.rvs(8)
         gate2 = unitary_group.rvs(8)
 
@@ -84,3 +58,43 @@ class TestUnitary(TestCase):
         calc2 = v_gate @ np.diag(diag).conj().T @ w_gate
         self.assertTrue(np.allclose(calc1, gate1))
         self.assertTrue(np.allclose(calc2, gate2))
+
+    # CSD
+
+    def test_unitary_csd(self):
+        """ Testing qclib.unitary csd"""
+        for n_qubits in range(2, 5):
+            self._test_unitary('csd', n_qubits)
+
+    def test_counting_csd(self):
+        """ Testing qclib.unitary.cnot_count csd"""
+        for n_qubits in range(2, 6):
+            self._test_counting('csd', n_qubits)
+
+    # QSD
+
+    def test_unitary_qsd(self):
+        """ Testing qclib.unitary qsd"""
+        for n_qubits in range(2, 5):
+            self._test_unitary('qsd', n_qubits, 0, False)
+
+        for n_qubits in range(2, 5):
+            self._test_unitary('qsd', n_qubits, 0, True)
+
+    def test_counting_qsd(self):
+        """ Testing qclib.unitary.cnot_count qsd"""
+        for n_qubits in range(2, 6):
+            self._test_counting('qsd', n_qubits, 0, False)
+
+        for n_qubits in range(2, 6):
+            self._test_counting('qsd', n_qubits, 0, True)
+
+    def test_unitary_qsd_count(self):
+        """ Testing qclib.unitary 4 qubits gate qsd"""
+        unitary_matrix = unitary_group.rvs(16)
+        gate = unitary(unitary_matrix, 'qsd')
+        gate = qiskit.transpile(gate, basis_gates=['u', 'cx'])
+        state = get_state(gate)
+        n_cx = gate.count_ops()['cx']
+        self.assertTrue(n_cx <= 100)
+        self.assertTrue(np.allclose(unitary_matrix[:, 0], state))

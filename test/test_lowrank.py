@@ -22,6 +22,8 @@ import numpy as np
 from qiskit import QuantumCircuit, ClassicalRegister, execute, transpile
 from qiskit.providers.aer.backends import AerSimulator
 from qclib.state_preparation import LowRankInitialize
+from qclib.state_preparation.lowrank import cnot_count
+
 from qclib.util import get_state
 
 # pylint: disable=missing-function-docstring
@@ -117,6 +119,18 @@ class TestLowRank(TestCase):
     def test_initialize_rank_1(self):
         self._test_initialize_mae(1, max_mae=0.09)
 
+    def test_cnot_count(self):
+        n_qubits = 7
+        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = QuantumCircuit(n_qubits)
+        LowRankInitialize.initialize(circuit, state_vector)
+        transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=0)
+        n_cx = transpiled_circuit.count_ops()['cx']
+
+        self.assertTrue(cnot_count(state_vector) == n_cx)
+
     def test_cnot_count_rank_1(self):
 
         # Builds a rank 1 state.
@@ -128,6 +142,6 @@ class TestLowRank(TestCase):
 
         circuit = QuantumCircuit(5)
         LowRankInitialize.initialize(circuit, state_vector)
-        transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=3)
+        transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=0)
 
         self.assertTrue('cx' not in transpiled_circuit.count_ops())

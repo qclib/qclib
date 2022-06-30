@@ -21,7 +21,7 @@ import numpy as np
 import scipy
 from qiskit import QuantumCircuit, transpile
 from scipy.stats import unitary_group
-from qclib.isometry import decompose
+from qclib.isometry import decompose, cnot_count
 from qclib.util import get_state
 
 # pylint: disable=missing-function-docstring
@@ -47,6 +47,9 @@ class TestIsometry(TestCase):
     def test_fixed_isometry_knill(self):
         self._test_fixed_isometry('knill')
 
+    def test_counting_knill(self):
+        self._test_counting('knill')
+
     def test_null_space_knill(self):
         self._test_null_space('knill')
 
@@ -67,6 +70,9 @@ class TestIsometry(TestCase):
     def test_fixed_isometry_ccd(self):
         self._test_fixed_isometry('ccd')
 
+    def test_counting_ccd(self):
+        self._test_counting('ccd')
+
     # scheme='csd' (cosine-sine decomposition) isometry tests
 
     def test_state_preparation_real_csd(self):
@@ -84,7 +90,21 @@ class TestIsometry(TestCase):
     def test_fixed_isometry_csd(self):
         self._test_fixed_isometry('csd')
 
+    def test_counting_csd(self):
+        self._test_counting('csd')
+
     # general functions for testing the schemes (knill, csd and ccd).
+
+    def _test_counting(self, scheme):
+        log_lines = 5
+        log_cols = 4
+
+        for j in range(0, log_cols+1):
+            isometry = unitary_group.rvs(2**log_lines)[:, :2**j]
+            n_cx_exact = cnot_count(isometry, scheme, 'exact')
+            n_cx_estimate = cnot_count(isometry, scheme, 'estimate')
+
+            self.assertTrue(n_cx_exact == n_cx_estimate)
 
     def _test_state_preparation_real(self, scheme):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j

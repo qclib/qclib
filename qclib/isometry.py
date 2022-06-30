@@ -98,7 +98,10 @@ def _is_isometry(iso, log_cols):
 def _csd(iso, log_lines, log_cols):
     unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
 
-    return decompose_unitary(unitary_gate, decomposition='qsd', iso=log_lines - log_cols, apply_a2=False)
+    return decompose_unitary(unitary_gate,
+                             decomposition='qsd',
+                             iso=log_lines - log_cols,
+                             apply_a2=False)
 
 
 #   Knill
@@ -361,7 +364,10 @@ def _cnot_count_estimate(isometry, scheme='ccd'):
 def _cnot_count_estimate_csd(iso, log_lines, log_cols):
     unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
 
-    return unitary_cnot_count(unitary_gate, decomposition='qsd', iso=log_lines - log_cols)
+    return unitary_cnot_count(unitary_gate,
+                              decomposition='qsd',
+                              iso=log_lines - log_cols,
+                              apply_a2=False)
 
 
 def _cnot_count_estimate_knill(iso, log_lines, log_cols):
@@ -385,10 +391,11 @@ def _cnot_count_estimate_knill(iso, log_lines, log_cols):
             cnots += 2 * schmidt_cnot_count(state)
 
             # MCP
-            if log_lines == 2:
-                cnots += 1
-            elif log_lines > 2:
-                cnots += 16 * log_lines ** 2 - 60 * log_lines + 42
+            circuit = QuantumCircuit(log_lines)
+            circuit.mcp(3.0, list(range(log_lines - 1)), log_lines - 1)
+            transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=0)
+            if 'cx' in transpiled_circuit.count_ops():
+                cnots += transpiled_circuit.count_ops()['cx']
 
     return cnots
 
