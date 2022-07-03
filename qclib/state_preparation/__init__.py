@@ -8,3 +8,5 @@ from .merge import MergeInitialize
 from .cvqram import CvqramInitialize
 from .cvoqram import CvoqramInitialize
 from .pivot import PivotInitialize
+from .isometry import IsometryInitialize
+from .svd import SVDInitialize
