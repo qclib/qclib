@@ -67,7 +67,7 @@ class TopDownInitialize(Initialize):
             if opt_params.get('lib') is None:
                 self.lib = 'qclib'
             else:
-                self.lib = 'qiskit'
+                self.lib = opt_params.get('lib')
 
         self._label = label
         if label is None:
