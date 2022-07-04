@@ -145,3 +145,18 @@ class TestLowRank(TestCase):
         transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=0)
 
         self.assertTrue('cx' not in transpiled_circuit.count_ops())
+
+    def test_inverse(self):
+        n_qubits = 2
+        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        gate = LowRankInitialize(state_vector)
+        circuit = QuantumCircuit(n_qubits)
+        circuit.append(gate, list(range(n_qubits)))
+        circuit.append(gate.inverse(), list(range(n_qubits)))
+
+        state = get_state(circuit)
+
+        zero_state = [1]+[0]*(2**n_qubits-1)
+        self.assertTrue(np.allclose(zero_state, state))
