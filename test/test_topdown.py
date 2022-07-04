@@ -29,7 +29,7 @@ from qclib.util import get_state
 backend = AerSimulator()
 SHOTS = 8192
 
-class TestMottonen(TestCase):
+class TestTopDown(TestCase):
     @staticmethod
     def measurement(circuit, n_qubits, classical_reg):
         circuit.measure(list(range(n_qubits)), classical_reg)
@@ -50,16 +50,16 @@ class TestMottonen(TestCase):
         return [ value/sum_values for (key, value) in counts2.items() ]
 
     @staticmethod
-    def mottonen_experiment(state):
+    def topdown_experiment(state):
         circuit = TopDownInitialize(state).definition
 
         n_qubits = int(np.log2(len(state)))
         classical_reg = ClassicalRegister(n_qubits)
         circuit.add_register(classical_reg)
 
-        return TestMottonen.measurement(circuit, n_qubits, classical_reg)
+        return TestTopDown.measurement(circuit, n_qubits, classical_reg)
 
-    def test_mottonen_state_real(self):
+    def test_topdown_state_real(self):
         state_vector = np.random.rand(32)
         state_vector = state_vector / np.linalg.norm(state_vector)
 
@@ -69,7 +69,7 @@ class TestMottonen(TestCase):
 
         self.assertTrue(np.allclose(state_vector, state))
 
-    def test_mottonen_state_complex(self):
+    def test_topdown_state_complex(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
@@ -79,11 +79,11 @@ class TestMottonen(TestCase):
 
         self.assertTrue(np.allclose(state_vector, state))
 
-    def test_mottonen_measure(self):
+    def test_topdown_measure(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        state = TestMottonen.mottonen_experiment(state_vector)
+        state = TestTopDown.topdown_experiment(state_vector)
 
         self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
                         rtol=1e-01, atol=0.005))

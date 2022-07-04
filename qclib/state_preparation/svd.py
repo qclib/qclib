@@ -39,7 +39,7 @@ class SVDInitialize(Initialize):
                 Values are amplitudes.
         """
 
-        self._name = 'svd_initialize'
+        self._name = 'svd'
         self._get_num_qubits(params)
 
         self._label = label
@@ -55,42 +55,40 @@ class SVDInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-
         """
-          State preparation using Schmidt decomposition arXiv:1003.5760
-          """
+        State preparation using Schmidt decomposition arXiv:1003.5760
+        """
         state = np.copy(self.params)
-        size = len(state)
-        n_qubits = np.log2(size)
+        n_qubits = self.num_qubits
         r = n_qubits % 2
         state.shape = (int(2 ** (n_qubits // 2)), int(2 ** (n_qubits // 2 + r)))
         u, d, v = np.linalg.svd(state)
         d = d / np.linalg.norm(d)
         reg_a = QuantumRegister(n_qubits // 2 + r)
         reg_b = QuantumRegister(n_qubits // 2)
-        sp_circuit = QuantumCircuit(reg_a, reg_b)
+        circuit = QuantumCircuit(reg_a, reg_b)
         if len(d) > 2:
-            circ = SVDInitialize(d).definition
-            sp_circuit.append(circ, reg_b)
+            gate = SVDInitialize(d)
+            circuit.append(gate, reg_b)
         else:
-            circ = TopDownInitialize(d)
-            sp_circuit.append(circ, reg_b)
+            gate = TopDownInitialize(d)
+            circuit.append(gate, reg_b)
 
         for k in range(int(n_qubits // 2)):
-            sp_circuit.cx(reg_b[k], reg_a[k])
+            circuit.cx(reg_b[k], reg_a[k])
 
         # apply gate U to the first register
         gate_u = unitary(u)
-        sp_circuit.append(gate_u, reg_b)
+        circuit.append(gate_u, reg_b)
 
         # apply gate V to the second register
         gate_v = unitary(v.T)
-        sp_circuit.append(gate_v, reg_a)
+        circuit.append(gate_v, reg_a)
 
-        return sp_circuit
+        return circuit
 
     @staticmethod
-    def initialize(q_circuit, state, qubits=None, lr_params=None):
+    def initialize(q_circuit, state, qubits=None):
         """
         Appends a SVDInitialize gate into the q_circuit
         """

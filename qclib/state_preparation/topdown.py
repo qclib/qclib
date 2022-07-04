@@ -18,7 +18,7 @@
 """
 
 import numpy as np
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, QuantumRegister
 
 from qclib.state_preparation.initialize import Initialize
 from qclib.state_preparation.util.state_tree_preparation import Amplitude, state_decomposition
@@ -44,21 +44,30 @@ class TopDownInitialize(Initialize):
                 A unit vector representing a quantum state.
                 Values are amplitudes.
 
-            opt_params: {'global_phase': global_phase}
+            opt_params: {'global_phase': global_phase, 'lib': lib}
                 global_phase: bool
                     If ``True``, corrects the global phase.
                     Default value is ``True``.
+                lib: str
+                    Library to be used.
+                    Default value is ``'qclib'``.
         """
         self._name = 'top-down'
         self._get_num_qubits(params)
 
         if opt_params is None:
             self.global_phase = True
+            self.lib = 'qclib'
         else:
             if opt_params.get('global_phase') is None:
                 self.global_phase = True
             else:
                 self.global_phase = opt_params.get('global_phase')
+
+            if opt_params.get('lib') is None:
+                self.lib = 'qclib'
+            else:
+                self.lib = opt_params.get('lib')
 
         self._label = label
         if label is None:
@@ -73,6 +82,14 @@ class TopDownInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
+        if self.lib == 'qiskit':
+            reg = QuantumRegister(self.num_qubits)
+            circuit = QuantumCircuit(reg)
+            # pylint: disable=maybe-no-member
+            circuit.initialize(self.params)
+
+            return circuit
+
         data = [Amplitude(i, a) for i, a in enumerate(self.params)]
 
         state_tree = state_decomposition(self.num_qubits, data)

@@ -27,14 +27,8 @@ class Initialize(Gate):
     def inverse(self):
         inverse_gate = self.copy()
 
-        inverse_gate.definition = QuantumCircuit(
-            *self.definition.qregs,
-            *self.definition.cregs,
-            global_phase=-self.definition.global_phase,
-        )
-        inverse_gate.definition._data = [
-            (inst.inverse(), qargs, cargs) for inst, qargs, cargs in reversed(self._definition)
-        ]
+        inverse_gate.definition = self.definition.inverse()
+        inverse_gate.label += '_dg'
 
         return inverse_gate
 
@@ -50,4 +44,4 @@ class Initialize(Gate):
         elif isinstance(parameter, np.number):
             return complex(parameter.item())
         else:
-            raise Exception(f"invalid param type {type(parameter)} for instruction  {self.name}")
+            raise Exception(f"invalid param type {type(parameter)} for instruction {self.name}")
