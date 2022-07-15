@@ -79,6 +79,7 @@ class BaaLowRankInitialize(Initialize):
         """
         self._name = 'baa-lrsp'
         self._get_num_qubits(params)
+        self.node = None
 
         if opt_params is None:
             self.max_fidelity_loss = 0.0
@@ -134,13 +135,13 @@ class BaaLowRankInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        node = adaptive_approximation(self.params, self.max_fidelity_loss, self.strategy,
+        self.node = adaptive_approximation(self.params, self.max_fidelity_loss, self.strategy,
                                       self.max_combination_size, self.use_low_rank)
 
         circuit = QuantumCircuit(self.num_qubits)
 
-        for vector, qubits, rank, partition in zip(node.vectors, node.qubits,
-                                                   node.ranks, node.partitions):
+        for vector, qubits, rank, partition in zip(self.node.vectors, self.node.qubits,
+                                                   self.node.ranks, self.node.partitions):
 
             lr_params = {'iso_scheme': self.isometry_scheme,
                          'unitary_scheme': self.unitary_scheme,

@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from math import log2
-from qiskit import QuantumCircuit
 from qiskit.circuit.gate import Gate
 import numpy as np
 

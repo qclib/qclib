@@ -16,10 +16,9 @@
 https://arxiv.org/abs/2108.10182
 """
 
-
+import cmath
+import math
 from dataclasses import dataclass
-import numpy as np
-
 from qclib.state_preparation.util.tree_utils import is_leaf
 
 @dataclass
@@ -37,8 +36,8 @@ class NodeAngleTree:
     def __str__(self):
         return str(self.level) + '_' + \
                str(self.index) + '\n' + \
-               '{0:.2g}'.format(self.angle_y) + '_' + \
-               '{0:.2g}'.format(self.angle_z)
+               f'{self.angle_y:.2g}_' + \
+               f'{self.angle_z:.2g}'
 
 def create_angles_tree(state_tree):
     """
@@ -51,14 +50,14 @@ def create_angles_tree(state_tree):
         amp = state_tree.right.amplitude / state_tree.amplitude
 
     # Avoid out-of-domain value due to numerical error.
-    if np.abs(amp) < -1.0:
-        angle_y = -np.pi
-    elif np.abs(amp) > 1.0:
-        angle_y = np.pi
+    if abs(amp) < -1.0:
+        angle_y = -math.pi
+    elif abs(amp) > 1.0:
+        angle_y = math.pi
     else:
-        angle_y = 2 * np.arcsin( np.abs(amp) )
+        angle_y = 2 * math.asin( abs(amp) )
 
-    angle_z = 2 * np.angle(amp)
+    angle_z = 2 * cmath.phase(amp)
 
     node = NodeAngleTree(state_tree.index, state_tree.level, angle_y, angle_z, None, None)
 
