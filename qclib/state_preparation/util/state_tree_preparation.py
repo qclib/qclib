@@ -16,9 +16,10 @@
 https://arxiv.org/abs/2108.10182
 """
 
+import math
+import cmath
 from dataclasses import dataclass
 from typing import NamedTuple
-import numpy as np
 
 
 class Amplitude(NamedTuple):
@@ -30,7 +31,7 @@ class Amplitude(NamedTuple):
 
     def __str__(self):
         return str(self.index) + ':' + \
-               '{0:.2g}'.format(self.amplitude)
+               f'{self.amplitude:.2g}'
 
 @dataclass
 class Node:
@@ -47,7 +48,7 @@ class Node:
     def __str__(self):
         return str(self.level) + '_' + \
                str(self.index) + '\n' + \
-               '{0:.2g}'.format(self.amplitude)
+               f'{self.amplitude:.2g}'
 
 def state_decomposition(nqubits, data):
     """
@@ -70,10 +71,10 @@ def state_decomposition(nqubits, data):
         k = 0
         n_nodes = len(nodes)
         while k < n_nodes:
-            mag = np.sqrt(np.abs(nodes[k].amplitude) ** 2 + np.abs(nodes[k + 1].amplitude) ** 2)
-            arg = (np.angle(nodes[k].amplitude) + np.angle(nodes[k + 1].amplitude)) / 2
+            mag = math.sqrt(abs(nodes[k].amplitude) ** 2 + abs(nodes[k + 1].amplitude) ** 2)
+            arg = (cmath.phase(nodes[k].amplitude) + cmath.phase(nodes[k + 1].amplitude)) / 2
 
-            amp = mag * np.exp(1j*arg)
+            amp = mag * cmath.exp(1j*arg)
 
             new_nodes.append(Node(nodes[k].index // 2, nqubits,
                                   amp,
