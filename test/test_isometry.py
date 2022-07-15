@@ -23,6 +23,7 @@ from qiskit import QuantumCircuit, transpile
 from scipy.stats import unitary_group
 from qclib.isometry import decompose, cnot_count
 from qclib.util import get_state
+from qclib.state_preparation import IsometryInitialize
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
@@ -53,6 +54,12 @@ class TestIsometry(TestCase):
     def test_null_space_knill(self):
         self._test_null_space('knill')
 
+    def test_initialize_knill(self):
+        self._test_initialize('knill')
+
+    def test_global_phase_knill(self):
+        self._test_global_phase('knill')
+
     # scheme='ccd' (column-by-column decomposition) isometry tests
 
     def test_state_preparation_real_ccd(self):
@@ -72,6 +79,12 @@ class TestIsometry(TestCase):
 
     def test_counting_ccd(self):
         self._test_counting('ccd')
+
+    def test_initialize_ccd(self):
+        self._test_initialize('ccd')
+
+    def test_global_phase_ccd(self):
+        self._test_global_phase('ccd')
 
     # scheme='csd' (cosine-sine decomposition) isometry tests
 
@@ -93,7 +106,49 @@ class TestIsometry(TestCase):
     def test_counting_csd(self):
         self._test_counting('csd')
 
+    def test_initialize_csd(self):
+        self._test_initialize('csd')
+
+    def test_global_phase_csd(self):
+        self._test_global_phase('csd')
+
+    # scheme='qiskit' isometry tests
+
+    #def test_global_phase_qiskit(self):
+    #    '''
+    #    This test shows that qiskit isometry has a global phase problem.
+    #    '''
+    #    self._test_global_phase('qiskit')
+
     # general functions for testing the schemes (knill, csd and ccd).
+
+    def _test_global_phase(self, scheme):
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = IsometryInitialize(state_vector,
+                                        opt_params={'scheme':scheme}
+                                    ).definition
+
+        state = get_state(circuit)
+
+        input_args = np.angle(state_vector)
+        state_args = np.angle(state)
+        args_diff = input_args - state_args
+
+        self.assertTrue(np.allclose(args_diff, 0.0))
+
+    def _test_initialize(self, scheme):
+        state_vector = np.random.rand(32) + np.random.rand(32) * 1j
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit = IsometryInitialize(state_vector,
+                                        opt_params={'scheme':scheme}
+                                    ).definition
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))
 
     def _test_counting(self, scheme):
         log_lines = 5
