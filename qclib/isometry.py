@@ -101,7 +101,7 @@ def _csd(iso, log_lines, log_cols):
     return decompose_unitary(unitary_gate,
                              decomposition='qsd',
                              iso=log_lines - log_cols,
-                             apply_a2=False)
+                             apply_a2=True)
 
 
 #   Knill
@@ -319,7 +319,7 @@ def _b(col_index, bit_index):  # col_index ^ ((col_index >> bit_index) << bit_in
 
 def _k_s(col_index, bit_index):
     # Returns the bit value at bit_index of col_index (k in the paper).
-    return int((col_index & 2 ** bit_index) / 2 ** bit_index)
+    return (col_index & 2 ** bit_index) // 2 ** bit_index
 
 
 def cnot_count(isometry, scheme='ccd', method='estimate'):
@@ -367,7 +367,7 @@ def _cnot_count_estimate_csd(iso, log_lines, log_cols):
     return unitary_cnot_count(unitary_gate,
                               decomposition='qsd',
                               iso=log_lines - log_cols,
-                              apply_a2=False)
+                              apply_a2=True)
 
 
 def _cnot_count_estimate_knill(iso, log_lines, log_cols):
@@ -384,7 +384,7 @@ def _cnot_count_estimate_knill(iso, log_lines, log_cols):
 
     cnots = 0
     for i in range(2 ** log_lines):
-        if np.abs(arg[i]) > 10 ** -15:
+        if np.abs(arg[i]) > 10 ** -7:
             state = eigvec[:, i]
 
             # Two times Schmidt state preparation
