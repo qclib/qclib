@@ -73,7 +73,7 @@ class IsometryInitialize(Initialize):
             reg = QuantumRegister(self.num_qubits)
             circuit = QuantumCircuit(reg)
             # pylint: disable=maybe-no-member
-            circuit.isometry(np.array(self.params), q_input=[], q_ancillas_for_output=reg[:])
+            circuit.isometry(np.array(self.params), q_input=[], q_ancillas_for_output=reg)
             return circuit
 
         return decompose(np.array(self.params), scheme=self.scheme)
