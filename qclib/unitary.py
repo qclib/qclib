@@ -222,8 +222,8 @@ def _cnot_count_estimate(gate, decomposition='qsd', iso=0, apply_a2=True):
 
     if iso:
         # TODO: Replace this recursion with a mathematical expression.
-        diag = 2 ** n_qubits - 2 if apply_a2 else 0
-        return _cnot_count_iso(n_qubits, iso, apply_a2) + diag
+        last_2q_gate_cnot = 1 if apply_a2 else 0
+        return _cnot_count_iso(n_qubits, iso, apply_a2) + last_2q_gate_cnot
 
     # Upper-bound expression for the unitary decomposition QSD
     # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
@@ -239,7 +239,8 @@ def _cnot_count_iso(n_qubits, iso, apply_a2=True):
     if n_qubits > 2:
         # Left circuit
         if iso:
-            gate_left = _cnot_count_iso(n_qubits-1, iso-1, apply_a2)
+            iso_cnot = 1 if n_qubits-1 == 2 else 0
+            gate_left = _cnot_count_iso(n_qubits-1, iso-1, apply_a2)+iso_cnot
         else:
             gate_left = _cnot_count_iso_qsd(n_qubits, apply_a2)
 
