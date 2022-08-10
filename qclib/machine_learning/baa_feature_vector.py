@@ -78,10 +78,13 @@ class BaaFeatureVector(BlueprintCircuit):
 
     """
 
-    def __init__(self, feature_dimension: Optional[int],
-                 strategy: str = 'greedy',
-                 max_fidelity_loss: float = 0.0,
-                 use_low_rank: bool = False) -> None:
+    def __init__(
+        self,
+        feature_dimension: Optional[int],
+        strategy: str = "greedy",
+        max_fidelity_loss: float = 0.0,
+        use_low_rank: bool = False,
+    ) -> None:
         """
         Args:
             feature_dimension: The feature dimension from which the number of
@@ -101,10 +104,12 @@ class BaaFeatureVector(BlueprintCircuit):
     def _build(self):
         super()._build()
 
-        placeholder = BaaParameterizedInitialize(self._ordered_parameters[:],
-                                                 self._strategy,
-                                                 self._max_fidelity_loss,
-                                                 self._use_low_rank)
+        placeholder = BaaParameterizedInitialize(
+            self._ordered_parameters[:],
+            self._strategy,
+            self._max_fidelity_loss,
+            self._use_low_rank,
+        )
         self.append(placeholder, self.qubits)
 
     def _unsorted_parameters(self):
@@ -117,7 +122,9 @@ class BaaFeatureVector(BlueprintCircuit):
             self._ordered_parameters.resize(self.feature_dimension)
         elif len(self._ordered_parameters) != self.feature_dimension:
             if raise_on_failure:
-                raise ValueError("Mismatching number of parameters and feature dimension.")
+                raise ValueError(
+                    "Mismatching number of parameters and feature dimension."
+                )
             return False
         return True
 
@@ -151,7 +158,7 @@ class BaaFeatureVector(BlueprintCircuit):
         Returns:
             The feature dimension, which is ``2 ** num_qubits``.
         """
-        return 2 ** self.num_qubits
+        return 2**self.num_qubits
 
     @feature_dimension.setter
     def feature_dimension(self, feature_dimension: int) -> None:
@@ -193,7 +200,7 @@ class BaaParameterizedInitialize(Instruction):
             if len(param.parameters) == 0:
                 cleaned_params.append(complex(param))
             else:
-                print('param', param)
+                print("param", param)
                 raise QiskitError(
                     "Cannot define a BaaParameterizedInitialize with unbound parameters"
                 )
@@ -201,9 +208,12 @@ class BaaParameterizedInitialize(Instruction):
         # normalize
         normalized = np.array(cleaned_params) / np.linalg.norm(cleaned_params)
 
-        circuit = BaaLowRankInitialize(normalized,
-                                       opt_params={
-                                           'max_fidelity_loss': self._max_fidelity_loss,
-                                           'strategy': self._strategy,
-                                           'use_low_rank': self._use_low_rank}).definition
+        circuit = BaaLowRankInitialize(
+            normalized,
+            opt_params={
+                "max_fidelity_loss": self._max_fidelity_loss,
+                "strategy": self._strategy,
+                "use_low_rank": self._use_low_rank,
+            },
+        ).definition
         self.definition = circuit

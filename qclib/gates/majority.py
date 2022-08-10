@@ -19,19 +19,19 @@ import numpy as np
 
 
 def operate(circuit, controls, target):
-    """ Apply a majority gate """
+    """Apply a majority gate"""
 
     size_controls = len(controls)
     log_n = int(np.floor(np.log2(size_controls)))
 
-    n_min = int(np.ceil(size_controls/2))
+    n_min = int(np.ceil(size_controls / 2))
     n_max = 2**log_n
 
     n_controls = [n_min]
 
     if n_min != n_max:
         if n_min % 2 != 0:
-            n_controls.extend(range(n_min+1, n_max))
+            n_controls.extend(range(n_min + 1, n_max))
 
         n_controls.append(n_max)
 

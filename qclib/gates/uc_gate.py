@@ -2,10 +2,12 @@ from qiskit.extensions.quantum_initializer import UCGate as qUCGate
 from qiskit.circuit.gate import Gate
 from qiskit.circuit.quantumcircuit import QuantumCircuit
 
+
 class UCGate(qUCGate):
     """
     qiskit UCGate with fixed inverse()
     """
+
     def __init__(self, gate_list, up_to_diagonal=False):
         super().__init__(gate_list, up_to_diagonal)
 

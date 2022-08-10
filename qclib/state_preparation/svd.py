@@ -32,22 +32,22 @@ class SVDInitialize(Initialize):
 
     def __init__(self, params, inverse=False, label=None):
         """
-            Parameters
-            ----------
-            params: list of complex
-                A unit vector representing a quantum state.
-                Values are amplitudes.
+        Parameters
+        ----------
+        params: list of complex
+            A unit vector representing a quantum state.
+            Values are amplitudes.
         """
 
-        self._name = 'svd'
+        self._name = "svd"
         self._get_num_qubits(params)
 
         self._label = label
         if label is None:
-            self._label = 'SP'
+            self._label = "SP"
 
             if inverse:
-                self._label = 'SPdg'
+                self._label = "SPdg"
 
         super().__init__(self._name, self.num_qubits, params, label=self._label)
 

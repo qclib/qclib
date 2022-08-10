@@ -27,7 +27,8 @@ from qiskit.extensions import UnitaryGate
 from qclib.unitary import unitary as decompose_unitary, cnot_count as unitary_cnot_count
 from qclib.gates.uc_gate import UCGate
 
-def decompose(isometry: np.ndarray, scheme='ccd'):
+
+def decompose(isometry: np.ndarray, scheme="ccd"):
     """
     Decompose an isometry from m to n qubits.
     In particular, it decomposes unitaries on n qubits (m=n) or prepare a
@@ -59,10 +60,10 @@ def decompose(isometry: np.ndarray, scheme='ccd'):
     log_lines = int(log_lines)
     log_cols = int(log_cols)
 
-    if scheme == 'csd':
+    if scheme == "csd":
         return _csd(iso, log_lines, log_cols)
 
-    if scheme == 'ccd':
+    if scheme == "ccd":
         return _ccd(iso, log_lines, log_cols)
 
     return _knill(iso, log_lines, log_cols)
@@ -79,28 +80,23 @@ def _check_isometry(iso, log_lines, log_cols):
             "The number of columns of the isometry is not a non negative power of 2."
         )
     if log_cols > log_lines:
-        raise ValueError(
-            "The input matrix has more columns than rows."
-        )
+        raise ValueError("The input matrix has more columns than rows.")
     if not _is_isometry(iso, log_cols):
-        raise ValueError(
-            "The input matrix has non orthonormal columns."
-        )
+        raise ValueError("The input matrix has non orthonormal columns.")
 
 
 def _is_isometry(iso, log_cols):
     identity = np.conj(iso.T).dot(iso)
-    return np.allclose(identity, np.eye(int(2 ** log_cols)))
+    return np.allclose(identity, np.eye(int(2**log_cols)))
 
 
 # Cosine-Sine
 def _csd(iso, log_lines, log_cols):
     unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
 
-    return decompose_unitary(unitary_gate,
-                             decomposition='qsd',
-                             iso=log_lines - log_cols,
-                             apply_a2=True)
+    return decompose_unitary(
+        unitary_gate, decomposition="qsd", iso=log_lines - log_cols, apply_a2=True
+    )
 
 
 #   Knill
@@ -121,9 +117,9 @@ def _knill(iso, log_lines, log_cols):
     # pylint: disable=import-outside-toplevel
     from qclib.state_preparation import LowRankInitialize
 
-    for i in range(2 ** log_lines):
+    for i in range(2**log_lines):
         # The eigenvalues are not necessarily ordered.
-        if np.abs(arg[i]) > 10 ** -7:
+        if np.abs(arg[i]) > 10**-7:
             state = eigvec[:, i]
             gate = LowRankInitialize(state)
 
@@ -152,9 +148,9 @@ def _extend_to_unitary(iso, log_lines, log_cols):
         # The transposition was removed because it would be nullified in
         # U[:, M:] = W.T .
 
-        unitary = np.zeros((2 ** log_lines, 2 ** log_lines), dtype=complex)
-        unitary[:, :2 ** log_cols] = iso
-        unitary[:, 2 ** log_cols:] = null_space
+        unitary = np.zeros((2**log_lines, 2**log_lines), dtype=complex)
+        unitary[:, : 2**log_cols] = iso
+        unitary[:, 2**log_cols :] = null_space
         # The transposition was removed because it nullified the
         # transposition of the conjugate complex above (which was removed).
 
@@ -166,16 +162,16 @@ def _ccd(iso, log_lines, log_cols):
     reg = QuantumRegister(log_lines)
     circuit = QuantumCircuit(reg)
 
-    for k in range(2 ** log_cols):  # iteration through columns.
+    for k in range(2**log_cols):  # iteration through columns.
         g_k = _g_k(iso, log_lines, k)
-        g_k.name = 'G' + str(k)
+        g_k.name = "G" + str(k)
 
         circuit.append(g_k.to_instruction(), reg)
 
     if log_cols > 0:
         # It clears the phases, as explained in the last sentence of the
         # first column on page 17.
-        phases = np.angle(np.diagonal(iso[:2 ** log_cols, :2 ** log_cols]))
+        phases = np.angle(np.diagonal(iso[: 2**log_cols, : 2**log_cols]))
         diag = np.exp(-1j * phases)
         diag_gate = DiagonalGate(diag.tolist())
         circuit.append(diag_gate, list(range(log_cols)))
@@ -187,7 +183,7 @@ def _g_k(iso, log_lines, col_index):
     # Gate G columns index k, to be created. Binary representation of column index k.
     # G_k's subgate bit index i (s in the paper).
     g_k = QuantumCircuit(log_lines)
-    k_bin = f'{col_index:0{log_lines}b}'
+    k_bin = f"{col_index:0{log_lines}b}"
     for i in range(log_lines):
         target = log_lines - i - 1
         control = list(range(target))
@@ -222,7 +218,7 @@ def _mc_gate(unitary, n_qubits, control, target, k_bin):
 
     controls = []
     for i in control:
-        if k_bin[i] == '1':
+        if k_bin[i] == "1":
             controls.append(i)
 
     unitaries = [np.identity(2) for _ in range(2 ** len(controls))]
@@ -256,8 +252,12 @@ def _update_isometry(iso, gate):
 
 def _mc_unitary(iso, col_index, bit_index):
     col = iso[:, col_index]
-    idx1 = 2 * _a(col_index, bit_index + 1) * 2 ** bit_index + _b(col_index, bit_index + 1)
-    idx2 = (2 * _a(col_index, bit_index + 1) + 1) * 2 ** bit_index + _b(col_index, bit_index + 1)
+    idx1 = 2 * _a(col_index, bit_index + 1) * 2**bit_index + _b(
+        col_index, bit_index + 1
+    )
+    idx2 = (2 * _a(col_index, bit_index + 1) + 1) * 2**bit_index + _b(
+        col_index, bit_index + 1
+    )
 
     return _unitary([[col[idx1]], [col[idx2]]], basis=0)
 
@@ -273,10 +273,12 @@ def _uc_unitaries(iso, n_qubits, col_index, bit_index):
 
     col = iso[:, col_index]
     for i in range(start, 2 ** (n_qubits - bit_index - 1)):
-        idx1 = 2 * i * 2 ** bit_index + _b(col_index, bit_index)
-        idx2 = (2 * i + 1) * 2 ** bit_index + _b(col_index, bit_index)
+        idx1 = 2 * i * 2**bit_index + _b(col_index, bit_index)
+        idx2 = (2 * i + 1) * 2**bit_index + _b(col_index, bit_index)
 
-        gates.append(_unitary([[col[idx1]], [col[idx2]]], basis=_k_s(col_index, bit_index)))
+        gates.append(
+            _unitary([[col[idx1]], [col[idx2]]], basis=_k_s(col_index, bit_index))
+        )
 
     return gates
 
@@ -304,42 +306,43 @@ def _unitary(iso, basis=0):  # Lemma2 of https://arxiv.org/abs/1501.06911
 
 def _a(col_index, bit_index):  # col_index >> bit_index.
     """
-     Returns int representing n-bit_index most significant bits.
+    Returns int representing n-bit_index most significant bits.
     """
-    return col_index // 2 ** bit_index
+    return col_index // 2**bit_index
 
 
 def _b(col_index, bit_index):  # col_index ^ ((col_index >> bit_index) << bit_index)
     """
     Returns int representing bit_index less significant bits.
     """
-    return col_index - (_a(col_index, bit_index) * 2 ** bit_index)
+    return col_index - (_a(col_index, bit_index) * 2**bit_index)
 
 
 def _k_s(col_index, bit_index):
     # Returns the bit value at bit_index of col_index (k in the paper).
-    return (col_index & 2 ** bit_index) // 2 ** bit_index
+    return (col_index & 2**bit_index) // 2**bit_index
 
 
-def cnot_count(isometry, scheme='ccd', method='estimate'):
+def cnot_count(isometry, scheme="ccd", method="estimate"):
     """
     Count the number of CNOTs to decompose the isometry.
     """
-    if method == 'estimate':
+    if method == "estimate":
         return _cnot_count_estimate(isometry, scheme)
 
     # Exact count
     circuit = decompose(isometry, scheme)
-    transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'],
-                                   optimization_level=0)
+    transpiled_circuit = transpile(
+        circuit, basis_gates=["u", "cx"], optimization_level=0
+    )
     count_ops = transpiled_circuit.count_ops()
-    if 'cx' in count_ops:
-        return count_ops['cx']
+    if "cx" in count_ops:
+        return count_ops["cx"]
 
     return 0
 
 
-def _cnot_count_estimate(isometry, scheme='ccd'):
+def _cnot_count_estimate(isometry, scheme="ccd"):
     """
     Estimate the number of CNOTs to decompose the isometry.
     """
@@ -350,10 +353,10 @@ def _cnot_count_estimate(isometry, scheme='ccd'):
     log_lines = int(log2(iso.shape[0]))
     log_cols = int(log2(iso.shape[1]))
 
-    if scheme == 'knill':
+    if scheme == "knill":
         return _cnot_count_estimate_knill(isometry, log_lines, log_cols)
 
-    if scheme == 'csd':
+    if scheme == "csd":
         return _cnot_count_estimate_csd(isometry, log_lines, log_cols)
 
     # CCD
@@ -363,10 +366,9 @@ def _cnot_count_estimate(isometry, scheme='ccd'):
 def _cnot_count_estimate_csd(iso, log_lines, log_cols):
     unitary_gate = _extend_to_unitary(iso, log_lines, log_cols)
 
-    return unitary_cnot_count(unitary_gate,
-                              decomposition='qsd',
-                              iso=log_lines - log_cols,
-                              apply_a2=True)
+    return unitary_cnot_count(
+        unitary_gate, decomposition="qsd", iso=log_lines - log_cols, apply_a2=True
+    )
 
 
 def _cnot_count_estimate_knill(iso, log_lines, log_cols):
@@ -382,8 +384,8 @@ def _cnot_count_estimate_knill(iso, log_lines, log_cols):
     from qclib.state_preparation.lowrank import cnot_count as schmidt_cnot_count
 
     cnots = 0
-    for i in range(2 ** log_lines):
-        if np.abs(arg[i]) > 10 ** -7:
+    for i in range(2**log_lines):
+        if np.abs(arg[i]) > 10**-7:
             state = eigvec[:, i]
 
             # Two times Schmidt state preparation
@@ -392,9 +394,11 @@ def _cnot_count_estimate_knill(iso, log_lines, log_cols):
             # MCP
             circuit = QuantumCircuit(log_lines)
             circuit.mcp(3.0, list(range(log_lines - 1)), log_lines - 1)
-            transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=0)
-            if 'cx' in transpiled_circuit.count_ops():
-                cnots += transpiled_circuit.count_ops()['cx']
+            transpiled_circuit = transpile(
+                circuit, basis_gates=["u", "cx"], optimization_level=0
+            )
+            if "cx" in transpiled_circuit.count_ops():
+                cnots += transpiled_circuit.count_ops()["cx"]
 
     return cnots
 
@@ -404,8 +408,8 @@ def _cnot_count_estimate_ccd(log_lines, log_cols):
     Estimate the number of CNOTs to decompose the isometry using CCD.
     """
     cnots = 0
-    for k in range(2 ** log_cols):
-        k_bin = f'{k:0{log_lines}b}'
+    for k in range(2**log_cols):
+        k_bin = f"{k:0{log_lines}b}"
         # G_K
         for i in range(log_lines):
             target = log_lines - i - 1
@@ -414,7 +418,7 @@ def _cnot_count_estimate_ccd(log_lines, log_cols):
 
             if _k_s(k, i) == 0 and _b(k, i + 1) != 0:
                 # MCG implemented as a UCG up to a diagonal
-                n_qubits = sum([k_bin[q] == '1' for q in control + ancilla]) + 1
+                n_qubits = sum([k_bin[q] == "1" for q in control + ancilla]) + 1
                 cnots += 2 ** (n_qubits - 1) - 1
 
             # UCG up to a diagonal
@@ -423,6 +427,6 @@ def _cnot_count_estimate_ccd(log_lines, log_cols):
 
     # Diagonal
     if log_cols > 0:
-        cnots += 2 ** log_cols - 2
+        cnots += 2**log_cols - 2
 
     return cnots

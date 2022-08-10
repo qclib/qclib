@@ -22,7 +22,10 @@ from math import log2
 from qiskit import QuantumCircuit
 
 from qclib.state_preparation.initialize import Initialize
-from qclib.state_preparation.util.state_tree_preparation import Amplitude, state_decomposition
+from qclib.state_preparation.util.state_tree_preparation import (
+    Amplitude,
+    state_decomposition,
+)
 from qclib.state_preparation.util.angle_tree_preparation import create_angles_tree
 from qclib.state_preparation.util.tree_register import add_register
 from qclib.state_preparation.util.tree_walk import bottom_up
@@ -38,22 +41,22 @@ class DcspInitialize(Initialize):
 
     def __init__(self, params, inverse=False, label=None):
         """
-            Parameters
-            ----------
-            params: list of complex
-                A unit vector representing a quantum state.
-                Values are amplitudes.
+        Parameters
+        ----------
+        params: list of complex
+            A unit vector representing a quantum state.
+            Values are amplitudes.
 
         """
-        self._name = 'dcsp'
+        self._name = "dcsp"
         self._get_num_qubits(params)
 
         self._label = label
         if label is None:
-            self._label = 'SP'
+            self._label = "SP"
 
             if inverse:
-                self._label = 'SPdg'
+                self._label = "SPdg"
 
         super().__init__(self._name, self.num_qubits, params, label=self._label)
 
@@ -68,7 +71,7 @@ class DcspInitialize(Initialize):
         angle_tree = create_angles_tree(state_tree)
 
         circuit = QuantumCircuit()
-        add_register(circuit, angle_tree, n_qubits-1)
+        add_register(circuit, angle_tree, n_qubits - 1)
 
         bottom_up(angle_tree, circuit, n_qubits)
 
@@ -77,7 +80,7 @@ class DcspInitialize(Initialize):
     def _get_num_qubits(self, params):
         if not log2(len(params)).is_integer():
             Exception("The number of amplitudes is not a power of 2")
-        self.num_qubits = len(params)-1
+        self.num_qubits = len(params) - 1
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None):

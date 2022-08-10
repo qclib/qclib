@@ -21,13 +21,14 @@ from qclib.state_preparation.util.tree_utils import children
 
 
 def output(angle_tree, output_qubits):
-    """ Define output qubits"""
+    """Define output qubits"""
     if angle_tree:
-        output_qubits.insert(0, angle_tree.qubit) # qiskit little-endian
+        output_qubits.insert(0, angle_tree.qubit)  # qiskit little-endian
         if angle_tree.left:
             output(angle_tree.left, output_qubits)
         else:
             output(angle_tree.right, output_qubits)
+
 
 def _add_register(angle_tree, qubits, start_level):
     if angle_tree:
@@ -41,6 +42,7 @@ def _add_register(angle_tree, qubits, start_level):
             else:
                 _add_register(angle_tree.right, qubits, start_level)
 
+
 def add_register(circuit, angle_tree, start_level):
     """
     Organize qubit registers, grouping by "output" and "ancilla" types.
@@ -49,25 +51,25 @@ def add_register(circuit, angle_tree, start_level):
     level = 0
     level_nodes = []
     nodes = [angle_tree]
-    while len(nodes) > 0: # count nodes per level
-        level_nodes.append( len(nodes) )
+    while len(nodes) > 0:  # count nodes per level
+        level_nodes.append(len(nodes))
         nodes = children(nodes)
         level += 1
 
-    noutput = level # one output qubits per level
-    nqubits = sum(level_nodes[:start_level]) # bottom-up qubits
+    noutput = level  # one output qubits per level
+    nqubits = sum(level_nodes[:start_level])  # bottom-up qubits
 
     # top-down qubits: (number of sub-states) * (number of qubits per sub-state)
-    nqubits += level_nodes[start_level] * (noutput-start_level)
+    nqubits += level_nodes[start_level] * (noutput - start_level)
 
     nancilla = nqubits - noutput
 
-    output_register = qiskit.QuantumRegister(noutput, name='output')
+    output_register = qiskit.QuantumRegister(noutput, name="output")
     circuit.add_register(output_register)
     qubits = [*output_register[::-1]]
 
     if nancilla > 0:
-        ancilla_register = qiskit.QuantumRegister(nancilla, name='ancilla')
+        ancilla_register = qiskit.QuantumRegister(nancilla, name="ancilla")
         circuit.add_register(ancilla_register)
         qubits.extend([*ancilla_register[::-1]])
 
