@@ -12,33 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-These classes are adaptations of Qiskit's RawFeatureVector and RawParameterizedInitialize
-classes.
-https://github.com/Qiskit/qiskit-machine-learning/blob/main/qiskit_machine_learning/circuit/library/raw_feature_vector.py
-
-The correct approach is to create a RawFeatureVector base class that implements
-only the common routines. Other classes, such as BaaFeatureVector, would
-inherit from this new class implementing at least the __init__ and _build
-functions. The current RawFeatureVector class would have to be renamed.
-"""
-
-from typing import Optional, List
 import numpy as np
 from qiskit.exceptions import QiskitError
 from qiskit.circuit import QuantumRegister, ParameterVector, Instruction
 from qiskit.circuit.library import BlueprintCircuit
-from ..state_preparation import BaaLowRankInitialize
+from qclib.state_preparation.initialize import Initialize
 
 # pylint: disable=relative-beyond-top-level
 
-
-class BaaFeatureVector(BlueprintCircuit):
-    """The BAA schmidt feature vector circuit.
-
+class FeatureVector(BlueprintCircuit):
+    """
     This circuit acts as parameterized initialization for statevectors with ``feature_dimension``
-    dimensions, thus with ``log2(feature_dimension)`` qubits. The circuit contains a
-    placeholder instruction that can only be synthesized/defined when all parameters are bound.
+    dimensions. The circuit contains a placeholder instruction that can only be
+    synthesized/defined when all parameters are bound.
 
     In ML, this circuit can be used to load the training data into qubit amplitudes. It does not
     apply an kernel transformation (therefore, it is a "raw" feature vector).
@@ -49,8 +35,8 @@ class BaaFeatureVector(BlueprintCircuit):
 
     .. code-block::
 
-        from qclib.machine_learning.baa_feature_vector import BaaFeatureVector
-        circuit = BaaFeatureVector(4)
+        from qclib.state_preparation import FeatureVector, BaaLowRankInitialize
+        circuit = FeatureVector(2, 4, BaaLowRankInitialize, opt_params=None)
         print(circuit.num_qubits)
         # prints: 2
 
@@ -58,7 +44,7 @@ class BaaFeatureVector(BlueprintCircuit):
         # prints:
         #      ┌────────────────────────────────────────┐
         # q_0: ┤0                                              ├
-        #      │  PARAMETERIZEDINITIALIZE(x[0],x[1],x[2],x[3]) │
+        #      │  ParameterizedInitialize(x[0],x[1],x[2],x[3]) │
         # q_1: ┤1                                              ├
         #      └────────────────────────────────────────┘
 
@@ -72,59 +58,57 @@ class BaaFeatureVector(BlueprintCircuit):
         # prints:
         #      ┌────────────────────────────────────────┐
         # q_0: ┤0                                              ├
-        #      │  PARAMETERIZEDINITIALIZE(0.70711,0,0,0.70711) │
+        #      │  ParameterizedInitialize(0.70711,0,0,0.70711) │
         # q_1: ┤1                                              ├
         #      └────────────────────────────────────────┘
 
     """
 
-    def __init__(
-        self,
-        feature_dimension: Optional[int],
-        strategy: str = "greedy",
-        max_fidelity_loss: float = 0.0,
-        use_low_rank: bool = False,
-    ) -> None:
-        """
-        Args:
-            feature_dimension: The feature dimension from which the number of
-                                qubits is inferred as ``n_qubits = log2(feature_dim)``
+    def __init__(self,
+                 num_qubits: int,
+                 feature_dimension: int,
+                 initializer: Initialize,
+                 opt_params = None) -> None:
 
-        """
         super().__init__()
 
         self._ordered_parameters = ParameterVector("x")
+
+        self.num_qubits = num_qubits
+        self._feature_dimension = None
         if feature_dimension is not None:
             self.feature_dimension = feature_dimension
 
-        self._strategy = strategy
-        self._max_fidelity_loss = max_fidelity_loss
-        self._use_low_rank = use_low_rank
-
-    def _build(self):
-        super()._build()
-
-        placeholder = BaaParameterizedInitialize(
-            self._ordered_parameters[:],
-            self._strategy,
-            self._max_fidelity_loss,
-            self._use_low_rank,
-        )
-        self.append(placeholder, self.qubits)
+        self._opt_params = opt_params
+        self._initializer = initializer
 
     def _unsorted_parameters(self):
         if self.data is None:
             self._build()
         return super()._unsorted_parameters()
 
+    def _build(self) -> None:
+        """If not already built, build the circuit."""
+        if self._is_built:
+            return
+
+        super()._build()
+
+        if self.num_qubits == 0:
+            return
+
+        placeholder = ParameterizedInitialize(self.num_qubits,
+                                                self._ordered_parameters[:],
+                                                self._initializer,
+                                                self._opt_params)
+        self.append(placeholder, self.qubits)
+
     def _check_configuration(self, raise_on_failure=True):
         if isinstance(self._ordered_parameters, ParameterVector):
             self._ordered_parameters.resize(self.feature_dimension)
         elif len(self._ordered_parameters) != self.feature_dimension:
             if raise_on_failure:
-                raise ValueError(
-                    "Mismatching number of parameters and feature dimension."
-                )
+                raise ValueError("Mismatching number of parameters and feature dimension.")
             return False
         return True
 
@@ -158,7 +142,7 @@ class BaaFeatureVector(BlueprintCircuit):
         Returns:
             The feature dimension, which is ``2 ** num_qubits``.
         """
-        return 2**self.num_qubits
+        return self._feature_dimension
 
     @feature_dimension.setter
     def feature_dimension(self, feature_dimension: int) -> None:
@@ -170,28 +154,24 @@ class BaaFeatureVector(BlueprintCircuit):
         Raises:
             ValueError: If ``feature_dimension`` is not a power of 2.
         """
-        num_qubits = np.log2(feature_dimension)
-        if int(num_qubits) != num_qubits:
-            raise ValueError("feature_dimension must be a power of 2!")
 
-        if num_qubits != self.num_qubits:
-            self._invalidate()
-            self.num_qubits = int(num_qubits)
+        if self._feature_dimension != feature_dimension:
+            #self._invalidate()
+            self._feature_dimension = feature_dimension
+            #self.qregs = []
+            #if self.num_qubits is not None and self.num_qubits > 0:
+            #    self.qregs = [QuantumRegister(self.num_qubits, name="q")]
 
-
-class BaaParameterizedInitialize(Instruction):
+class ParameterizedInitialize(Instruction):
     """A normalized parameterized initialize instruction."""
 
-    def __init__(self, amplitudes, strategy, max_fidelity_loss, use_low_rank):
-        num_qubits = np.log2(len(amplitudes))
-        if int(num_qubits) != num_qubits:
-            raise ValueError("feature_dimension must be a power of 2!")
+    def __init__(self, n_qubits, amplitudes, initializer, opt_params):
+        num_qubits = n_qubits
 
-        super().__init__("BaaParameterizedInitialize", int(num_qubits), 0, amplitudes)
+        super().__init__("ParameterizedInitialize", int(num_qubits), 0, amplitudes)
 
-        self._strategy = strategy
-        self._max_fidelity_loss = max_fidelity_loss
-        self._use_low_rank = use_low_rank
+        self._initializer = initializer
+        self._opt_params = opt_params
 
     def _define(self):
         # cast ParameterExpressions that are fully bound to numbers
@@ -200,20 +180,13 @@ class BaaParameterizedInitialize(Instruction):
             if len(param.parameters) == 0:
                 cleaned_params.append(complex(param))
             else:
-                print("param", param)
                 raise QiskitError(
-                    "Cannot define a BaaParameterizedInitialize with unbound parameters"
+                    "Cannot define a ParameterizedInitialize with unbound parameters"
                 )
 
         # normalize
         normalized = np.array(cleaned_params) / np.linalg.norm(cleaned_params)
 
-        circuit = BaaLowRankInitialize(
-            normalized,
-            opt_params={
-                "max_fidelity_loss": self._max_fidelity_loss,
-                "strategy": self._strategy,
-                "use_low_rank": self._use_low_rank,
-            },
-        ).definition
-        self.definition = circuit
+        gate = self._initializer(normalized, opt_params=self._opt_params)
+
+        self.definition = gate.definition
