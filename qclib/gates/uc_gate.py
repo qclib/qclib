@@ -1,22 +1,29 @@
 from qiskit.extensions.quantum_initializer import UCGate as qUCGate
-import numpy as np
-
+from qiskit.circuit.gate import Gate
+from qiskit.circuit.quantumcircuit import QuantumCircuit
 
 class UCGate(qUCGate):
     """
-    qiskit UCGate with fixed global phase
-    FIXME: requires to extract the gate matrix
+    qiskit UCGate with fixed inverse()
     """
     def __init__(self, gate_list, up_to_diagonal=False):
         super().__init__(gate_list, up_to_diagonal)
 
-    def _define(self):
-        super()._define()
-        self.definition = super().definition
+    def inverse(self):
+        """Return the inverse.
 
-        import qiskit.quantum_info as qi
+        This does not re-compute the decomposition for the multiplexer with the inverse of the
+        gates but simply inverts the existing decomposition.
+        """
+        inverse_gate = Gate(
+            name=self.name + "_dg", num_qubits=self.num_qubits, params=[]
+        )  # removing the params because arrays are deprecated
 
-        op = qi.Operator(self.definition)
-        actual_phase = np.angle(op.data[0, 0])
-        original_phase = np.angle(self.params[0][0, 0])
-        self.definition.global_phase = self.definition.global_phase + original_phase - actual_phase
+        definition = QuantumCircuit(*self.definition.qregs)
+        for inst in reversed(self._definition):
+            definition._append(inst.replace(operation=inst.operation.inverse()))
+
+        definition.global_phase = -self.definition.global_phase
+
+        inverse_gate.definition = definition
+        return inverse_gate
