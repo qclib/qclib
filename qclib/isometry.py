@@ -22,11 +22,10 @@ import numpy as np
 import scipy
 import qiskit.quantum_info as qi
 from qiskit import QuantumCircuit, QuantumRegister, transpile
-from qiskit.extensions.quantum_initializer import UCGate
 from qiskit.extensions.quantum_initializer.diagonal import DiagonalGate
 from qiskit.extensions import UnitaryGate
 from qclib.unitary import unitary as decompose_unitary, cnot_count as unitary_cnot_count
-
+from qclib.gates.uc_gate import UCGate
 
 def decompose(isometry: np.ndarray, scheme='ccd'):
     """
@@ -241,11 +240,11 @@ def _uc_gate(unitaries, n_qubits, control, target):
         # "control" is reversed due to UCGate implementation.
         uc_gate = UCGate(unitaries, up_to_diagonal=True)
         gate.append(uc_gate, [target] + control[::-1])
-
     else:
         # UCGate does not work with target only.
         unitary_gate = UnitaryGate(unitaries[0])
         gate.append(unitary_gate, [target])
+
     return gate
 
 
@@ -266,7 +265,7 @@ def _mc_unitary(iso, col_index, bit_index):
 def _uc_unitaries(iso, n_qubits, col_index, bit_index):
     start = _a(col_index, bit_index + 1) + 1
     if _b(col_index, bit_index + 1) == 0:
-        start = _a(col_index, bit_index + 1)
+        start -= 1
 
     gates = []
     for i in range(start):
@@ -305,7 +304,7 @@ def _unitary(iso, basis=0):  # Lemma2 of https://arxiv.org/abs/1501.06911
 
 def _a(col_index, bit_index):  # col_index >> bit_index.
     """
-     Returns int representing n-bit_index most  significant bits.
+     Returns int representing n-bit_index most significant bits.
     """
     return col_index // 2 ** bit_index
 
