@@ -93,10 +93,7 @@ class BdspInitialize(Initialize):
         if not n_qubits.is_integer():
             Exception("The number of amplitudes is not a power of 2")
         n_qubits = int(n_qubits)
-        # bottom-up qubits + top-down qubits
-        # top-down qubits: (number of sub-states) * (number of qubits per sub-state)
-        self.num_qubits = sum([2**i for i in range(n_qubits-self.split)])
-        self.num_qubits += 2**(n_qubits-self.split) * self.split
+        self.num_qubits = (self.split+1) * 2**(n_qubits-self.split) - 1
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):

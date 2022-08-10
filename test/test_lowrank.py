@@ -68,8 +68,8 @@ class TestLowRank(TestCase):
         partitions = combinations(qubits, (n_qubits+1)//2)
         for partition in partitions:
             circuit = QuantumCircuit(n_qubits)
-            lr_params = {'lr': rank, 'partition': partition}
-            LowRankInitialize.initialize(circuit, state_vector, lr_params=lr_params)
+            opt_params = {'lr': rank, 'partition': partition}
+            LowRankInitialize.initialize(circuit, state_vector, opt_params=opt_params)
 
             state = get_state(circuit)
 
@@ -83,8 +83,8 @@ class TestLowRank(TestCase):
         partitions = combinations(qubits, (n_qubits+1)//2)
         for partition in partitions:
             circuit = QuantumCircuit(n_qubits)
-            lr_params = {'partition': partition}
-            LowRankInitialize.initialize(circuit, state_vector, lr_params=lr_params)
+            opt_params = {'partition': partition}
+            LowRankInitialize.initialize(circuit, state_vector, opt_params=opt_params)
 
             state = get_state(circuit)
 
@@ -101,7 +101,7 @@ class TestLowRank(TestCase):
         state_vector = state_vector / np.linalg.norm(state_vector)
 
         circuit = QuantumCircuit(5)
-        LowRankInitialize.initialize(circuit, state_vector, lr_params={'lr': 5})
+        LowRankInitialize.initialize(circuit, state_vector, opt_params={'lr': 5})
 
         state = get_state(circuit)
 
