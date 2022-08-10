@@ -39,7 +39,10 @@ from qiskit.circuit.quantumcircuit import QuantumCircuit, Gate
 from qiskit.circuit.library.standard_gates import CXGate, RXGate, RYGate, RZGate
 from qiskit.exceptions import QiskitError
 from qiskit.quantum_info.operators import Operator
-from qiskit.quantum_info.synthesis.weyl import weyl_coordinates, transform_to_magic_basis
+from qiskit.quantum_info.synthesis.weyl import (
+    weyl_coordinates,
+    transform_to_magic_basis,
+)
 from qiskit.quantum_info.synthesis.one_qubit_decompose import (
     OneQubitEulerDecomposer,
     DEFAULT_ATOL,
@@ -60,7 +63,9 @@ def decompose_two_qubit_product_gate(special_unitary_matrix):
         R = special_unitary_matrix[2:, :2].copy()
         detR = R[0, 0] * R[1, 1] - R[0, 1] * R[1, 0]
     if abs(detR) < 0.1:
-        raise QiskitError("decompose_two_qubit_product_gate: unable to decompose: detR < 0.1")
+        raise QiskitError(
+            "decompose_two_qubit_product_gate: unable to decompose: detR < 0.1"
+        )
     R /= np.sqrt(detR)
 
     # extract the left component
@@ -69,7 +74,9 @@ def decompose_two_qubit_product_gate(special_unitary_matrix):
     L = temp[::2, ::2]
     detL = L[0, 0] * L[1, 1] - L[0, 1] * L[1, 0]
     if abs(detL) < 0.9:
-        raise QiskitError("decompose_two_qubit_product_gate: unable to decompose: detL < 0.9")
+        raise QiskitError(
+            "decompose_two_qubit_product_gate: unable to decompose: detL < 0.9"
+        )
     L /= np.sqrt(detL)
     phase = cmath.phase(detL) / 2
 
@@ -120,15 +127,19 @@ class TwoQubitWeylDecomposition:
     _original_decomposition: "TwoQubitWeylDecomposition"
     _is_flipped_from_original: bool  # The approx is closest to a Weyl reflection of the original?
 
-    _default_1q_basis: ClassVar[str] = "ZYZ"  # Default one qubit basis (explicit parameterization)
+    _default_1q_basis: ClassVar[
+        str
+    ] = "ZYZ"  # Default one qubit basis (explicit parameterization)
 
     def __init_subclass__(cls, **kwargs):
         """Subclasses should be concrete, not factories.
 
         Make explicitly-instantiated subclass __new__  call base __new__ with fidelity=None"""
         super().__init_subclass__(**kwargs)
-        cls.__new__ = lambda cls, *a, fidelity=None, **k: TwoQubitWeylDecomposition.__new__(
-            cls, *a, fidelity=None, **k
+        cls.__new__ = (
+            lambda cls, *a, fidelity=None, **k: TwoQubitWeylDecomposition.__new__(
+                cls, *a, fidelity=None, **k
+            )
         )
 
     @staticmethod
@@ -351,7 +362,10 @@ class TwoQubitWeylDecomposition:
                     "Requested fidelity different from actual by %s",
                     self.calculated_fidelity - actual_fidelity,
                 )
-        if self.requested_fidelity and self.calculated_fidelity + 1.0e-13 < self.requested_fidelity:
+        if (
+            self.requested_fidelity
+            and self.calculated_fidelity + 1.0e-13 < self.requested_fidelity
+        ):
             raise QiskitError(
                 f"{self.__class__.__name__}: "
                 f"calculated fidelity: {self.calculated_fidelity} "
@@ -579,7 +593,9 @@ class TwoQubitControlledUDecomposer:
             try:
                 rxx_equivalent_gate(test_angle, label="foo")
             except TypeError as _:
-                raise QiskitError("Equivalent gate needs to take exactly 1 angle parameter.") from _
+                raise QiskitError(
+                    "Equivalent gate needs to take exactly 1 angle parameter."
+                ) from _
             decomp = TwoQubitWeylDecomposition(rxx_equivalent_gate(test_angle))
 
             circ = QuantumCircuit(2)
@@ -669,11 +685,19 @@ class TwoQubitControlledUDecomposer:
 
         # Express the RXXGate in terms of the user-provided RXXGate equivalent gate.
         rxx_circ = QuantumCircuit(2, global_phase=-decomposer_inv.global_phase)
-        rxx_circ.compose(oneq_decompose(decomposer_inv.K2r).inverse(), inplace=True, qubits=[0])
-        rxx_circ.compose(oneq_decompose(decomposer_inv.K2l).inverse(), inplace=True, qubits=[1])
+        rxx_circ.compose(
+            oneq_decompose(decomposer_inv.K2r).inverse(), inplace=True, qubits=[0]
+        )
+        rxx_circ.compose(
+            oneq_decompose(decomposer_inv.K2l).inverse(), inplace=True, qubits=[1]
+        )
         rxx_circ.compose(circ, inplace=True)
-        rxx_circ.compose(oneq_decompose(decomposer_inv.K1r).inverse(), inplace=True, qubits=[0])
-        rxx_circ.compose(oneq_decompose(decomposer_inv.K1l).inverse(), inplace=True, qubits=[1])
+        rxx_circ.compose(
+            oneq_decompose(decomposer_inv.K1r).inverse(), inplace=True, qubits=[0]
+        )
+        rxx_circ.compose(
+            oneq_decompose(decomposer_inv.K1l).inverse(), inplace=True, qubits=[1]
+        )
 
         return rxx_circ
 
@@ -816,10 +840,30 @@ def Ud(a, b, c):
     """Generates the array Exp(i(a xx + b yy + c zz))"""
     return np.array(
         [
-            [cmath.exp(1j * c) * math.cos(a - b), 0, 0, 1j * cmath.exp(1j * c) * math.sin(a - b)],
-            [0, cmath.exp(-1j * c) * math.cos(a + b), 1j * cmath.exp(-1j * c) * math.sin(a + b), 0],
-            [0, 1j * cmath.exp(-1j * c) * math.sin(a + b), cmath.exp(-1j * c) * math.cos(a + b), 0],
-            [1j * cmath.exp(1j * c) * math.sin(a - b), 0, 0, cmath.exp(1j * c) * math.cos(a - b)],
+            [
+                cmath.exp(1j * c) * math.cos(a - b),
+                0,
+                0,
+                1j * cmath.exp(1j * c) * math.sin(a - b),
+            ],
+            [
+                0,
+                cmath.exp(-1j * c) * math.cos(a + b),
+                1j * cmath.exp(-1j * c) * math.sin(a + b),
+                0,
+            ],
+            [
+                0,
+                1j * cmath.exp(-1j * c) * math.sin(a + b),
+                cmath.exp(-1j * c) * math.cos(a + b),
+                0,
+            ],
+            [
+                1j * cmath.exp(1j * c) * math.sin(a - b),
+                0,
+                0,
+                cmath.exp(1j * c) * math.cos(a - b),
+            ],
         ],
         dtype=complex,
     )
@@ -837,7 +881,8 @@ def rz_array(theta):
     Rz(theta) = diag(exp(-i*theta/2),exp(i*theta/2))
     """
     return np.array(
-        [[cmath.exp(-1j * theta / 2.0), 0], [0, cmath.exp(1j * theta / 2.0)]], dtype=complex
+        [[cmath.exp(-1j * theta / 2.0), 0], [0, cmath.exp(1j * theta / 2.0)]],
+        dtype=complex,
     )
 
 
@@ -870,7 +915,9 @@ class TwoQubitBasisDecomposer:
             self._decomposer1q = OneQubitEulerDecomposer("U3")
 
         # FIXME: find good tolerances
-        self.is_supercontrolled = math.isclose(basis.a, np.pi / 4) and math.isclose(basis.c, 0.0)
+        self.is_supercontrolled = math.isclose(basis.a, np.pi / 4) and math.isclose(
+            basis.c, 0.0
+        )
 
         # Create some useful matrices U1, U2, U3 are equivalent to the basis,
         # expand as Ui = Ki1.Ubasis.Ki2
@@ -927,11 +974,16 @@ class TwoQubitBasisDecomposer:
             1
             / math.sqrt(2)
             * np.array(
-                [[cmath.exp(-1j * b), cmath.exp(-1j * b)], [-cmath.exp(1j * b), cmath.exp(1j * b)]],
+                [
+                    [cmath.exp(-1j * b), cmath.exp(-1j * b)],
+                    [-cmath.exp(1j * b), cmath.exp(1j * b)],
+                ],
                 dtype=complex,
             )
         )
-        K31r = 1j * np.array([[cmath.exp(1j * b), 0], [0, -cmath.exp(-1j * b)]], dtype=complex)
+        K31r = 1j * np.array(
+            [[cmath.exp(1j * b), 0], [0, -cmath.exp(-1j * b)]], dtype=complex
+        )
         K32r = (
             1
             / (1 - 1j)
@@ -1078,7 +1130,9 @@ class TwoQubitBasisDecomposer:
 
         return U3r, U3l, U2r, U2l, U1r, U1l, U0r, U0l
 
-    def __call__(self, target, basis_fidelity=None, *, _num_basis_uses=None) -> QuantumCircuit:
+    def __call__(
+        self, target, basis_fidelity=None, *, _num_basis_uses=None
+    ) -> QuantumCircuit:
         """Decompose a two-qubit unitary over fixed basis + SU(2) using the best approximation given
         that each basis application has a finite fidelity.
 
@@ -1089,7 +1143,9 @@ class TwoQubitBasisDecomposer:
 
         target_decomposed = TwoQubitWeylDecomposition(target)
         traces = self.traces(target_decomposed)
-        expected_fidelities = [trace_to_fid(traces[i]) * basis_fidelity**i for i in range(4)]
+        expected_fidelities = [
+            trace_to_fid(traces[i]) * basis_fidelity**i for i in range(4)
+        ]
 
         best_nbasis = int(np.argmax(expected_fidelities))
         if _num_basis_uses is not None:
@@ -1120,8 +1176,12 @@ class TwoQubitBasisDecomposer:
             return_circuit.compose(decomposition_euler[2 * i], [q[0]], inplace=True)
             return_circuit.compose(decomposition_euler[2 * i + 1], [q[1]], inplace=True)
             return_circuit.append(self.gate, [q[0], q[1]])
-        return_circuit.compose(decomposition_euler[2 * best_nbasis], [q[0]], inplace=True)
-        return_circuit.compose(decomposition_euler[2 * best_nbasis + 1], [q[1]], inplace=True)
+        return_circuit.compose(
+            decomposition_euler[2 * best_nbasis], [q[0]], inplace=True
+        )
+        return_circuit.compose(
+            decomposition_euler[2 * best_nbasis + 1], [q[1]], inplace=True
+        )
         return return_circuit
 
     def _pulse_optimal_chooser(self, best_nbasis, decomposition, target_decomposed):
@@ -1146,11 +1206,17 @@ class TwoQubitBasisDecomposer:
         if self._decomposer1q.basis in {"ZSX", "ZSXX"}:
             if isinstance(self.gate, CXGate):
                 if best_nbasis == 3:
-                    circuit = self._get_sx_vz_3cx_efficient_euler(decomposition, target_decomposed)
+                    circuit = self._get_sx_vz_3cx_efficient_euler(
+                        decomposition, target_decomposed
+                    )
                 elif best_nbasis == 2:
-                    circuit = self._get_sx_vz_2cx_efficient_euler(decomposition, target_decomposed)
+                    circuit = self._get_sx_vz_2cx_efficient_euler(
+                        decomposition, target_decomposed
+                    )
             else:
-                raise QiskitError("pulse_optimizer currently only works with CNOT entangling gate")
+                raise QiskitError(
+                    "pulse_optimizer currently only works with CNOT entangling gate"
+                )
         else:
             raise QiskitError(
                 '"pulse_optimize" currently only works with ZSX basis '
@@ -1324,9 +1390,13 @@ class TwoQubitBasisDecomposer:
         elif x12_isNonZero and not x12_isPiMult:
             # this is non-optimal but doesn't seem to occur currently
             if self.pulse_optimize is None:
-                qc.compose(self._decomposer1q(Operator(RXGate(x12)).data), [0], inplace=True)
+                qc.compose(
+                    self._decomposer1q(Operator(RXGate(x12)).data), [0], inplace=True
+                )
             else:
-                raise QiskitError("possible non-pulse-optimal decomposition encountered")
+                raise QiskitError(
+                    "possible non-pulse-optimal decomposition encountered"
+                )
         if math.isclose(euler_q1[1][1], math.pi / 2, abs_tol=atol):
             qc.sx(1)
             qc.global_phase -= math.pi / 4
@@ -1334,10 +1404,14 @@ class TwoQubitBasisDecomposer:
             # this is non-optimal but doesn't seem to occur currently
             if self.pulse_optimize is None:
                 qc.compose(
-                    self._decomposer1q(Operator(RXGate(euler_q1[1][1])).data), [1], inplace=True
+                    self._decomposer1q(Operator(RXGate(euler_q1[1][1])).data),
+                    [1],
+                    inplace=True,
                 )
             else:
-                raise QiskitError("possible non-pulse-optimal decomposition encountered")
+                raise QiskitError(
+                    "possible non-pulse-optimal decomposition encountered"
+                )
         qc.rz(euler_q1[1][2] + euler_q1[2][0], 1)
 
         qc.cx(1, 0)
@@ -1350,10 +1424,14 @@ class TwoQubitBasisDecomposer:
             # this is non-optimal but doesn't seem to occur currently
             if self.pulse_optimize is None:
                 qc.compose(
-                    self._decomposer1q(Operator(RXGate(euler_q1[2][1])).data), [1], inplace=True
+                    self._decomposer1q(Operator(RXGate(euler_q1[2][1])).data),
+                    [1],
+                    inplace=True,
                 )
             else:
-                raise QiskitError("possible non-pulse-optimal decomposition encountered")
+                raise QiskitError(
+                    "possible non-pulse-optimal decomposition encountered"
+                )
 
         qc.cx(1, 0)
 
@@ -1375,7 +1453,9 @@ class TwoQubitBasisDecomposer:
 
         # TODO: fix the sign problem to avoid correction here
         if cmath.isclose(
-            target_decomposed.unitary_matrix[0, 0], -(Operator(qc).data[0, 0]), abs_tol=atol
+            target_decomposed.unitary_matrix[0, 0],
+            -(Operator(qc).data[0, 0]),
+            abs_tol=atol,
         ):
             qc.global_phase += math.pi
         return qc
@@ -1395,12 +1475,17 @@ class TwoQubitBasisDecomposer:
             4
             * (
                 math.cos(np.pi / 4 - a) * math.cos(self.basis.b - b) * math.cos(c)
-                + 1j * math.sin(np.pi / 4 - a) * math.sin(self.basis.b - b) * math.sin(c)
+                + 1j
+                * math.sin(np.pi / 4 - a)
+                * math.sin(self.basis.b - b)
+                * math.sin(c)
             ),
             4 * math.cos(c),
             4,
         ]
-        return np.argmax([trace_to_fid(traces[i]) * self.basis_fidelity**i for i in range(4)])
+        return np.argmax(
+            [trace_to_fid(traces[i]) * self.basis_fidelity**i for i in range(4)]
+        )
 
 
 class TwoQubitDecomposeUpToDiagonal:
@@ -1487,7 +1572,9 @@ class TwoQubitDecomposeUpToDiagonal:
         real_map = self._real_trace_transform(su4)
         mapped_su4 = real_map @ su4
         if not self._cx2_test(mapped_su4):
-            warnings.warn("Unitary decomposition up to diagonal may use an additionl CX gate.")
+            warnings.warn(
+                "Unitary decomposition up to diagonal may use an additionl CX gate."
+            )
         circ = two_qubit_cnot_decompose(mapped_su4)
         circ.global_phase += phase
         return real_map.conj(), circ
@@ -1537,5 +1624,3 @@ class _LazyTwoQubitCXDecomposer(TwoQubitBasisDecomposer):
 
 
 two_qubit_cnot_decompose = _LazyTwoQubitCXDecomposer()
-
-

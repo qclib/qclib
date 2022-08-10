@@ -21,7 +21,10 @@ import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 
 from qclib.state_preparation.initialize import Initialize
-from qclib.state_preparation.util.state_tree_preparation import Amplitude, state_decomposition
+from qclib.state_preparation.util.state_tree_preparation import (
+    Amplitude,
+    state_decomposition,
+)
 from qclib.state_preparation.util.angle_tree_preparation import create_angles_tree
 from qclib.state_preparation.util.tree_register import add_register
 from qclib.state_preparation.util.tree_walk import top_down
@@ -38,43 +41,43 @@ class TopDownInitialize(Initialize):
 
     def __init__(self, params, inverse=False, label=None, opt_params=None):
         """
-            Parameters
-            ----------
-            params: list of complex
-                A unit vector representing a quantum state.
-                Values are amplitudes.
+        Parameters
+        ----------
+        params: list of complex
+            A unit vector representing a quantum state.
+            Values are amplitudes.
 
-            opt_params: {'global_phase': global_phase, 'lib': lib}
-                global_phase: bool
-                    If ``True``, corrects the global phase.
-                    Default value is ``True``.
-                lib: str
-                    Library to be used.
-                    Default value is ``'qclib'``.
+        opt_params: {'global_phase': global_phase, 'lib': lib}
+            global_phase: bool
+                If ``True``, corrects the global phase.
+                Default value is ``True``.
+            lib: str
+                Library to be used.
+                Default value is ``'qclib'``.
         """
-        self._name = 'top-down'
+        self._name = "top-down"
         self._get_num_qubits(params)
 
         if opt_params is None:
             self.global_phase = True
-            self.lib = 'qclib'
+            self.lib = "qclib"
         else:
-            if opt_params.get('global_phase') is None:
+            if opt_params.get("global_phase") is None:
                 self.global_phase = True
             else:
-                self.global_phase = opt_params.get('global_phase')
+                self.global_phase = opt_params.get("global_phase")
 
-            if opt_params.get('lib') is None:
-                self.lib = 'qclib'
+            if opt_params.get("lib") is None:
+                self.lib = "qclib"
             else:
-                self.lib = opt_params.get('lib')
+                self.lib = opt_params.get("lib")
 
         self._label = label
         if label is None:
-            self._label = 'SP'
+            self._label = "SP"
 
             if inverse:
-                self._label = 'SPdg'
+                self._label = "SPdg"
 
         super().__init__(self._name, self.num_qubits, params, label=self._label)
 
@@ -82,7 +85,7 @@ class TopDownInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        if self.lib == 'qiskit':
+        if self.lib == "qiskit":
             reg = QuantumRegister(self.num_qubits)
             circuit = QuantumCircuit(reg)
             # pylint: disable=maybe-no-member
@@ -100,7 +103,7 @@ class TopDownInitialize(Initialize):
 
         top_down(angle_tree, circuit, 0)
         if self.global_phase:
-            circuit.global_phase += sum(np.angle(self.params))/len(self.params)
+            circuit.global_phase += sum(np.angle(self.params)) / len(self.params)
 
         return circuit
 
@@ -110,6 +113,8 @@ class TopDownInitialize(Initialize):
         Appends a TopDownInitialize gate into the q_circuit
         """
         if qubits is None:
-            q_circuit.append(TopDownInitialize(state, opt_params=opt_params), q_circuit.qubits)
+            q_circuit.append(
+                TopDownInitialize(state, opt_params=opt_params), q_circuit.qubits
+            )
         else:
             q_circuit.append(TopDownInitialize(state, opt_params=opt_params), qubits)

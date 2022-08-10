@@ -21,18 +21,31 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.decomposition import PCA
 
-def preprocessing(training_size:int, test_size:int, features:int, max_features:int,
-                    data, class_labels:list, num_classes:int, random_seed=42, normalize=True):
+
+def preprocessing(
+    training_size: int,
+    test_size: int,
+    features: int,
+    max_features: int,
+    data,
+    class_labels: list,
+    num_classes: int,
+    random_seed=42,
+    normalize=True,
+):
     """
     Common dataset preprocessing routine
     """
 
     # pylint: disable=no-member
-    sample_train, sample_test, label_train, label_test = \
-        train_test_split(data.data, data.target, test_size=test_size*num_classes,
-                                                 random_state=random_seed,
-                                                 shuffle=True,
-                                                 stratify=data.target)
+    sample_train, sample_test, label_train, label_test = train_test_split(
+        data.data,
+        data.target,
+        test_size=test_size * num_classes,
+        random_state=random_seed,
+        shuffle=True,
+        stratify=data.target,
+    )
 
     # Standardize for gaussian around 0 with unit variance
     std_scale = StandardScaler().fit(sample_train)
@@ -53,15 +66,20 @@ def preprocessing(training_size:int, test_size:int, features:int, max_features:i
 
     # Normalize rows.
     if normalize:
-        sample_train = sample_train / \
-                       np.linalg.norm(sample_train, axis=1).reshape((len(sample_train),1))
-        sample_test = sample_test / \
-                      np.linalg.norm(sample_test, axis=1).reshape((len(sample_test),1))
+        sample_train = sample_train / np.linalg.norm(sample_train, axis=1).reshape(
+            (len(sample_train), 1)
+        )
+        sample_test = sample_test / np.linalg.norm(sample_test, axis=1).reshape(
+            (len(sample_test), 1)
+        )
 
     # Pick training and test size number of samples for each class label
-    training_input = {key: (sample_train[label_train == key, :])[:training_size]
-                      for key in class_labels}
-    test_input = {key: (sample_test[label_test == key, :])[:test_size]
-                  for key in class_labels}
+    training_input = {
+        key: (sample_train[label_train == key, :])[:training_size]
+        for key in class_labels
+    }
+    test_input = {
+        key: (sample_test[label_test == key, :])[:test_size] for key in class_labels
+    }
 
     return sample_train, training_input, test_input, class_labels

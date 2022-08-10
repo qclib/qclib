@@ -26,12 +26,13 @@ class Amplitude(NamedTuple):
     """
     Named tuple for amplitudes
     """
+
     index: int
     amplitude: float
 
     def __str__(self):
-        return str(self.index) + ':' + \
-               f'{self.amplitude:.2g}'
+        return str(self.index) + ":" + f"{self.amplitude:.2g}"
+
 
 @dataclass
 class Node:
@@ -42,13 +43,12 @@ class Node:
     index: int
     level: int
     amplitude: float
-    left: 'Node'
-    right: 'Node'
+    left: "Node"
+    right: "Node"
 
     def __str__(self):
-        return str(self.level) + '_' + \
-               str(self.index) + '\n' + \
-               f'{self.amplitude:.2g}'
+        return str(self.level) + "_" + str(self.index) + "\n" + f"{self.amplitude:.2g}"
+
 
 def state_decomposition(nqubits, data):
     """
@@ -71,15 +71,18 @@ def state_decomposition(nqubits, data):
         k = 0
         n_nodes = len(nodes)
         while k < n_nodes:
-            mag = math.sqrt(abs(nodes[k].amplitude) ** 2 + abs(nodes[k + 1].amplitude) ** 2)
-            arg = (cmath.phase(nodes[k].amplitude) + cmath.phase(nodes[k + 1].amplitude)) / 2
+            mag = math.sqrt(
+                abs(nodes[k].amplitude) ** 2 + abs(nodes[k + 1].amplitude) ** 2
+            )
+            arg = (
+                cmath.phase(nodes[k].amplitude) + cmath.phase(nodes[k + 1].amplitude)
+            ) / 2
 
-            amp = mag * cmath.exp(1j*arg)
+            amp = mag * cmath.exp(1j * arg)
 
-            new_nodes.append(Node(nodes[k].index // 2, nqubits,
-                                  amp,
-                                  nodes[k],
-                                  nodes[k + 1]))
+            new_nodes.append(
+                Node(nodes[k].index // 2, nqubits, amp, nodes[k], nodes[k + 1])
+            )
             k = k + 2
 
     tree_root = new_nodes[0]

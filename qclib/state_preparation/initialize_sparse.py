@@ -39,9 +39,11 @@ class InitializeSparse(Initialize):
         quantum state.
         """
         if isinstance(parameter, tuple):
-            if not match('([01])+', parameter[0]):
-                raise Exception('Dictionary keys must be binary strings')
+            if not match("([01])+", parameter[0]):
+                raise Exception("Dictionary keys must be binary strings")
             validated_value = super().validate_parameter(parameter[1])
             return parameter[0], validated_value
 
-        raise Exception('Input param must be a dictionary with pairs (binary_string, values)')
+        raise Exception(
+            "Input param must be a dictionary with pairs (binary_string, values)"
+        )

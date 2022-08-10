@@ -20,15 +20,23 @@ http://yann.lecun.com/exdb/mnist/
 from dataclasses import dataclass
 import numpy as np
 from keras.datasets import mnist
-from .common import preprocessing # pylint: disable=relative-beyond-top-level
+from .common import preprocessing  # pylint: disable=relative-beyond-top-level
+
 
 @dataclass
 class Dataset:
     data: np.ndarray
     target: np.ndarray
 
-def load(training_size:int, test_size:int, classes=None, features=784, random_seed=42,
-                                                                        normalize=True):
+
+def load(
+    training_size: int,
+    test_size: int,
+    classes=None,
+    features=784,
+    random_seed=42,
+    normalize=True,
+):
     """
     MNIST dataset
     http://yann.lecun.com/exdb/mnist/
@@ -41,17 +49,29 @@ def load(training_size:int, test_size:int, classes=None, features=784, random_se
     (training_data, training_labels), (test_data, test_labels) = mnist.load_data()
 
     data = Dataset(
-            np.append(training_data.reshape(60000,784), test_data.reshape(10000,784), axis=0),
-            np.append(training_labels, test_labels)
-        )
+        np.append(
+            training_data.reshape(60000, 784), test_data.reshape(10000, 784), axis=0
+        ),
+        np.append(training_labels, test_labels),
+    )
 
     sample_total, training_input, test_input, class_labels = preprocessing(
-            training_size, test_size, features, 784, data, class_labels, 10, random_seed, normalize
-        )
+        training_size,
+        test_size,
+        features,
+        784,
+        data,
+        class_labels,
+        10,
+        random_seed,
+        normalize,
+    )
 
     # Completes 2^10 amplitudes.
     for label in training_input:
-        training_input[label] = [np.append(d, np.zeros(240)) for d in training_input[label]]
+        training_input[label] = [
+            np.append(d, np.zeros(240)) for d in training_input[label]
+        ]
 
     for label in test_input:
         test_input[label] = [np.append(d, np.zeros(240)) for d in test_input[label]]

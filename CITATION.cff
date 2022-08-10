@@ -1,17 +1,14 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 authors:
-- family-names: "da Silva"
-  given-names: "Adenilton J."
-  orcid: "https://orcid.org/0000-0003-0019-7694"
-  
-- family-names: "Araújo"
-  given-names: "Ismael C. S."
-  orcid: "https://orcid.org/0000-0001-6240-0235"
-  
+
 - family-names: "Araujo"
   given-names:  "Israel F."
   orcid: "https://orcid.org/0000-0002-0308-8701"
+
+- family-names: "Araújo"
+  given-names: "Ismael C. S."
+  orcid: "https://orcid.org/0000-0001-6240-0235"
   
 - family-names: "da Silva"
   given-names: "Leon D."
@@ -20,8 +17,13 @@ authors:
 - family-names: "Blank"
   given-names: "Carsten"
   orcid: "https://orcid.org/0000-0003-3450-0823"
+
+- family-names: "da Silva"
+  given-names: "Adenilton J."
+  orcid: "https://orcid.org/0000-0003-0019-7694"
+
 title: "Quantum computing library"
-version: 0.0.13
+version: 0.0.18
 doi: 
-date-released: 2022-02-23
+date-released: 2022-07-23
 url: "https://github.com/qclib/qclib"

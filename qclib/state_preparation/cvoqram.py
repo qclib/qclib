@@ -31,7 +31,7 @@ class CvoqramInitialize(InitializeSparse):
     """
 
     def __init__(self, params, inverse=False, label=None, opt_params=None):
-        self._name = 'cvoqram'
+        self._name = "cvoqram"
         self._get_num_qubits(params)
         self.norm = 1
 
@@ -39,17 +39,17 @@ class CvoqramInitialize(InitializeSparse):
         if opt_params is None:
             self.with_aux = default_with_aux
         else:
-            if opt_params.get('with_aux') is None:
+            if opt_params.get("with_aux") is None:
                 self.with_aux = default_with_aux
             else:
-                self.with_aux = opt_params.get('with_aux')
+                self.with_aux = opt_params.get("with_aux")
 
         self._label = label
         if label is None:
-            self._label = 'SP'
+            self._label = "SP"
 
             if inverse:
-                self._label = 'SPdg'
+                self._label = "SPdg"
 
         super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
 
@@ -57,12 +57,12 @@ class CvoqramInitialize(InitializeSparse):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        """ Initialize quantum registers """
-        aux = QuantumRegister(1, name='u')
-        memory = QuantumRegister(self.num_qubits, name='m')
+        """Initialize quantum registers"""
+        aux = QuantumRegister(1, name="u")
+        memory = QuantumRegister(self.num_qubits, name="m")
 
         if self.with_aux:
-            anc = QuantumRegister(self.num_qubits-1, name='anc')
+            anc = QuantumRegister(self.num_qubits - 1, name="anc")
             circuit = QuantumCircuit(aux, anc, memory)
         else:
             anc = None
@@ -90,41 +90,39 @@ class CvoqramInitialize(InitializeSparse):
     def _select_controls(binary_string):
         control = []
         for k, bit in enumerate(binary_string[::-1]):
-            if bit == '1':
+            if bit == "1":
                 control.append(k)
 
         return control
 
     def _mcuvchain(self, circuit, alpha, beta, phi, control, memory, anc, aux):
         """
-         N-qubit controlled-unitary gate
+        N-qubit controlled-unitary gate
         """
 
         lst_ctrl = control
         lst_ctrl_reversed = list(reversed(lst_ctrl))
-        circuit.rccx(memory[lst_ctrl_reversed[0]],
-                     memory[lst_ctrl_reversed[1]],
-                     anc[self.num_qubits-2])
+        circuit.rccx(
+            memory[lst_ctrl_reversed[0]],
+            memory[lst_ctrl_reversed[1]],
+            anc[self.num_qubits - 2],
+        )
 
         tof = {}
-        i = self.num_qubits-1
+        i = self.num_qubits - 1
         for ctrl in lst_ctrl_reversed[2:]:
-            circuit.rccx(anc[i-1],
-                         memory[ctrl],
-                         anc[i-2])
-            tof[ctrl] = [i-1, i-2]
+            circuit.rccx(anc[i - 1], memory[ctrl], anc[i - 2])
+            tof[ctrl] = [i - 1, i - 2]
             i -= 1
 
-        circuit.cu(alpha, beta, phi, 0, anc[i-1], aux[0])
+        circuit.cu(alpha, beta, phi, 0, anc[i - 1], aux[0])
 
         for ctrl in lst_ctrl[:-2]:
-            circuit.rccx(anc[tof[ctrl][0]],
-                         memory[ctrl],
-                         anc[tof[ctrl][1]])
+            circuit.rccx(anc[tof[ctrl][0]], memory[ctrl], anc[tof[ctrl][1]])
 
-        circuit.rccx(memory[lst_ctrl[-1]],
-                     memory[lst_ctrl[-2]],
-                     anc[self.num_qubits-2])
+        circuit.rccx(
+            memory[lst_ctrl[-1]], memory[lst_ctrl[-2]], anc[self.num_qubits - 2]
+        )
 
     def _load_superposition(self, circuit, feature, control, memory, anc, aux):
         """
@@ -149,6 +147,8 @@ class CvoqramInitialize(InitializeSparse):
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):
         if qubits is None:
-            q_circuit.append(CvoqramInitialize(state, opt_params=opt_params), q_circuit.qubits)
+            q_circuit.append(
+                CvoqramInitialize(state, opt_params=opt_params), q_circuit.qubits
+            )
         else:
             q_circuit.append(CvoqramInitialize(state, opt_params=opt_params), qubits)
