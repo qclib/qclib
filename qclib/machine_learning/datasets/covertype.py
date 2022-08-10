@@ -18,10 +18,17 @@ https://archive.ics.uci.edu/ml/datasets/Covertype
 """
 
 from sklearn import datasets
-from .common import preprocessing # pylint: disable=relative-beyond-top-level
+from .common import preprocessing  # pylint: disable=relative-beyond-top-level
 
-def load(training_size:int, test_size:int, classes=None, features=54, random_seed=42,
-                                                                        normalize=True):
+
+def load(
+    training_size: int,
+    test_size: int,
+    classes=None,
+    features=54,
+    random_seed=42,
+    normalize=True,
+):
     """
     Covertype dataset
     https://archive.ics.uci.edu/ml/datasets/Covertype
@@ -29,10 +36,18 @@ def load(training_size:int, test_size:int, classes=None, features=54, random_see
     if classes is None:
         classes = list(range(7))
 
-    class_labels = [i+1 for i in classes]
+    class_labels = [i + 1 for i in classes]
 
     data = datasets.fetch_covtype()
 
     return preprocessing(
-        training_size, test_size, features, 64, data, class_labels, 7, random_seed, normalize
+        training_size,
+        test_size,
+        features,
+        64,
+        data,
+        class_labels,
+        7,
+        random_seed,
+        normalize,
     )

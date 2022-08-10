@@ -18,10 +18,17 @@ https://archive.ics.uci.edu/ml/datasets/optical+recognition+of+handwritten+digit
 """
 
 from sklearn import datasets
-from .common import preprocessing # pylint: disable=relative-beyond-top-level
+from .common import preprocessing  # pylint: disable=relative-beyond-top-level
 
-def load(training_size:int, test_size:int, classes=None, features=64, random_seed=42,
-                                                                        normalize=True):
+
+def load(
+    training_size: int,
+    test_size: int,
+    classes=None,
+    features=64,
+    random_seed=42,
+    normalize=True,
+):
     """
     Optical Recognition of Handwritten Digits Data Set
     https://archive.ics.uci.edu/ml/datasets/optical+recognition+of+handwritten+digits
@@ -34,5 +41,13 @@ def load(training_size:int, test_size:int, classes=None, features=64, random_see
     data = datasets.load_digits()
 
     return preprocessing(
-        training_size, test_size, features, 64, data, class_labels, 10, random_seed, normalize
+        training_size,
+        test_size,
+        features,
+        64,
+        data,
+        class_labels,
+        10,
+        random_seed,
+        normalize,
     )

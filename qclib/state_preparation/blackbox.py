@@ -37,16 +37,16 @@ class BlackBoxInitialize(Initialize):
     """
 
     def __init__(self, params, inverse=False, label=None):
-        self._name = 'blackbox'
+        self._name = "blackbox"
         self._get_num_qubits(params)
         self.num_qubits += 1
 
         self._label = label
         if label is None:
-            self._label = 'SP'
+            self._label = "SP"
 
             if inverse:
-                self._label = 'SPdg'
+                self._label = "SPdg"
 
         super().__init__(self._name, self.num_qubits, params, label=self._label)
 
@@ -62,7 +62,7 @@ class BlackBoxInitialize(Initialize):
         ury_gate = UCRYGate(list(theta))
         urz_gate = UCRZGate(list(phi))
 
-        gate_u = QuantumCircuit(self.num_qubits, name='U')
+        gate_u = QuantumCircuit(self.num_qubits, name="U")
         gate_u.h(gate_u.qubits[1:])
         gate_u.append(ury_gate, gate_u.qubits)
         gate_u.append(urz_gate, gate_u.qubits)
@@ -70,12 +70,14 @@ class BlackBoxInitialize(Initialize):
 
         it_matrix = [[-1, 0], [0, 1]]
         gate_it = UnitaryGate(it_matrix)
-        gate_it.name = 'I_t'
+        gate_it.name = "I_t"
 
         gate_is = gate_it.control(self.num_qubits - 1, ctrl_state=0)
-        gate_is.name = 'I_s'
+        gate_is.name = "I_s"
 
-        repetitions = (np.pi / 4) * (np.sqrt(n_amplitudes) / np.linalg.norm(self.params))
+        repetitions = (np.pi / 4) * (
+            np.sqrt(n_amplitudes) / np.linalg.norm(self.params)
+        )
         repetitions = int(repetitions)
 
         q_circuit = QuantumCircuit(self.num_qubits)

@@ -133,16 +133,16 @@ def _count_ones(pattern):
 
 
 def random_sparse(nbits, density):
-    '''
+    """
     Creates a random input for sparse quantum state preparation
     nbits: int number of qubits
     density: float in [0,1]
 
     returns
     bin_data: [(binary_string_k, float_k)] k = 0 ... n
-    '''
+    """
 
-    data = sparse.random(2 ** nbits, 1, density, format="dok")
+    data = sparse.random(2**nbits, 1, density, format="dok")
 
     rows, _ = data.nonzero()
     bin_data = []
@@ -180,12 +180,12 @@ def double_sparse(nbits, log_size, p_1):
     -------
     \\sum_{k} x_k |p_k>, each bit of p_k is equal to 1 with probability p1
     """
-    data = np.random.rand(2 ** log_size) + np.random.rand(2 ** log_size)*1j
+    data = np.random.rand(2**log_size) + np.random.rand(2**log_size) * 1j
     length = np.linalg.norm(data)
-    data = (1/length) * data
+    data = (1 / length) * data
 
     binary = _double_sparse_binary(nbits, log_size, 1 - p_1, p_1)
-    bin_data = [(binary[i], data[i]) for i in range(2 ** log_size)]
+    bin_data = [(binary[i], data[i]) for i in range(2**log_size)]
 
     bin_data.sort(key=_count_ones)
     return bin_data
@@ -212,15 +212,15 @@ def _compute_matrix_angles(feature, norm):
         cos_value = np.sqrt((norm - phase) / norm)
         cos_value = verify_trigonometric_interval(cos_value)
         alpha = 2 * (np.arccos(cos_value))
-        beta = np.arccos(- feature.real / np.sqrt(np.abs(np.power(feature, 2))))
+        beta = np.arccos(-feature.real / np.sqrt(np.abs(np.power(feature, 2))))
 
         if feature.imag < 0:
             beta = 2 * np.pi - beta
 
-        phi = - beta
+        phi = -beta
 
     else:
-        sin_value = - feature / np.sqrt(norm)
+        sin_value = -feature / np.sqrt(norm)
         sin_value = verify_trigonometric_interval(sin_value)
         alpha = 2 * (np.arcsin(sin_value))
 
@@ -239,6 +239,6 @@ def build_state_dict(state):
     state_dict = {}
     for (value_idx, value) in enumerate(state):
         if value != 0:
-            binary_string = '{:0{}b}'.format(value_idx, n_qubits)[::-1]
+            binary_string = "{:0{}b}".format(value_idx, n_qubits)[::-1]
             state_dict[binary_string] = value
     return state_dict
