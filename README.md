@@ -55,7 +55,7 @@ The following table shows the depth, number of qubits, and CNOTs of circuits pro
 | bdsp | qclib | 1151 | 72320 | 1603 |
 | dcsp | qclib | 32767 | 262016 | 899 |
 
-You can reproduce the results [here](example/comparison.ipynb).
+You can reproduce the results [here](https://github.com/qclib/qclib-papers/blob/main/examples/state_preparation_benchmark.ipynb).
 
 ## Authors
 The first version of qclib was developed at [Centro de Informática](https://portal.cin.ufpe.br) - UFPE.
