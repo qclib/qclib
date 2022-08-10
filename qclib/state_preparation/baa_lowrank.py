@@ -143,12 +143,12 @@ class BaaLowRankInitialize(Initialize):
         for vector, qubits, rank, partition in zip(self.node.vectors, self.node.qubits,
                                                    self.node.ranks, self.node.partitions):
 
-            lr_params = {'iso_scheme': self.isometry_scheme,
+            opt_params = {'iso_scheme': self.isometry_scheme,
                          'unitary_scheme': self.unitary_scheme,
                          'partition': partition,
                          'lr': rank}
 
-            gate = LowRankInitialize(vector, lr_params=lr_params)
+            gate = LowRankInitialize(vector, opt_params=opt_params)
             circuit.compose(gate, qubits[::-1], inplace=True)  # qiskit little-endian.
 
         return circuit.reverse_bits()

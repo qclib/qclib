@@ -37,7 +37,7 @@ class LowRankInitialize(Initialize):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, lr_params=None):
+    def __init__(self, params, inverse=False, label=None, opt_params=None):
         """
             Parameters
             ----------
@@ -45,10 +45,10 @@ class LowRankInitialize(Initialize):
                 A unit vector representing a quantum state.
                 Values are amplitudes.
 
-            lr_params: {'lr': low_rank,
-                        'iso_scheme': isometry_scheme,
-                        'unitary_scheme': unitary_scheme,
-                        'partition': partition}
+            opt_params: {'lr': low_rank,
+                         'iso_scheme': isometry_scheme,
+                         'unitary_scheme': unitary_scheme,
+                         'partition': partition}
                 low_rank: int
                     ``state`` low-rank approximation (1 <= ``low_rank`` < 2**(n_qubits//2)).
                     If ``low_rank`` is not in the valid range, it will be ignored.
@@ -80,23 +80,23 @@ class LowRankInitialize(Initialize):
         self._name = 'low_rank'
         self._get_num_qubits(params)
 
-        if lr_params is None:
+        if opt_params is None:
             self.isometry_scheme = 'ccd'
             self.unitary_scheme = 'qsd'
             self.low_rank = 0
             self.partition = None
         else:
-            self.low_rank = 0 if lr_params.get('lr') is None else lr_params.get('lr')
-            self.partition = lr_params.get('partition')
-            if lr_params.get('iso_scheme') is None:
+            self.low_rank = 0 if opt_params.get('lr') is None else opt_params.get('lr')
+            self.partition = opt_params.get('partition')
+            if opt_params.get('iso_scheme') is None:
                 self.isometry_scheme = 'ccd'
             else:
-                self.isometry_scheme = lr_params.get('iso_scheme')
+                self.isometry_scheme = opt_params.get('iso_scheme')
 
-            if lr_params.get('unitary_scheme') is None:
+            if opt_params.get('unitary_scheme') is None:
                 self.unitary_scheme = 'qsd'
             else:
-                self.unitary_scheme = lr_params.get('unitary_scheme')
+                self.unitary_scheme = opt_params.get('unitary_scheme')
 
         self._label = label
         if label is None:
@@ -143,14 +143,14 @@ class LowRankInitialize(Initialize):
         return circuit.reverse_bits()
 
     @staticmethod
-    def initialize(q_circuit, state, qubits=None, lr_params=None):
+    def initialize(q_circuit, state, qubits=None, opt_params=None):
         """
         Appends a LowRankInitialize gate into the q_circuit
         """
         if qubits is None:
-            q_circuit.append(LowRankInitialize(state, lr_params=lr_params), q_circuit.qubits)
+            q_circuit.append(LowRankInitialize(state, opt_params=opt_params), q_circuit.qubits)
         else:
-            q_circuit.append(LowRankInitialize(state, lr_params=lr_params), qubits)
+            q_circuit.append(LowRankInitialize(state, opt_params=opt_params), qubits)
 
     def _encode(self, data, circuit, reg):
         """
@@ -159,7 +159,7 @@ class LowRankInitialize(Initialize):
         if data.shape[1] == 1:
             # state preparation
             gate_u = LowRankInitialize(data[:, 0],
-                                       lr_params={'iso_scheme': self.isometry_scheme,
+                                       opt_params={'iso_scheme': self.isometry_scheme,
                                                   'unitary_scheme': self.unitary_scheme})
 
         elif data.shape[0]//2 == data.shape[1]:
