@@ -26,11 +26,11 @@ SHOTS = 8192
 
 
 class TestInitialize(TestCase):
-    """ Testing divide-and-conquer state preparation """
+    """Testing divide-and-conquer state preparation"""
 
     @staticmethod
     def dcsp_experiment(state):
-        """ Run divide-and-conquer state preparation """
+        """Run divide-and-conquer state preparation"""
         circuit = DcspInitialize(state).definition
 
         n_qubits = int(np.log2(len(state)))
@@ -40,10 +40,12 @@ class TestInitialize(TestCase):
         return measurement(circuit, n_qubits, classical_register, backend, SHOTS)
 
     def test_dcsp(self):
-        """ Testing divide-and-conquer state preparation """
+        """Testing divide-and-conquer state preparation"""
         vector = np.random.rand(16) + np.random.rand(16) * 1j
         vector = vector / np.linalg.norm(vector)
 
         state = TestInitialize.dcsp_experiment(vector)
 
-        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))
+        self.assertTrue(
+            np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005)
+        )

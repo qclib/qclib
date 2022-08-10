@@ -29,6 +29,7 @@ from qclib.util import get_state
 backend = AerSimulator()
 SHOTS = 8192
 
+
 class TestTopDown(TestCase):
     @staticmethod
     def measurement(circuit, n_qubits, classical_reg):
@@ -41,13 +42,13 @@ class TestTopDown(TestCase):
 
         counts2 = {}
         for i in range(2**n_qubits):
-            pattern = f'{i:0{n_qubits}b}'
+            pattern = f"{i:0{n_qubits}b}"
             if pattern in counts:
                 counts2[pattern] = counts[pattern]
             else:
                 counts2[pattern] = 0.0
 
-        return [ value/sum_values for (key, value) in counts2.items() ]
+        return [value / sum_values for (key, value) in counts2.items()]
 
     @staticmethod
     def topdown_experiment(state):
@@ -85,5 +86,8 @@ class TestTopDown(TestCase):
 
         state = TestTopDown.topdown_experiment(state_vector)
 
-        self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
-                        rtol=1e-01, atol=0.005))
+        self.assertTrue(
+            np.allclose(
+                np.power(np.abs(state_vector), 2), state, rtol=1e-01, atol=0.005
+            )
+        )

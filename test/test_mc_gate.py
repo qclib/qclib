@@ -22,11 +22,12 @@ import qiskit
 import qclib.util
 from qclib.gates.mc_gate import mc_gate
 
+
 class TestLinearToffoli(TestCase):
-    """ Testing qclib.gate.toffoli """
+    """Testing qclib.gate.toffoli"""
 
     def test_controlled_gate(self):
-        """ Testing multi controlled gate """
+        """Testing multi controlled gate"""
 
         gate_u = unitary_group.rvs(2)
 
@@ -39,7 +40,7 @@ class TestLinearToffoli(TestCase):
         mc_gate(gate_u, circuit, [4, 3, 2, 1], 0)
 
         state = qclib.util.get_state(circuit)
-        self.assertTrue(np.isclose(state[30], gate_u[0,0]))
+        self.assertTrue(np.isclose(state[30], gate_u[0, 0]))
         self.assertTrue(np.isclose(state[31], gate_u[1, 0]))
 
         circuit2 = qiskit.QuantumCircuit(5)
@@ -56,7 +57,7 @@ class TestLinearToffoli(TestCase):
         self.assertTrue(np.isclose(state[31], gate_u[1, 1]))
 
     def test_linear_toffoli3(self):
-        """ Testing Toffoli control 111"""
+        """Testing Toffoli control 111"""
         gate_x = np.array([[0, 1], [1, 0]])
         circuit = qiskit.QuantumCircuit(4)
 
@@ -74,7 +75,7 @@ class TestLinearToffoli(TestCase):
         self.assertTrue(np.allclose(state, exp_state))
 
     def test_linear_toffoli2(self):
-        """ Testing Toffoli control 110"""
+        """Testing Toffoli control 110"""
         gate_x = np.array([[0, 1], [1, 0]])
 
         circuit2 = qiskit.QuantumCircuit(4)
@@ -92,7 +93,7 @@ class TestLinearToffoli(TestCase):
         self.assertTrue(np.allclose(state1, state2))
 
     def test_linear_toffoli1(self):
-        """ Testing Toffoli control 100"""
+        """Testing Toffoli control 100"""
         gate_x = np.array([[0, 1], [1, 0]])
 
         circuit2 = qiskit.QuantumCircuit(4)
@@ -110,7 +111,7 @@ class TestLinearToffoli(TestCase):
         self.assertTrue(np.allclose(state1, state2))
 
     def test_linear_toffoli0(self):
-        """ Testing Toffoli control 000"""
+        """Testing Toffoli control 000"""
         gate_x = np.array([[0, 1], [1, 0]])
 
         circuit2 = qiskit.QuantumCircuit(4)
@@ -127,14 +128,14 @@ class TestLinearToffoli(TestCase):
         self.assertTrue(np.allclose(state1, state2))
 
     def test_mct_toffoli(self):
-        """ compare qiskit.mct and toffoli depth with 7 qubits """
+        """compare qiskit.mct and toffoli depth with 7 qubits"""
         gate_x = np.array([[0, 1], [1, 0]])
         qcirc1 = qiskit.QuantumCircuit(6)
         qcirc1.mct([0, 1, 2, 3, 4], 5)
-        t_qcirc1 = qiskit.transpile(qcirc1, basis_gates=['u', 'cx'])
+        t_qcirc1 = qiskit.transpile(qcirc1, basis_gates=["u", "cx"])
 
         qcirc2 = qiskit.QuantumCircuit(6)
         mc_gate(gate_x, qcirc2, [0, 1, 2, 3, 4], 5)
-        t_qcirc2 = qiskit.transpile(qcirc2, basis_gates=['u', 'cx'])
+        t_qcirc2 = qiskit.transpile(qcirc2, basis_gates=["u", "cx"])
 
         self.assertTrue(t_qcirc2.depth() < t_qcirc1.depth())

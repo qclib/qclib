@@ -54,7 +54,7 @@ def generalized_cross_product(vector_u: np.ndarray, vector_v: np.ndarray) -> np.
     entries = []
     for j in range(vector_u.shape[0]):
         for i in range(j):
-            entry = np.abs(vector_u[i] * vector_v[j] - vector_u[j] * vector_v[i])**2
+            entry = np.abs(vector_u[i] * vector_v[j] - vector_u[j] * vector_v[i]) ** 2
             entries.append(entry)
     return np.sum(entries)
 
@@ -79,8 +79,8 @@ def meyer_wallach_entanglement(vector: np.ndarray) -> float:
     num_qb = _to_qubits(vector.shape[0])
     meyer_wallach_entry = np.zeros(shape=(num_qb, 1))
     for j in range(num_qb):
-        psi_0 = np.zeros(shape=(vector.shape[0]//2, 1), dtype=complex)
-        psi_1 = np.zeros(shape=(vector.shape[0]//2, 1), dtype=complex)
+        psi_0 = np.zeros(shape=(vector.shape[0] // 2, 1), dtype=complex)
+        psi_1 = np.zeros(shape=(vector.shape[0] // 2, 1), dtype=complex)
         for basis_state, entry in enumerate(vector):
             delta_0, new_basis_state_0 = _get_iota(j, num_qb, 0, basis_state)
             delta_1, new_basis_state_1 = _get_iota(j, num_qb, 1, basis_state)
@@ -93,11 +93,12 @@ def meyer_wallach_entanglement(vector: np.ndarray) -> float:
         entry = generalized_cross_product(psi_0, psi_1)
         meyer_wallach_entry[j] = entry
 
-    return np.sum(meyer_wallach_entry) * (4/num_qb)
+    return np.sum(meyer_wallach_entry) * (4 / num_qb)
 
 
-def geometric_entanglement(state_vector: List[complex], return_product_state=False
-                           ) -> Union[float, Tuple[float, List[np.ndarray]]]:
+def geometric_entanglement(
+    state_vector: List[complex], return_product_state=False
+) -> Union[float, Tuple[float, List[np.ndarray]]]:
     """
 
     Computes the geometric entanglement (1,2) of a quantum state.
@@ -128,20 +129,22 @@ def geometric_entanglement(state_vector: List[complex], return_product_state=Fal
     # We take four shots and take the min of it.
 
     for _ in range(4):
-        decomp_tensor = parafac(tensor, rank=1, normalize_factors=True, init='random')
+        decomp_tensor = parafac(tensor, rank=1, normalize_factors=True, init="random")
         fidelity_loss = 1 - np.abs(decomp_tensor.weights[0]) ** 2
         results[fidelity_loss] = decomp_tensor
 
     min_fidelity_loss = min(results)
 
     if return_product_state:
-        return min_fidelity_loss, [f.flatten() for f in results[min_fidelity_loss].factors]
+        return min_fidelity_loss, [
+            f.flatten() for f in results[min_fidelity_loss].factors
+        ]
 
     return min_fidelity_loss
 
 
 def _separation_matrix(n_qubits, state_vector, partition):
-    new_shape = (2 ** (n_qubits-len(partition)), 2 ** len(partition))
+    new_shape = (2 ** (n_qubits - len(partition)), 2 ** len(partition))
 
     qubit_shape = tuple([2] * n_qubits)
     # We need to swap qubits from their subsystem2 position to the end of the
@@ -149,9 +152,9 @@ def _separation_matrix(n_qubits, state_vector, partition):
     from_move = sorted(partition)
     to_move = (n_qubits - np.arange(1, len(partition) + 1))[::-1]
 
-    sep_matrix = \
-        np.moveaxis(np.array(state_vector).reshape(qubit_shape),
-                    from_move, to_move).reshape(new_shape)
+    sep_matrix = np.moveaxis(
+        np.array(state_vector).reshape(qubit_shape), from_move, to_move
+    ).reshape(new_shape)
     return sep_matrix
 
 
@@ -186,16 +189,16 @@ def _to_qubits(n_state_vector):
 
 
 def _undo_separation_matrix(n_qubits, sep_matrix, partition):
-    new_shape = (2 ** n_qubits, )
+    new_shape = (2**n_qubits,)
 
     qubit_shape = tuple([2] * n_qubits)
 
     to_move = sorted(partition)
     from_move = (n_qubits - np.arange(1, len(partition) + 1))[::-1]
 
-    state_vector = \
-        np.moveaxis(np.array(sep_matrix).reshape(qubit_shape),
-                    from_move, to_move).reshape(new_shape)
+    state_vector = np.moveaxis(
+        np.array(sep_matrix).reshape(qubit_shape), from_move, to_move
+    ).reshape(new_shape)
     return state_vector
 
 

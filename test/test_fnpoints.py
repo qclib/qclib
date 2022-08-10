@@ -19,34 +19,42 @@ import numpy as np
 from qclib.state_preparation import FnPointsInitialize
 from qclib.util import get_state
 
+
 class TestVentura(TestCase):
-    """ Testing qclib.state_preparation.ventura.initialize """
+    """Testing qclib.state_preparation.ventura.initialize"""
+
     def test_binary_function(self):
         """
-          Testing a function (f(z) in {0, 1, ..., N-1}) with z in {0,1}^n.
+        Testing a function (f(z) in {0, 1, ..., N-1}) with z in {0,1}^n.
         """
         # couples of input and output.
         n_qubits = 4
         function_io = {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 11: 0, 12: 1, 13: 2, 14: 3, 15: 4}
-        function_io = {f'{input_z:0{n_qubits}b}':output_s
-                        for input_z, output_s in function_io.items()}
+        function_io = {
+            f"{input_z:0{n_qubits}b}": output_s
+            for input_z, output_s in function_io.items()
+        }
 
         nnzero = len(function_io)
-        max_denominator = max(function_io.values())-1
+        max_denominator = max(function_io.values()) - 1
 
-        opt_params = {'n_output_values': max_denominator}
+        opt_params = {"n_output_values": max_denominator}
         circuit = FnPointsInitialize(function_io, opt_params=opt_params).definition
         state = get_state(circuit)
 
         desired_state = []
-        for k in [f'{i:0{n_qubits}b}' for i in range(2**n_qubits)]:
+        for k in [f"{i:0{n_qubits}b}" for i in range(2**n_qubits)]:
             # The amplitudes of modulus "1/sqrt(m)" will be "2 pi / N" radians
             # apart from each other on the complex plane.
             if k in function_io:
-                amplitude = -1/np.sqrt(nnzero)*np.exp(function_io[k]*1j*2*np.pi/max_denominator)
+                amplitude = (
+                    -1
+                    / np.sqrt(nnzero)
+                    * np.exp(function_io[k] * 1j * 2 * np.pi / max_denominator)
+                )
                 desired_state.append(amplitude)
             else:
                 desired_state.append(0)
 
         # The data is encoded in the first 2^n amplitudes of the circuit state vector.
-        self.assertTrue(np.allclose(desired_state, state[:2**n_qubits]))
+        self.assertTrue(np.allclose(desired_state, state[: 2**n_qubits]))

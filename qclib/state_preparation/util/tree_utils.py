@@ -17,7 +17,8 @@ https://arxiv.org/abs/2108.10182
 """
 
 
-from graphviz    import Digraph
+from graphviz import Digraph
+
 
 def is_leaf(tree):
     """
@@ -29,8 +30,9 @@ def is_leaf(tree):
 
     return False
 
+
 def remove_leafs(tree):
-    """ remove tree leafs """
+    """remove tree leafs"""
     if tree.left:
         if is_leaf(tree.left):
             tree.left = None
@@ -43,6 +45,7 @@ def remove_leafs(tree):
         else:
             remove_leafs(tree.right)
 
+
 def leftmost(tree):
     """
     :param tree: a tree node
@@ -53,12 +56,14 @@ def leftmost(tree):
 
     return tree.right
 
+
 def node_index(tree):
     """
     :param tree: a tree node
     :return: the total index of the node in the tree.
     """
-    return 2**tree.level-1+tree.index
+    return 2**tree.level - 1 + tree.index
+
 
 def root_node(tree, level):
     """
@@ -71,6 +76,7 @@ def root_node(tree, level):
         root = root.parent
 
     return root
+
 
 def children(nodes):
     """
@@ -87,6 +93,7 @@ def children(nodes):
 
     return child
 
+
 def length(tree):
     """
     Count the total number of the tree nodes.
@@ -99,6 +106,7 @@ def length(tree):
         n_nodes += 1
         return n_nodes
     return 0
+
 
 def level_length(tree, level):
     """
@@ -117,6 +125,7 @@ def level_length(tree, level):
 
     return 0
 
+
 def height(root):
     """
     Count the number of levels in the tree.
@@ -130,6 +139,7 @@ def height(root):
         left = leftmost(left)
 
     return n_levels
+
 
 def left_view(root, stop_level):
     """
@@ -145,6 +155,7 @@ def left_view(root, stop_level):
 
     return branch
 
+
 def subtree_level_index(root, tree):
     """
     :param root: subtree root node
@@ -152,6 +163,7 @@ def subtree_level_index(root, tree):
     :return: the index of tree node repective to the subtree defined by root
     """
     return tree.index - root.index * 2 ** (tree.level - root.level)
+
 
 def subtree_level_leftmost(root, level):
     """
@@ -163,6 +175,7 @@ def subtree_level_leftmost(root, level):
     while left and left.level < level:
         left = leftmost(left)
     return left
+
 
 def subtree_level_nodes(tree, level, level_nodes):
     """
@@ -180,6 +193,7 @@ def subtree_level_nodes(tree, level, level_nodes):
             subtree_level_nodes(tree.right, level, level_nodes)
     else:
         level_nodes.append(tree)
+
 
 def tree_visual_representation(tree, dot=None):
     """

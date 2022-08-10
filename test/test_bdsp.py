@@ -24,13 +24,14 @@ from .util import measurement
 backend = AerSimulator()
 SHOTS = 8192
 
+
 class TestBdsp(TestCase):
-    """ Testing bdsp """
+    """Testing bdsp"""
 
     @staticmethod
     def bdsp_experiment(state, split=None):
-        """ Run bdsp experiment """
-        opt_params = {'split': split}
+        """Run bdsp experiment"""
+        opt_params = {"split": split}
         circuit = BdspInitialize(state, opt_params=opt_params).definition
 
         n_qubits = int(np.log2(len(state)))
@@ -40,29 +41,35 @@ class TestBdsp(TestCase):
         return measurement(circuit, n_qubits, classical_register, backend, SHOTS)
 
     def test_bottom_up(self):
-        """ Testing bdsp """
+        """Testing bdsp"""
 
         vector = np.random.rand(16) + np.random.rand(16) * 1j
         vector = vector / np.linalg.norm(vector)
 
         state = TestBdsp.bdsp_experiment(vector, 1)
 
-        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))
+        self.assertTrue(
+            np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005)
+        )
 
     def test_top_down(self):
-        """ Testing bdsp """
+        """Testing bdsp"""
         vector = np.random.rand(16) + np.random.rand(16) * 1j
         vector = vector / np.linalg.norm(vector)
 
         state = TestBdsp.bdsp_experiment(vector, int(np.log2(len(vector))))
 
-        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))
+        self.assertTrue(
+            np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005)
+        )
 
     def test_sublinear(self):
-        """ Testing bdsp """
+        """Testing bdsp"""
         vector = np.random.rand(16) + np.random.rand(16) * 1j
         vector = vector / np.linalg.norm(vector)
 
         state = TestBdsp.bdsp_experiment(vector)
 
-        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))
+        self.assertTrue(
+            np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005)
+        )

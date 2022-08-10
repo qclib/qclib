@@ -34,34 +34,34 @@ class IsometryInitialize(Initialize):
 
     def __init__(self, params, inverse=False, label=None, opt_params=None):
         """
-            Parameters
-            ----------
-            params: list of complex
-                A unit vector representing a quantum state.
-                Values are amplitudes.
+        Parameters
+        ----------
+        params: list of complex
+            A unit vector representing a quantum state.
+            Values are amplitudes.
 
-            opt_params: {'scheme': scheme}
-                scheme: str
-                    method to decompose the isometry ('knill', 'ccd', 'csd', 'qiskit').
-                    Default is scheme='ccd'.
+        opt_params: {'scheme': scheme}
+            scheme: str
+                method to decompose the isometry ('knill', 'ccd', 'csd', 'qiskit').
+                Default is scheme='ccd'.
         """
-        self._name = 'isometry'
+        self._name = "isometry"
         self._get_num_qubits(params)
 
         if opt_params is None:
-            self.scheme = 'ccd'
+            self.scheme = "ccd"
         else:
-            if opt_params.get('scheme') is None:
-                self.scheme = 'ccd'
+            if opt_params.get("scheme") is None:
+                self.scheme = "ccd"
             else:
-                self.scheme = opt_params.get('scheme')
+                self.scheme = opt_params.get("scheme")
 
         self._label = label
         if label is None:
-            self._label = 'SP'
+            self._label = "SP"
 
             if inverse:
-                self._label = 'SPdg'
+                self._label = "SPdg"
 
         super().__init__(self._name, self.num_qubits, params, label=self._label)
 
@@ -69,11 +69,13 @@ class IsometryInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        if self.scheme == 'qiskit':
+        if self.scheme == "qiskit":
             reg = QuantumRegister(self.num_qubits)
             circuit = QuantumCircuit(reg)
             # pylint: disable=maybe-no-member
-            circuit.isometry(np.array(self.params), q_input=[], q_ancillas_for_output=reg)
+            circuit.isometry(
+                np.array(self.params), q_input=[], q_ancillas_for_output=reg
+            )
             return circuit
 
         return decompose(np.array(self.params), scheme=self.scheme)
@@ -84,6 +86,8 @@ class IsometryInitialize(Initialize):
         Appends a IsometryInitialize gate into the q_circuit
         """
         if qubits is None:
-            q_circuit.append(IsometryInitialize(state, opt_params=opt_params), q_circuit.qubits)
+            q_circuit.append(
+                IsometryInitialize(state, opt_params=opt_params), q_circuit.qubits
+            )
         else:
             q_circuit.append(IsometryInitialize(state, opt_params=opt_params), qubits)

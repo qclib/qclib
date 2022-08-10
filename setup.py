@@ -21,15 +21,15 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.7',
+    python_requires=">=3.7",
     install_requires=[
-        'scipy>=1.7.1',
-        'qiskit>=0.36.0',
-        'qiskit-aqua>=0.9.5',
-        'qiskit-machine-learning>=0.3.1',
-        'deprecation',
-        'tensorly',
-        'keras',
-        'graphviz'
-    ]
+        "scipy>=1.7.1",
+        "qiskit>=0.36.0",
+        "qiskit-aqua>=0.9.5",
+        "qiskit-machine-learning>=0.3.1",
+        "deprecation",
+        "tensorly",
+        "keras",
+        "graphviz",
+    ],
 )

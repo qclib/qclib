@@ -27,7 +27,7 @@ from qclib.util import get_state, build_state_dict
 
 
 class TestMergeInitialize(unittest.TestCase):
-    """ Teste MergeInitialize Gate"""
+    """Teste MergeInitialize Gate"""
 
     def test_two_states_uniform(self):
         state_vector = 1 / np.sqrt(2) * np.array([1, 0, 0, 0, 0, 1, 0, 0])
@@ -57,8 +57,18 @@ class TestMergeInitialize(unittest.TestCase):
         self.assertTrue(np.allclose(state_vector, state))
 
     def test_three_states_superposition_with_complex_features(self):
-        state_vector = np.array([0, complex(np.sqrt(0.1), np.sqrt(0.1)), 0, 0,
-                                 complex(np.sqrt(0.1), np.sqrt(0.2)), 0, 0, np.sqrt(0.5)])
+        state_vector = np.array(
+            [
+                0,
+                complex(np.sqrt(0.1), np.sqrt(0.1)),
+                0,
+                0,
+                complex(np.sqrt(0.1), np.sqrt(0.2)),
+                0,
+                0,
+                np.sqrt(0.5),
+            ]
+        )
         state_dict = build_state_dict(state_vector)
         initialize = MergeInitialize.initialize
         circ = QuantumCircuit(3)
@@ -69,5 +79,5 @@ class TestMergeInitialize(unittest.TestCase):
     def test_raises_error_input_not_dict(self):
         initialize = MergeInitialize.initialize
         circ = QuantumCircuit()
-        with self.assertRaises(Exception): 
+        with self.assertRaises(Exception):
             initialize(circ, [])

@@ -21,23 +21,30 @@ import math
 from dataclasses import dataclass
 from qclib.state_preparation.util.tree_utils import is_leaf
 
+
 @dataclass
 class NodeAngleTree:
     """
     Binary tree node used in function create_angles_tree
     """
+
     index: int
     level: int
     angle_y: float
     angle_z: float
-    left: 'NodeAngleTree'
-    right: 'NodeAngleTree'
+    left: "NodeAngleTree"
+    right: "NodeAngleTree"
 
     def __str__(self):
-        return str(self.level) + '_' + \
-               str(self.index) + '\n' + \
-               f'{self.angle_y:.2g}_' + \
-               f'{self.angle_z:.2g}'
+        return (
+            str(self.level)
+            + "_"
+            + str(self.index)
+            + "\n"
+            + f"{self.angle_y:.2g}_"
+            + f"{self.angle_z:.2g}"
+        )
+
 
 def create_angles_tree(state_tree):
     """
@@ -55,11 +62,13 @@ def create_angles_tree(state_tree):
     elif abs(amp) > 1.0:
         angle_y = math.pi
     else:
-        angle_y = 2 * math.asin( abs(amp) )
+        angle_y = 2 * math.asin(abs(amp))
 
     angle_z = 2 * cmath.phase(amp)
 
-    node = NodeAngleTree(state_tree.index, state_tree.level, angle_y, angle_z, None, None)
+    node = NodeAngleTree(
+        state_tree.index, state_tree.level, angle_y, angle_z, None, None
+    )
 
     if not is_leaf(state_tree.left):
         node.right = create_angles_tree(state_tree.right)

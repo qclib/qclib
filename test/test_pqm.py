@@ -21,18 +21,20 @@ from qclib.memory.pqm import initialize as pqm
 from qclib.state_preparation import LowRankInitialize
 from qclib.util import get_counts
 
+
 class TestPQM(TestCase):
-    """ Testing qclib.memory.pqm"""
+    """Testing qclib.memory.pqm"""
+
     @staticmethod
     def _run_pqm(is_classical_pattern):
-        """ run PQM with classical or quantum input"""
+        """run PQM with classical or quantum input"""
         # pqm memory data
         data = [0, 1, 0, 0]
         data = data / np.linalg.norm(data)
 
         # initialize quantum registers
-        memory = QuantumRegister(2, 'm')
-        aux = QuantumRegister(1, 'c')
+        memory = QuantumRegister(2, "m")
+        aux = QuantumRegister(1, "c")
         output = ClassicalRegister(1)
         circ = QuantumCircuit(memory, aux, output)
 
@@ -58,21 +60,21 @@ class TestPQM(TestCase):
             pqm(circ, q_bin_input, memory, aux, is_classical_pattern=False)
 
         # measure output and verify results
-        circ.measure(aux, output) # pylint: disable=maybe-no-member
+        circ.measure(aux, output)  # pylint: disable=maybe-no-member
         counts = get_counts(circ)
 
         return counts
 
     def test_classical_input(self):
-        """ Testing PQM with classical input """
+        """Testing PQM with classical input"""
         # classical input pattern
         counts = TestPQM._run_pqm(True)
 
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts["0"] / 1024 == 1)
 
     def test_quantum_input(self):
-        """ Testing PQM with quantum input """
+        """Testing PQM with quantum input"""
         # quantum input pattern
         counts = TestPQM._run_pqm(False)
 
-        self.assertTrue(counts['0'] / 1024 == 1)
+        self.assertTrue(counts["0"] / 1024 == 1)

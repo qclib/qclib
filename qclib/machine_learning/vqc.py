@@ -29,9 +29,12 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.aqua.algorithms import VQC as qiskit_vqc
 from qiskit.aqua.algorithms.classifiers.vqc import return_probabilities
+
 # from qiskit.circuit.library import BlueprintCircuit
 from qiskit_machine_learning.circuit.library import RawFeatureVector
-from .baa_feature_vector import BaaFeatureVector  # pylint: disable=relative-beyond-top-level
+from .baa_feature_vector import (
+    BaaFeatureVector,
+)  # pylint: disable=relative-beyond-top-level
 
 # pylint: disable=invalid-name
 
@@ -59,22 +62,33 @@ class VQC(qiskit_vqc):
         theta_sets = np.split(theta, num_theta_sets)
 
         def _build_parameterized_circuits():
-            var_form_support = isinstance(self._var_form, QuantumCircuit) \
+            var_form_support = (
+                isinstance(self._var_form, QuantumCircuit)
                 or self._var_form.support_parameterized_circuit
-            feat_map_support = isinstance(self._feature_map, QuantumCircuit) \
+            )
+            feat_map_support = (
+                isinstance(self._feature_map, QuantumCircuit)
                 or self._feature_map.support_parameterized_circuit
+            )
 
             # cannot transpile RawFeatureVector or BaaFeatureVector.
             # See the comment at the beginning of this file.
             if isinstance(self._feature_map, (RawFeatureVector, BaaFeatureVector)):
                 feat_map_support = False
 
-            if var_form_support and feat_map_support and self._parameterized_circuits is None:
+            if (
+                var_form_support
+                and feat_map_support
+                and self._parameterized_circuits is None
+            ):
                 parameterized_circuits = self.construct_circuit(
-                    self._feature_map_params, self._var_form_params,
-                    measurement=not self._quantum_instance.is_statevector)
-                self._parameterized_circuits = \
-                    self._quantum_instance.transpile(parameterized_circuits)[0]
+                    self._feature_map_params,
+                    self._var_form_params,
+                    measurement=not self._quantum_instance.is_statevector,
+                )
+                self._parameterized_circuits = self._quantum_instance.transpile(
+                    parameterized_circuits
+                )[0]
 
         _build_parameterized_circuits()
         for thet in theta_sets:
@@ -82,14 +96,20 @@ class VQC(qiskit_vqc):
                 if self._parameterized_circuits is not None:
                     curr_params = dict(zip(self._feature_map_params, datum))
                     curr_params.update(dict(zip(self._var_form_params, thet)))
-                    circuit = self._parameterized_circuits.assign_parameters(curr_params)
+                    circuit = self._parameterized_circuits.assign_parameters(
+                        curr_params
+                    )
                 else:
                     circuit = self.construct_circuit(
-                        datum, thet, measurement=not self._quantum_instance.is_statevector)
+                        datum,
+                        thet,
+                        measurement=not self._quantum_instance.is_statevector,
+                    )
                 circuits.append(circuit)
 
         results = self._quantum_instance.execute(
-            circuits, had_transpiled=self._parameterized_circuits is not None)
+            circuits, had_transpiled=self._parameterized_circuits is not None
+        )
 
         circuit_id = 0
         predicted_probs = []
@@ -107,7 +127,7 @@ class VQC(qiskit_vqc):
                     outcome_dict = {}
                     bitstr_size = int(math.log2(len(outcome_vector)))
                     for i, _ in enumerate(outcome_vector):
-                        bitstr_i = format(i, '0' + str(bitstr_size) + 'b')
+                        bitstr_i = format(i, "0" + str(bitstr_size) + "b")
                         outcome_dict[bitstr_i] = outcome_vector[i]
                 else:
                     outcome_dict = results.get_counts(circuit_id)

@@ -18,7 +18,6 @@ import numpy as np
 
 
 class Initialize(Gate):
-
     @staticmethod
     def initialize(q_circuit, state, qubits=None):
         pass
@@ -27,7 +26,7 @@ class Initialize(Gate):
         inverse_gate = self.copy()
 
         inverse_gate.definition = self.definition.inverse()
-        inverse_gate.label += '_dg'
+        inverse_gate.label += "_dg"
 
         return inverse_gate
 
@@ -43,4 +42,6 @@ class Initialize(Gate):
         elif isinstance(parameter, np.number):
             return complex(parameter.item())
         else:
-            raise Exception(f"invalid param type {type(parameter)} for instruction {self.name}")
+            raise Exception(
+                f"invalid param type {type(parameter)} for instruction {self.name}"
+            )

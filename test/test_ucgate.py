@@ -19,21 +19,24 @@ import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.quantum_info.random import random_unitary
 from qiskit.quantum_info import Operator
-#from qiskit.extensions.quantum_initializer.uc import UCGate
+
+# from qiskit.extensions.quantum_initializer.uc import UCGate
 from qclib.gates.uc_gate import UCGate
 
+
 class TestUCGate(TestCase):
-    """ Testing qclib.gates.ucgate """
+    """Testing qclib.gates.ucgate"""
+
     def test_inverse_ucg(self):
         """ "Test inverse function of uniformly controlled gates"""
-        gates = [random_unitary(2, seed=42+s).data for s in range(2**2)]
+        gates = [random_unitary(2, seed=42 + s).data for s in range(2**2)]
         num_con = int(np.log2(len(gates)))
         reg = QuantumRegister(num_con + 1)
         circuit = QuantumCircuit(reg)
 
         ucg = UCGate(gates, up_to_diagonal=True)
-        circuit.append(ucg, reg[1:]+ [reg[0]])
-        #qc.uc(gates, q[1:], q[0], up_to_diagonal=False)
+        circuit.append(ucg, reg[1:] + [reg[0]])
+        # qc.uc(gates, q[1:], q[0], up_to_diagonal=False)
         circuit.append(circuit.inverse(), circuit.qubits)
 
         unitary = Operator(circuit).data

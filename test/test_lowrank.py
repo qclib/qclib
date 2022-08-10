@@ -36,7 +36,7 @@ class TestLowRank(TestCase):
         """
         Mean Absolute Error
         """
-        return np.sum(np.abs(state-ideal))/len(ideal)
+        return np.sum(np.abs(state - ideal)) / len(ideal)
 
     @staticmethod
     def get_counts(circuit):
@@ -50,25 +50,27 @@ class TestLowRank(TestCase):
 
         counts_with_zeros = {}
         for i in range(2**n_qubits):
-            pattern = f'{i:0{n_qubits}b}'
+            pattern = f"{i:0{n_qubits}b}"
             if pattern in counts:
                 counts_with_zeros[pattern] = counts[pattern]
             else:
                 counts_with_zeros[pattern] = 0.0
 
         sum_values = sum(counts.values())
-        return [value/sum_values for (key, value) in counts_with_zeros.items()]
+        return [value / sum_values for (key, value) in counts_with_zeros.items()]
 
     def _test_initialize_mae(self, rank=0, max_mae=10**-15):
         n_qubits = 5
-        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state_vector = (
+            np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        )
         state_vector = state_vector / np.linalg.norm(state_vector)
 
         qubits = list(range(n_qubits))
-        partitions = combinations(qubits, (n_qubits+1)//2)
+        partitions = combinations(qubits, (n_qubits + 1) // 2)
         for partition in partitions:
             circuit = QuantumCircuit(n_qubits)
-            opt_params = {'lr': rank, 'partition': partition}
+            opt_params = {"lr": rank, "partition": partition}
             LowRankInitialize.initialize(circuit, state_vector, opt_params=opt_params)
 
             state = get_state(circuit)
@@ -76,14 +78,16 @@ class TestLowRank(TestCase):
             self.assertTrue(TestLowRank.mae(state, state_vector) < max_mae)
 
     def _test_initialize_full_rank(self, n_qubits):
-        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state_vector = (
+            np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        )
         state_vector = state_vector / np.linalg.norm(state_vector)
 
         qubits = list(range(n_qubits))
-        partitions = combinations(qubits, (n_qubits+1)//2)
+        partitions = combinations(qubits, (n_qubits + 1) // 2)
         for partition in partitions:
             circuit = QuantumCircuit(n_qubits)
-            opt_params = {'partition': partition}
+            opt_params = {"partition": partition}
             LowRankInitialize.initialize(circuit, state_vector, opt_params=opt_params)
 
             state = get_state(circuit)
@@ -101,7 +105,7 @@ class TestLowRank(TestCase):
         state_vector = state_vector / np.linalg.norm(state_vector)
 
         circuit = QuantumCircuit(5)
-        LowRankInitialize.initialize(circuit, state_vector, opt_params={'lr': 5})
+        LowRankInitialize.initialize(circuit, state_vector, opt_params={"lr": 5})
 
         state = get_state(circuit)
 
@@ -121,13 +125,17 @@ class TestLowRank(TestCase):
 
     def test_cnot_count(self):
         n_qubits = 7
-        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state_vector = (
+            np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        )
         state_vector = state_vector / np.linalg.norm(state_vector)
 
         circuit = QuantumCircuit(n_qubits)
         LowRankInitialize.initialize(circuit, state_vector)
-        transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=0)
-        n_cx = transpiled_circuit.count_ops()['cx']
+        transpiled_circuit = transpile(
+            circuit, basis_gates=["u", "cx"], optimization_level=0
+        )
+        n_cx = transpiled_circuit.count_ops()["cx"]
 
         self.assertTrue(cnot_count(state_vector) == n_cx)
 
@@ -142,13 +150,17 @@ class TestLowRank(TestCase):
 
         circuit = QuantumCircuit(5)
         LowRankInitialize.initialize(circuit, state_vector)
-        transpiled_circuit = transpile(circuit, basis_gates=['u', 'cx'], optimization_level=0)
+        transpiled_circuit = transpile(
+            circuit, basis_gates=["u", "cx"], optimization_level=0
+        )
 
-        self.assertTrue('cx' not in transpiled_circuit.count_ops())
+        self.assertTrue("cx" not in transpiled_circuit.count_ops())
 
     def test_inverse(self):
         n_qubits = 2
-        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state_vector = (
+            np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        )
         state_vector = state_vector / np.linalg.norm(state_vector)
 
         gate = LowRankInitialize(state_vector)
@@ -158,5 +170,5 @@ class TestLowRank(TestCase):
 
         state = get_state(circuit)
 
-        zero_state = [1]+[0]*(2**n_qubits-1)
+        zero_state = [1] + [0] * (2**n_qubits - 1)
         self.assertTrue(np.allclose(zero_state, state))

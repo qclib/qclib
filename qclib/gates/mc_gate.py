@@ -20,7 +20,9 @@ import qiskit
 import numpy as np
 
 
-def mc_gate(gate: np.ndarray, circuit: qiskit.QuantumCircuit, controls: list, targ: int):
+def mc_gate(
+    gate: np.ndarray, circuit: qiskit.QuantumCircuit, controls: list, targ: int
+):
     """
 
     Parameters
@@ -58,17 +60,19 @@ def _c1c2(gate, n_qubits, qcirc, first=True, step=1):
         start = 1
         reverse = False
 
-    qubit_pairs = [pairs(control, target)
-                   for target in range(n_qubits)
-                   for control in range(start, target)]
+    qubit_pairs = [
+        pairs(control, target)
+        for target in range(n_qubits)
+        for control in range(start, target)
+    ]
 
-    qubit_pairs.sort(key=lambda e: e.control+e.target, reverse=reverse)
+    qubit_pairs.sort(key=lambda e: e.control + e.target, reverse=reverse)
 
     for pair in qubit_pairs:
         exponent = pair.target - pair.control
         if pair.control == 0:
             exponent = exponent - 1
-        param = 2 ** exponent
+        param = 2**exponent
         signal = -1 if (pair.control == 0 and not first) else 1
         signal = step * signal
         if pair.target == n_qubits - 1 and first:
@@ -79,16 +83,19 @@ def _c1c2(gate, n_qubits, qcirc, first=True, step=1):
 
 
 def _gate_u(agate, coef, signal):
-    param = 1/np.abs(coef)
+    param = 1 / np.abs(coef)
 
     values, vectors = np.linalg.eig(agate)
-    gate = np.power(values[0]+0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T
-    gate = gate + np.power(values[1]+0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
+    gate = np.power(values[0] + 0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T
+    gate = (
+        gate
+        + np.power(values[1] + 0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
+    )
 
     if signal < 0:
         gate = np.linalg.inv(gate)
 
-    sqgate = qiskit.QuantumCircuit(1, name='U^1/' + str(coef))
+    sqgate = qiskit.QuantumCircuit(1, name="U^1/" + str(coef))
     sqgate.unitary(gate, 0)  # pylint: disable=maybe-no-member
     csqgate = sqgate.control(1)
 

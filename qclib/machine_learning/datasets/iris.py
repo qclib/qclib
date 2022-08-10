@@ -18,10 +18,17 @@ https://archive.ics.uci.edu/ml/datasets/iris
 """
 
 from sklearn import datasets
-from .common import preprocessing # pylint: disable=relative-beyond-top-level
+from .common import preprocessing  # pylint: disable=relative-beyond-top-level
 
-def load(training_size:int, test_size:int, classes=None, features=4, random_seed=42,
-                                                                        normalize=True):
+
+def load(
+    training_size: int,
+    test_size: int,
+    classes=None,
+    features=4,
+    random_seed=42,
+    normalize=True,
+):
     """
     Iris dataset
     https://archive.ics.uci.edu/ml/datasets/iris
@@ -29,11 +36,19 @@ def load(training_size:int, test_size:int, classes=None, features=4, random_seed
     if classes is None:
         classes = list(range(3))
 
-    class_labels = [r'Setosa', r'Versicolor', r'Virginica']
+    class_labels = [r"Setosa", r"Versicolor", r"Virginica"]
     class_labels = [class_labels[i] for i in classes]
 
     data = datasets.load_iris(return_X_y=True)
 
     return preprocessing(
-        training_size, test_size, features, 64, data, class_labels, 3, random_seed, normalize
+        training_size,
+        test_size,
+        features,
+        64,
+        data,
+        class_labels,
+        3,
+        random_seed,
+        normalize,
     )

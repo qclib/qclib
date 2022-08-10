@@ -1,8 +1,9 @@
 """ auxiliary file """
 from qiskit import execute
 
+
 def measurement(circuit, n_qubits, classical_register, backend, shots):
-    """ run circuit and return measurements """
+    """run circuit and return measurements"""
     circuit.measure(list(range(n_qubits)), classical_register)
 
     job = execute(circuit, backend, shots=shots, optimization_level=3)
@@ -10,8 +11,8 @@ def measurement(circuit, n_qubits, classical_register, backend, shots):
     counts = job.result().get_counts(circuit)
 
     counts2 = {}
-    for k in range(2 ** n_qubits):
-        pattern = '{:0{}b}'.format(k, n_qubits)
+    for k in range(2**n_qubits):
+        pattern = "{:0{}b}".format(k, n_qubits)
         if pattern in counts:
             counts2[pattern] = counts[pattern]
         else:

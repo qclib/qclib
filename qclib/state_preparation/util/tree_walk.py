@@ -20,8 +20,9 @@ from qiskit.circuit.library import RYGate, RZGate
 from qclib.gates.ucr import ucr
 from qclib.state_preparation.util.tree_utils import leftmost, children
 
+
 def bottom_up(angle_tree, circuit, start_level):
-    """ bottom_up state preparation """
+    """bottom_up state preparation"""
 
     if angle_tree and angle_tree.level < start_level:
 
@@ -35,18 +36,21 @@ def bottom_up(angle_tree, circuit, start_level):
 
         _apply_cswaps(angle_tree, circuit)
 
+
 def top_down(angle_tree, circuit, start_level, control_nodes=None, target_nodes=None):
-    """ top down state preparation """
+    """top down state preparation"""
     if angle_tree:
         if angle_tree.level < start_level:
             top_down(angle_tree.left, circuit, start_level)
             top_down(angle_tree.right, circuit, start_level)
         else:
             if target_nodes is None:
-                control_nodes = []                           # initialize the controls
-                target_nodes = [angle_tree]                  # start by the subtree root
+                control_nodes = []  # initialize the controls
+                target_nodes = [angle_tree]  # start by the subtree root
             else:
-                target_nodes = children(target_nodes)        # all the nodes in the current level
+                target_nodes = children(
+                    target_nodes
+                )  # all the nodes in the current level
 
             angles_y = [node.angle_y for node in target_nodes]
             angles_z = [node.angle_z for node in target_nodes]
@@ -57,17 +61,25 @@ def top_down(angle_tree, circuit, start_level, control_nodes=None, target_nodes=
             # That is why the RZ multiplexor is reversed.
             if any(angles_y):
                 ucry = ucr(RYGate, angles_y, last_control=not any(angles_z))
-                circuit.append(ucry, [target_qubit]+control_qubits[::-1])
+                circuit.append(ucry, [target_qubit] + control_qubits[::-1])
 
             if any(angles_z):
                 ucrz = ucr(RZGate, angles_z, last_control=not any(angles_y))
-                circuit.append(ucrz.reverse_ops(), [target_qubit]+control_qubits[::-1])
+                circuit.append(
+                    ucrz.reverse_ops(), [target_qubit] + control_qubits[::-1]
+                )
 
-            control_nodes.append(angle_tree)                 # add current node to the controls list
+            control_nodes.append(angle_tree)  # add current node to the controls list
 
             # walk to the first node of the next level.
-            top_down(angle_tree.left, circuit, start_level,
-                     control_nodes=control_nodes, target_nodes=target_nodes)
+            top_down(
+                angle_tree.left,
+                circuit,
+                start_level,
+                control_nodes=control_nodes,
+                target_nodes=target_nodes,
+            )
+
 
 def _apply_cswaps(angle_tree, circuit):
 

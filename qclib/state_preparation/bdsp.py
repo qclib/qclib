@@ -22,7 +22,10 @@ import numpy as np
 from qiskit import QuantumCircuit
 
 from qclib.state_preparation.initialize import Initialize
-from qclib.state_preparation.util.state_tree_preparation import Amplitude, state_decomposition
+from qclib.state_preparation.util.state_tree_preparation import (
+    Amplitude,
+    state_decomposition,
+)
 from qclib.state_preparation.util.angle_tree_preparation import create_angles_tree
 from qclib.state_preparation.util.tree_register import add_register
 from qclib.state_preparation.util.tree_walk import top_down, bottom_up
@@ -38,35 +41,35 @@ class BdspInitialize(Initialize):
 
     def __init__(self, params, inverse=False, label=None, opt_params=None):
         """
-            Parameters
-            ----------
-            params: list of complex
-                A unit vector representing a quantum state.
-                Values are amplitudes.
+        Parameters
+        ----------
+        params: list of complex
+            A unit vector representing a quantum state.
+            Values are amplitudes.
 
-            opt_params: {'split': split}
-                split: int
-                    Level (enumerated from bottom to top, where 1 ≤ s ≤ n)
-                    at which the angle tree is split.
-                    Default value is ``ceil(n_qubits/2)`` (sublinear).
+        opt_params: {'split': split}
+            split: int
+                Level (enumerated from bottom to top, where 1 ≤ s ≤ n)
+                at which the angle tree is split.
+                Default value is ``ceil(n_qubits/2)`` (sublinear).
         """
         if opt_params is None:
-            self.split = int(ceil(log2(len(params))/2))  # sublinear
+            self.split = int(ceil(log2(len(params)) / 2))  # sublinear
         else:
-            if opt_params.get('split') is None:
-                self.split = int(ceil(log2(len(params))/2))  # sublinear
+            if opt_params.get("split") is None:
+                self.split = int(ceil(log2(len(params)) / 2))  # sublinear
             else:
-                self.split = opt_params.get('split')
+                self.split = opt_params.get("split")
 
-        self._name = 'bdsp'
+        self._name = "bdsp"
         self._get_num_qubits(params)
 
         self._label = label
         if label is None:
-            self._label = 'SP'
+            self._label = "SP"
 
             if inverse:
-                self._label = 'SPdg'
+                self._label = "SPdg"
 
         super().__init__(self._name, self.num_qubits, params, label=self._label)
 
@@ -81,10 +84,10 @@ class BdspInitialize(Initialize):
         angle_tree = create_angles_tree(state_tree)
 
         circuit = QuantumCircuit()
-        add_register(circuit, angle_tree, n_qubits-self.split)
+        add_register(circuit, angle_tree, n_qubits - self.split)
 
-        top_down(angle_tree, circuit, n_qubits-self.split)
-        bottom_up(angle_tree, circuit, n_qubits-self.split)
+        top_down(angle_tree, circuit, n_qubits - self.split)
+        bottom_up(angle_tree, circuit, n_qubits - self.split)
 
         return circuit
 
@@ -93,7 +96,7 @@ class BdspInitialize(Initialize):
         if not n_qubits.is_integer():
             Exception("The number of amplitudes is not a power of 2")
         n_qubits = int(n_qubits)
-        self.num_qubits = (self.split+1) * 2**(n_qubits-self.split) - 1
+        self.num_qubits = (self.split + 1) * 2 ** (n_qubits - self.split) - 1
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):
@@ -101,6 +104,8 @@ class BdspInitialize(Initialize):
         Appends a BdspInitialize gate into the q_circuit
         """
         if qubits is None:
-            q_circuit.append(BdspInitialize(state, opt_params=opt_params), q_circuit.qubits)
+            q_circuit.append(
+                BdspInitialize(state, opt_params=opt_params), q_circuit.qubits
+            )
         else:
             q_circuit.append(BdspInitialize(state, opt_params=opt_params), qubits)

@@ -19,14 +19,16 @@ from qiskit import ClassicalRegister, QuantumRegister, QuantumCircuit
 from qclib.gates.majority import operate as majority
 from qclib.util import get_counts
 
+
 class TestMajority(TestCase):
-    """ Testing qclib.gate.majority """
+    """Testing qclib.gate.majority"""
+
     @staticmethod
     def _run_majority(bin_input):
-        """ Run majority gate and return counts """
+        """Run majority gate and return counts"""
         # initialize quantum registers
-        controls = QuantumRegister(len(bin_input), 'controls')
-        target = QuantumRegister(1, 'target')
+        controls = QuantumRegister(len(bin_input), "controls")
+        target = QuantumRegister(1, "target")
         output = ClassicalRegister(1)
         circuit = QuantumCircuit(controls, target, output)
 
@@ -45,38 +47,38 @@ class TestMajority(TestCase):
         return counts
 
     def _test_majority(self, n_qubits):
-        """ Testing majority """
-        for i in range(2 ** n_qubits):
-            bits = [int(j) for j in '{:0{}b}'.format(i, n_qubits)]
+        """Testing majority"""
+        for i in range(2**n_qubits):
+            bits = [int(j) for j in "{:0{}b}".format(i, n_qubits)]
             counts = TestMajority._run_majority(bits)
 
-            if sum(bits) >= n_qubits/2:
-                self.assertTrue(counts['1'] / 1024 == 1)
+            if sum(bits) >= n_qubits / 2:
+                self.assertTrue(counts["1"] / 1024 == 1)
             else:
-                self.assertTrue(counts['0'] / 1024 == 1)
+                self.assertTrue(counts["0"] / 1024 == 1)
 
     # Keep tests separated by number of qubits to make it easier to identify errors.
     def test_majority_2(self):
-        """ Testing 2 qubits majority """
+        """Testing 2 qubits majority"""
         TestMajority._test_majority(self, 2)
 
     def test_majority_3(self):
-        """ Testing 3 qubits majority """
+        """Testing 3 qubits majority"""
         TestMajority._test_majority(self, 3)
 
     def test_majority_4(self):
-        """ Testing 4 qubits majority """
+        """Testing 4 qubits majority"""
         TestMajority._test_majority(self, 4)
 
     def test_majority_5(self):
-        """ Testing 5 qubits majority """
+        """Testing 5 qubits majority"""
 
         TestMajority._test_majority(self, 5)
 
     def test_majority_6(self):
-        """ Testing 6 qubits majority """
+        """Testing 6 qubits majority"""
         TestMajority._test_majority(self, 6)
 
     def test_majority_7(self):
-        """ Testing 7 qubits majority """
+        """Testing 7 qubits majority"""
         TestMajority._test_majority(self, 7)

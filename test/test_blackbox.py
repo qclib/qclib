@@ -22,10 +22,10 @@ from qclib.util import get_state
 
 
 class TestBlackbox(TestCase):
-    """ Test blackbox state preparation """
+    """Test blackbox state preparation"""
 
     def test_blackbox(self):
-        """ Run blackbox state preparation """
+        """Run blackbox state preparation"""
         initialize = BlackBoxInitialize.initialize
 
         state = np.random.rand(16) - 0.5 + (np.random.rand(16) - 0.5) * 1j
@@ -35,7 +35,7 @@ class TestBlackbox(TestCase):
         initialize(q_circuit, state.tolist())
 
         out = get_state(q_circuit)
-        out = out.reshape((len(out)//2, 2))
+        out = out.reshape((len(out) // 2, 2))
         out = out[:, 0]
 
         self.assertTrue(np.allclose(state, out, atol=0.02))

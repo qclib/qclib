@@ -27,9 +27,10 @@ from qclib.util import get_state
 
 
 class TestSVDInitialize(TestCase):
-
     def _test_initialize(self, n_qubits):
-        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state_vector = (
+            np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        )
         state_vector = state_vector / np.linalg.norm(state_vector)
 
         circuit = QuantumCircuit(n_qubits)
