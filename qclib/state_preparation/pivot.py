@@ -24,7 +24,7 @@ from qclib.state_preparation.initialize_sparse import InitializeSparse
 
 
 class PivotInitialize(InitializeSparse):
-    """Pivot State Preparation"""
+    """Pivot State Preparation arXiv:2006.00016"""
 
     def __init__(self, params, inverse=False, label=None, opt_params=None):
         self._name = "pivot"
