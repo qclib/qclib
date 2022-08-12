@@ -86,7 +86,7 @@ class PivotInitialize(InitializeSparse):
 
         if non_zero <= 2:
             initialize_circ = qiskit.QuantumCircuit(1)
-            initialize_circ.initialize(dense_state)
+            LowRankInitialize.initialize(initialize_circ, dense_state)
         else:
             initialize_circ = QuantumCircuit(target_size)
             LowRankInitialize.initialize(initialize_circ, dense_state)
