@@ -18,6 +18,7 @@ from unittest import TestCase
 import numpy as np
 from qclib.state_preparation import CvoqramInitialize, PivotInitialize
 from qclib.util import double_sparse, get_state
+from qiskit.quantum_info import Operator
 
 class TestCvoqram(TestCase):
     """ Testing qclib.state_preparation.cvoqram """
@@ -75,6 +76,14 @@ class TestPivotingSP(TestCase):
         state = get_state(circuit)
         self.assertTrue(np.isclose(state[0b001], 1/np.sqrt(3)))
         self.assertTrue(np.isclose(state[0b110], np.sqrt(2j / 3)))
+
+    def test_inverse(self):
+        data = {'001': 1 / np.sqrt(3), '110': np.sqrt(2j / 3)}
+        circuit = PivotInitialize(data).definition
+        circ_op = Operator(circuit).data
+        inv_circ = circuit.inverse()
+        inv_op = Operator(inv_circ).data
+        self.assertTrue(np.allclose(circ_op @ inv_op, np.eye(8)))
 
     def test_pivotsp_random(self):
         """ Testing pivot state preparation with 4 amplitudes """

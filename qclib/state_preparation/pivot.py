@@ -24,7 +24,7 @@ from qclib.state_preparation.initialize_sparse import InitializeSparse
 
 
 class PivotInitialize(InitializeSparse):
-    """Pivot State Preparation"""
+    """Pivot State Preparation arXiv:2006.00016"""
 
     def __init__(self, params, inverse=False, label=None, opt_params=None):
         self._name = "pivot"
@@ -86,7 +86,7 @@ class PivotInitialize(InitializeSparse):
 
         if non_zero <= 2:
             initialize_circ = qiskit.QuantumCircuit(1)
-            initialize_circ.initialize(dense_state)
+            LowRankInitialize.initialize(initialize_circ, dense_state)
         else:
             initialize_circ = QuantumCircuit(target_size)
             LowRankInitialize.initialize(initialize_circ, dense_state)
