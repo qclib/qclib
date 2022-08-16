@@ -27,7 +27,20 @@ from qclib.util import get_state
 
 class TestBergholmInitialize(TestCase):
 
-  def test_three_qubit_state(self):
+  def test_three_qubit_state_real(self):
+    state = np.random.rand(8)
+    state = state / np.linalg.norm(state)
+    
+    initialize = BergholmInitialize.initialize
+    circuit = QuantumCircuit(3)
+    
+    initialize(circuit, state.tolist())
+
+    output_state = get_state(circuit)
+ 
+    self.assertTrue(np.allclose(output_state, state))
+
+  def test_three_qubit_state_complex(self):
 
     state = np.random.rand(8) + np.random.rand(8) * 1j
     state = state / np.linalg.norm(state)

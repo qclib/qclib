@@ -27,7 +27,6 @@ from qclib.state_preparation.util.state_tree_preparation import (
     state_decomposition,
 )
 from qclib.gates.uc_gate import UCGate
-from qclib.state_preparation.util.angle_tree_preparation import create_angles_tree
 from qclib.state_preparation.util import tree_utils
 
 class BergholmInitialize(Initialize):
@@ -74,15 +73,18 @@ class BergholmInitialize(Initialize):
         children_amplitudes = self._get_amplitudes(children_nodes)
 
         while tree_level > 0:
-            if tree_level != 0:
-                parent_amplitudes = self._apply_diagonal(parent_amplitudes,
-                                                         children_amplitudes)
+            #if tree_level != 0:
+            #    parent_amplitudes = self._apply_diagonal(parent_amplitudes,
+            #                                             children_amplitudes)
 
             current_level_mux = self._build_multiplexor(parent_amplitudes, children_amplitudes)        
 
             ucg = UCGate(current_level_mux, up_to_diagonal=True)
-            q_circuit.append(ucg, q_register[:tree_level-1] + [q_register[tree_level-1]])
             
+            controls = q_register[self.num_qubits - tree_level + 1:]
+            target = [q_register[self.num_qubits - tree_level]]
+            q_circuit.append(ucg, target + controls)
+
             #preparing for the next loop
             tree_level -= 1
             children_amplitudes = parent_amplitudes
@@ -93,10 +95,10 @@ class BergholmInitialize(Initialize):
                                            parent_nodes)
             parent_amplitudes = self._get_amplitudes(parent_nodes)
 
-        return q_circuit.reverse_ops()
+        return q_circuit.inverse()
 
     def _apply_diagonal(self, parent_amplitudes, children_amplitudes):
-        phases = np.angle(children_amplitudes.conj())
+        phases = np.angle(children_amplitudes)
 
         diag = np.exp(1j*phases)[::2]
         diag = np.multiply(diag, parent_amplitudes)
@@ -117,29 +119,29 @@ class BergholmInitialize(Initialize):
         gates = []
         len_pnodes = len(parent_amplitudes)
         len_snodes = len(children_amplitudes)
-        for parent_idx, sibling_idx in zip(range(len_pnodes), range(1, len_snodes, 2)):
-            amp = (children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx])
-            gates += [self._get_branch_operator(amp)]
+        for parent_idx, sibling_idx in zip(range(len_pnodes), range(0, len_snodes, 2)):
+            amp_ket0 = (children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx])
+            amp_ket1 = (children_amplitudes[sibling_idx+1] / parent_amplitudes[parent_idx])
+            gates += [self._get_branch_operator(amp_ket0, amp_ket1)]
         return gates
 
-    def _get_branch_operator(self, amplitude):
+    def _get_branch_operator(self, amplitude_ket0, amplitude_ket1):
         """
         Returns the matrix operator that is going to split the qubit in to two components
         of a superposition
         Args:
-        amplitude: Complex amplitude from which the gate is suposed to be built
+        amplitude_ket0: Complex amplitude of the |0> component of the superpoisition
+        amplitude_ket1: Complex amplitude of the |1> component of the superpoisition
         Returns: 
         A 2x2 numpy array defining the desired operator inferred from
         the amplitude argument
         """
-        theta = 2 * np.arcsin(abs(amplitude)) 
-        gamma = 2 * cmath.phase(amplitude)
 
-        operator = np.array([[np.cos(theta / 2) * np.exp( -1j*gamma/2), 
-                              -np.sin(theta / 2) * np.exp( -1j*gamma / 2)],
-                             [np.sin(theta / 2) * np.exp( 1j*gamma / 2), 
-                              np.cos(theta / 2) * np.exp( 1j*gamma / 2)]])
-        return operator
+        operator = np.array([[amplitude_ket0, 
+                              -np.conj(amplitude_ket1)],
+                             [amplitude_ket1, 
+                              np.conj(amplitude_ket0)]])
+        return np.conj(operator).T
 
     def _get_amplitudes(self, node_list): 
         """
