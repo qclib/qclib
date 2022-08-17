@@ -106,7 +106,7 @@ class TestLowRank(TestCase):
         self.assertTrue(np.allclose(state_vector, state))
 
     def test_initialize_rank_4(self):
-        self._test_initialize_mae(4, max_mae=10**-14)
+        self._test_initialize_mae(4, max_mae=10**-10)
 
     def test_initialize_rank_3(self):
         self._test_initialize_mae(3, max_mae=0.04)
