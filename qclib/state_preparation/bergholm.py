@@ -18,20 +18,16 @@
         https://journals.aps.org/pra/abstract/10.1103/PhysRevA.71.052330
 """
 import numpy as np
-import cmath
+import numpy.linalg as la
 from qiskit import QuantumCircuit, QuantumRegister
-
 from qclib.state_preparation.initialize import Initialize
-from qclib.state_preparation.util.state_tree_preparation import (
-    Amplitude,
-    state_decomposition,
-)
 from qclib.gates.uc_gate import UCGate
-from qclib.state_preparation.util import tree_utils
+
 
 class BergholmInitialize(Initialize):
     """
-        https://journals.aps.org/pra/abstract/10.1103/PhysRevA.71.052330
+        Quantum circuits with uniformly controlled one-qubit gates
+        https://doi.org/10.48550/arXiv.quant-ph/0410066
     """
 
     def __init__(self, params, inverse=False, label=None):
@@ -40,9 +36,9 @@ class BergholmInitialize(Initialize):
         self._get_num_qubits(params)
 
         if label is None:
-          self._label = "bergholm"
+            self._label = "bergholm"
 
-          if inverse:
+            if inverse:
                 self._label = "bergholm_dg"
 
         super().__init__(self._name, self.num_qubits, params, label=self._label)
@@ -54,55 +50,30 @@ class BergholmInitialize(Initialize):
 
         q_register = QuantumRegister(self.num_qubits)
         q_circuit = QuantumCircuit(q_register)
-        data = [Amplitude(i, a) for i, a in enumerate(self.params)]
-        tree_root = state_decomposition(self.num_qubits, data)
-        
+
+        children = self.params
+        size = len(children) // 2
+        parent = [la.norm([children[2 * k], children[2 * k + 1]]) for k in range(size)]
+
         tree_level = self.num_qubits
-        
-        parent_nodes = []
-        children_nodes = [] 
-
-        tree_utils.subtree_level_nodes(tree_root,
-                                       tree_level - 1,
-                                       parent_nodes)
-        parent_amplitudes = self._get_amplitudes(parent_nodes)
-
-        tree_utils.subtree_level_nodes(tree_root,
-                                       tree_level,
-                                       children_nodes)
-        children_amplitudes = self._get_amplitudes(children_nodes)
-
         while tree_level > 0:
-            #if tree_level != 0:
-            #    parent_amplitudes = self._apply_diagonal(parent_amplitudes,
-            #                                             children_amplitudes)
 
-            current_level_mux = self._build_multiplexor(parent_amplitudes, children_amplitudes)        
-
+            current_level_mux = self._build_multiplexor(parent, children)
             ucg = UCGate(current_level_mux, up_to_diagonal=True)
-            
+
             controls = q_register[self.num_qubits - tree_level + 1:]
             target = [q_register[self.num_qubits - tree_level]]
             q_circuit.append(ucg, target + controls)
 
-            #preparing for the next loop
+            # preparing for the next loop
             tree_level -= 1
-            children_amplitudes = parent_amplitudes
-
-            parent_nodes = []
-            tree_utils.subtree_level_nodes(tree_root,
-                                           tree_level - 1,
-                                           parent_nodes)
-            parent_amplitudes = self._get_amplitudes(parent_nodes)
+            children = parent
+            diagonal = np.conj(ucg._get_diagonal())[::2]
+            children = children * diagonal
+            size = len(children) // 2
+            parent = [la.norm([children[2 * k], children[2 * k + 1]]) for k in range(size)]
 
         return q_circuit.inverse()
-
-    def _apply_diagonal(self, parent_amplitudes, children_amplitudes):
-        phases = np.angle(children_amplitudes)
-
-        diag = np.exp(1j*phases)[::2]
-        diag = np.multiply(diag, parent_amplitudes)
-        return diag
 
     def _build_multiplexor(self, parent_amplitudes, children_amplitudes):
         """
@@ -121,41 +92,32 @@ class BergholmInitialize(Initialize):
         len_snodes = len(children_amplitudes)
         for parent_idx, sibling_idx in zip(range(len_pnodes), range(0, len_snodes, 2)):
             amp_ket0 = (children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx])
-            amp_ket1 = (children_amplitudes[sibling_idx+1] / parent_amplitudes[parent_idx])
+            amp_ket1 = (children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx])
             gates += [self._get_branch_operator(amp_ket0, amp_ket1)]
         return gates
 
-    def _get_branch_operator(self, amplitude_ket0, amplitude_ket1):
+    @staticmethod
+    def _get_branch_operator(amplitude_ket0, amplitude_ket1):
         """
         Returns the matrix operator that is going to split the qubit in to two components
         of a superposition
         Args:
         amplitude_ket0: Complex amplitude of the |0> component of the superpoisition
         amplitude_ket1: Complex amplitude of the |1> component of the superpoisition
-        Returns: 
+        Returns:
         A 2x2 numpy array defining the desired operator inferred from
         the amplitude argument
         """
 
-        operator = np.array([[amplitude_ket0, 
+        operator = np.array([[amplitude_ket0,
                               -np.conj(amplitude_ket1)],
-                             [amplitude_ket1, 
+                             [amplitude_ket1,
                               np.conj(amplitude_ket0)]])
         return np.conj(operator).T
 
-    def _get_amplitudes(self, node_list): 
-        """
-        Extract amplitudes from node list and
-        returns them as a numpy array
-        """
-        amps = []
-        for node in node_list:
-            amps.append(node.amplitude)
-        return np.array(amps)
-
     @staticmethod
     def initialize(q_circuit, state, qubits=None):
-      if qubits is None:
-          q_circuit.append(BergholmInitialize(state).definition, q_circuit.qubits)
-      else:
-          q_circuit.append(BergholmInitialize(state).definition, qubits)
+        if qubits is None:
+            q_circuit.append(BergholmInitialize(state).definition, q_circuit.qubits)
+        else:
+            q_circuit.append(BergholmInitialize(state).definition, qubits)
