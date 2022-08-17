@@ -90,8 +90,6 @@ class TestLowRank(TestCase):
 
             self.assertTrue(np.allclose(state_vector, state))
 
-    def test_initialize_full_rank_7(self):
-        self._test_initialize_full_rank(7)
 
     def test_initialize_full_rank_6(self):
         self._test_initialize_full_rank(6)
