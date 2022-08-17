@@ -72,11 +72,3 @@ class TestMajority(TestCase):
         """ Testing 5 qubits majority """
 
         TestMajority._test_majority(self, 5)
-
-    def test_majority_6(self):
-        """ Testing 6 qubits majority """
-        TestMajority._test_majority(self, 6)
-
-    def test_majority_7(self):
-        """ Testing 7 qubits majority """
-        TestMajority._test_majority(self, 7)
