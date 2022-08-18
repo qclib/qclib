@@ -24,7 +24,7 @@ from qclib.state_preparation.initialize import Initialize
 from qclib.gates.uc_gate import UCGate
 
 
-class BergholmInitialize(Initialize):
+class UCGInitialize(Initialize):
     """
         Quantum circuits with uniformly controlled one-qubit gates
         https://doi.org/10.48550/arXiv.quant-ph/0410066
@@ -118,6 +118,6 @@ class BergholmInitialize(Initialize):
     @staticmethod
     def initialize(q_circuit, state, qubits=None):
         if qubits is None:
-            q_circuit.append(BergholmInitialize(state).definition, q_circuit.qubits)
+            q_circuit.append(UCGInitialize(state).definition, q_circuit.qubits)
         else:
-            q_circuit.append(BergholmInitialize(state).definition, qubits)
+            q_circuit.append(UCGInitialize(state).definition, qubits)

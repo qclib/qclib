@@ -19,19 +19,19 @@ from unittest import TestCase
 import numpy as np
 from qiskit import QuantumCircuit
 
-from qclib.state_preparation import BergholmInitialize
+from qclib.state_preparation import UCGInitialize
 from qclib.util import get_state
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
 
-class TestBergholmInitialize(TestCase):
+class TestUCGInitialize(TestCase):
 
   def test_three_qubit_state_real(self):
     state = np.random.rand(8)
     state = state / np.linalg.norm(state)
     
-    initialize = BergholmInitialize.initialize
+    initialize = UCGInitialize.initialize
     circuit = QuantumCircuit(3)
     
     initialize(circuit, state.tolist())
@@ -45,7 +45,7 @@ class TestBergholmInitialize(TestCase):
     state = np.random.rand(8) + np.random.rand(8) * 1j
     state = state / np.linalg.norm(state)
     
-    initialize = BergholmInitialize.initialize
+    initialize = UCGInitialize.initialize
     circuit = QuantumCircuit(3)
     
     initialize(circuit, state.tolist())

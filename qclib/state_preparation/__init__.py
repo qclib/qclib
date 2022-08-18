@@ -10,4 +10,4 @@ from .cvoqram import CvoqramInitialize
 from .pivot import PivotInitialize
 from .isometry import IsometryInitialize
 from .svd import SVDInitialize
-from .bergholm import BergholmInitialize
+from .ucg_initialize import UCGInitialize
