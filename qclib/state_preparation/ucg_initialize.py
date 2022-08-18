@@ -14,7 +14,7 @@
 
 """
       This module implements the state preparation proposed by
-      Bergholm et al (2005) available in: 
+      Bergholm et al (2005) available in:
         https://journals.aps.org/pra/abstract/10.1103/PhysRevA.71.052330
 """
 import numpy as np
@@ -32,14 +32,14 @@ class UCGInitialize(Initialize):
 
     def __init__(self, params, inverse=False, label=None):
 
-        self._name = "bergholm"
+        self._name = "ucg_initialize"
         self._get_num_qubits(params)
 
         if label is None:
-            self._label = "bergholm"
+            self._label = "ucg_initialize"
 
             if inverse:
-                self._label = "bergholm_dg"
+                self._label = "ucg_initialize_dg"
 
         super().__init__(self._name, self.num_qubits, params, label=self._label)
 
@@ -68,7 +68,7 @@ class UCGInitialize(Initialize):
             # preparing for the next loop
             tree_level -= 1
             children = parent
-            diagonal = np.conj(ucg._get_diagonal())[::2]
+            diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
             children = children * diagonal
             size = len(children) // 2
             parent = [la.norm([children[2 * k], children[2 * k + 1]]) for k in range(size)]
@@ -78,13 +78,12 @@ class UCGInitialize(Initialize):
     def _build_multiplexor(self, parent_amplitudes, children_amplitudes):
         """
         Infers the unitary to be used in the uniformily controlled multiplexor
-        defined by Bergholm et al (2005). This procedure assumes that the right most
-        child of a node is on a odd index.
+        defined by Bergholm et al (2005).
         Args:
-        parent_amplitudes: list of nodes from the previous level
-        children_amplitudes: children of the paren nodes
+        parent_amplitudes: list of amplitudes
+        children_amplitudes: children of the parent amplitudes
         Returns:
-        list of 2-by-2 numpy arrays with the desired unitary to be used
+        list of 2-by-2 numpy arrays with the desired unitaries to be used
         in the multiplexor
         """
         gates = []
@@ -109,10 +108,9 @@ class UCGInitialize(Initialize):
         the amplitude argument
         """
 
-        operator = np.array([[amplitude_ket0,
-                              -np.conj(amplitude_ket1)],
-                             [amplitude_ket1,
-                              np.conj(amplitude_ket0)]])
+        operator = np.array([[amplitude_ket0, -np.conj(amplitude_ket1)],
+                             [amplitude_ket1, np.conj(amplitude_ket0)]])
+
         return np.conj(operator).T
 
     @staticmethod
