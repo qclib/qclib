@@ -30,10 +30,11 @@ class UCGInitialize(Initialize):
         https://doi.org/10.48550/arXiv.quant-ph/0410066
     """
 
-    def __init__(self, params, inverse=False, label=None):
+    def __init__(self, params, inverse=False, label=None, index=0):
 
         self._name = "ucg_initialize"
         self._get_num_qubits(params)
+        self.index = index
 
         if label is None:
             self._label = "ucg_initialize"
@@ -47,7 +48,7 @@ class UCGInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-
+        string_target = bin(self.index)[2:].zfill(self.num_qubits)[::-1]
         q_register = QuantumRegister(self.num_qubits)
         q_circuit = QuantumCircuit(q_register)
 
@@ -57,8 +58,10 @@ class UCGInitialize(Initialize):
 
         tree_level = self.num_qubits
         while tree_level > 0:
-
-            current_level_mux = self._build_multiplexor(parent, children)
+            bit_target = string_target[self.num_qubits-tree_level]
+            current_level_mux = self._build_multiplexor(parent,
+                                                        children,
+                                                        target=bit_target)
             ucg = UCGate(current_level_mux, up_to_diagonal=True)
 
             controls = q_register[self.num_qubits - tree_level + 1:]
@@ -68,14 +71,18 @@ class UCGInitialize(Initialize):
             # preparing for the next loop
             tree_level -= 1
             children = parent
-            diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
+            if bit_target == '1':
+                diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
+            else:
+                diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
+
             children = children * diagonal
             size = len(children) // 2
             parent = [la.norm([children[2 * k], children[2 * k + 1]]) for k in range(size)]
 
         return q_circuit.inverse()
 
-    def _build_multiplexor(self, parent_amplitudes, children_amplitudes):
+    def _build_multiplexor(self, parent_amplitudes, children_amplitudes, target='0'):
         """
         Infers the unitary to be used in the uniformily controlled multiplexor
         defined by Bergholm et al (2005).
@@ -92,11 +99,11 @@ class UCGInitialize(Initialize):
         for parent_idx, sibling_idx in zip(range(len_pnodes), range(0, len_snodes, 2)):
             amp_ket0 = (children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx])
             amp_ket1 = (children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx])
-            gates += [self._get_branch_operator(amp_ket0, amp_ket1)]
+            gates += [self._get_branch_operator(amp_ket0, amp_ket1, target)]
         return gates
 
     @staticmethod
-    def _get_branch_operator(amplitude_ket0, amplitude_ket1):
+    def _get_branch_operator(amplitude_ket0, amplitude_ket1, target='0'):
         """
         Returns the matrix operator that is going to split the qubit in to two components
         of a superposition
@@ -108,14 +115,18 @@ class UCGInitialize(Initialize):
         the amplitude argument
         """
 
-        operator = np.array([[amplitude_ket0, -np.conj(amplitude_ket1)],
-                             [amplitude_ket1, np.conj(amplitude_ket0)]])
+        if target == '0':
+            operator = np.array([[amplitude_ket0, -np.conj(amplitude_ket1)],
+                                 [amplitude_ket1, np.conj(amplitude_ket0)]])
+        else:
+            operator = np.array([[-np.conj(amplitude_ket1), amplitude_ket0],
+                                 [np.conj(amplitude_ket0), amplitude_ket1]])
 
         return np.conj(operator).T
 
     @staticmethod
-    def initialize(q_circuit, state, qubits=None):
+    def initialize(q_circuit, state, qubits=None, index=0):
         if qubits is None:
-            q_circuit.append(UCGInitialize(state).definition, q_circuit.qubits)
+            q_circuit.append(UCGInitialize(state, index=index).definition, q_circuit.qubits)
         else:
-            q_circuit.append(UCGInitialize(state).definition, qubits)
+            q_circuit.append(UCGInitialize(state, index=index).definition, qubits)
