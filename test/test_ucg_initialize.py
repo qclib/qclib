@@ -37,7 +37,7 @@ class TestUCGInitialize(TestCase):
         circuit.x(1)
         circuit.x(3)
 
-        initialize(circuit, state.tolist(), index=10)
+        initialize(circuit, state.tolist(), opt_params={"target_state": 10})
 
         output_state = get_state(circuit)
         print(output_state @ state.T)
@@ -54,7 +54,7 @@ class TestUCGInitialize(TestCase):
         circuit.x(1)
         circuit.x(2)
 
-        initialize(circuit, state.tolist(), index=7)
+        initialize(circuit, state.tolist(), opt_params={"target_state": 7})
 
         output_state = get_state(circuit)
         print(output_state @ state.T)

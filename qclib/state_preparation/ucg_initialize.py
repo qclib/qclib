@@ -30,11 +30,11 @@ class UCGInitialize(Initialize):
         https://doi.org/10.48550/arXiv.quant-ph/0410066
     """
 
-    def __init__(self, params, inverse=False, label=None, index=0):
+    def __init__(self, params, inverse=False, label=None, opt_params=None):
 
         self._name = "ucg_initialize"
         self._get_num_qubits(params)
-        self.index = index
+        self.target_state = 0 if opt_params is None else opt_params.get("target_state")
 
         if label is None:
             self._label = "ucg_initialize"
@@ -48,7 +48,7 @@ class UCGInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        string_target = bin(self.index)[2:].zfill(self.num_qubits)[::-1]
+        string_target = bin(self.target_state)[2:].zfill(self.num_qubits)[::-1]
         q_register = QuantumRegister(self.num_qubits)
         q_circuit = QuantumCircuit(q_register)
 
@@ -125,8 +125,9 @@ class UCGInitialize(Initialize):
         return np.conj(operator).T
 
     @staticmethod
-    def initialize(q_circuit, state, qubits=None, index=0):
+    def initialize(q_circuit, state, qubits=None, opt_params=None):
+        gate = UCGInitialize(state, opt_params=opt_params)
         if qubits is None:
-            q_circuit.append(UCGInitialize(state, index=index).definition, q_circuit.qubits)
+            q_circuit.append(gate.definition, q_circuit.qubits)
         else:
-            q_circuit.append(UCGInitialize(state, index=index).definition, qubits)
+            q_circuit.append(gate.definition, qubits)
