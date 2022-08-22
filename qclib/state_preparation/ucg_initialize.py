@@ -97,9 +97,12 @@ class UCGInitialize(Initialize):
         len_pnodes = len(parent_amplitudes)
         len_snodes = len(children_amplitudes)
         for parent_idx, sibling_idx in zip(range(len_pnodes), range(0, len_snodes, 2)):
-            amp_ket0 = (children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx])
-            amp_ket1 = (children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx])
-            gates += [self._get_branch_operator(amp_ket0, amp_ket1, target)]
+            if parent_amplitudes[parent_idx] != 0:
+                amp_ket0 = (children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx])
+                amp_ket1 = (children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx])
+                gates += [self._get_branch_operator(amp_ket0, amp_ket1, target)]
+            else:
+                gates += [np.eye(2)]
         return gates
 
     @staticmethod

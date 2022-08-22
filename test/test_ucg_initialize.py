@@ -30,6 +30,8 @@ class TestUCGInitialize(TestCase):
         """Test UCGInitialize with four qubits and index 10"""
         nqubits = 4
         state = np.random.rand(2 ** nqubits)
+        state[0] = 0
+        state[1] = 0
         state = state / np.linalg.norm(state)
 
         initialize = UCGInitialize.initialize
