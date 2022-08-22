@@ -67,20 +67,20 @@ def mcx(n_qubits: int):
 
     qc_mcx = QuantumCircuit(qr_k1_controls, qr_k2_controls, qr_target, qr_ancilla)
 
-    mcx_no_ancilla(circuit=qc_mcx, controls=qr_k1_controls, free=qr_free_k1, targ=qr_ancilla)
+    _mcx_no_ancilla(circuit=qc_mcx, controls=qr_k1_controls, free=qr_free_k1, targ=qr_ancilla)
 
     qc_mcx.h(qr_target)
     qc_mcx.s(qr_ancilla)
 
-    mcx_no_ancilla(circuit=qc_mcx, controls=qr_k2_plus_one_controls[::-1], free=qr_free_k2[::-1], targ=qr_ancilla)
+    _mcx_no_ancilla(circuit=qc_mcx, controls=qr_k2_plus_one_controls[::-1], free=qr_free_k2[::-1], targ=qr_ancilla)
 
     qc_mcx.sdg(qr_ancilla)
 
-    mcx_no_ancilla(circuit=qc_mcx, controls=qr_k1_controls, free=qr_free_k1, targ=qr_ancilla)
+    _mcx_no_ancilla(circuit=qc_mcx, controls=qr_k1_controls, free=qr_free_k1, targ=qr_ancilla)
 
     qc_mcx.s(qr_ancilla)
 
-    mcx_no_ancilla(circuit=qc_mcx, controls=qr_k2_plus_one_controls[::-1], free=qr_free_k2[::-1], targ=qr_ancilla)
+    _mcx_no_ancilla(circuit=qc_mcx, controls=qr_k2_plus_one_controls[::-1], free=qr_free_k2[::-1], targ=qr_ancilla)
 
     qc_mcx.h(qr_target)
     qc_mcx.sdg(qr_ancilla)
