@@ -37,12 +37,9 @@ class UCGInitialize(Initialize):
         self.target_state = 0 if opt_params is None else opt_params.get("target_state")
 
         if label is None:
-            self._label = "ucg_initialize"
+            label = "ucg_initialize"
 
-            if inverse:
-                self._label = "ucg_initialize_dg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

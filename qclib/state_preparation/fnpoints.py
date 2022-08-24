@@ -78,14 +78,10 @@ class FnPointsInitialize(InitializeSparse):
                 if self.n_output_values < default_n_output_values:
                     self.n_output_values = default_n_output_values
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            self._label = "FNSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
+        super().__init__(self._name, self.num_qubits, params.items(), label)
 
     def _define(self):
         self.definition = self._define_initialize()

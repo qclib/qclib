@@ -122,14 +122,10 @@ class BaaLowRankInitialize(Initialize):
         if self.max_fidelity_loss < 0 or self.max_fidelity_loss > 1:
             self.max_fidelity_loss = 0.0
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            self._label = "BAASP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

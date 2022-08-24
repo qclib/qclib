@@ -39,16 +39,13 @@ class MergeInitialize(InitializeSparse):
 
         self._name = "merge"
 
-        self._label = label
         if label is None:
-            self._label = "MERGE"
-            if inverse:
-                self._label = "MERGEdg"
+            label = "MERGESP"
 
         # Parameters need to be validated first by superclass
         self._get_num_qubits(params)
 
-        super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
+        super().__init__(self._name, self.num_qubits, params.items(), label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

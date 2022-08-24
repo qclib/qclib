@@ -39,14 +39,10 @@ class PivotInitialize(InitializeSparse):
             else:
                 self.aux = opt_params.get("aux")
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            self.label = "PivotSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
+        super().__init__(self._name, self.num_qubits, params.items(), label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

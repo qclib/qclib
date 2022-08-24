@@ -44,14 +44,10 @@ class CvqramInitialize(InitializeSparse):
             else:
                 self.mode = opt_params.get("mode")
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            label = "CVSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
+        super().__init__(self._name, self.num_qubits, params.items(), label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

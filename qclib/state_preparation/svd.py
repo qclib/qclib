@@ -42,14 +42,10 @@ class SVDInitialize(Initialize):
         self._name = "svd"
         self._get_num_qubits(params)
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            label = "SVDSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

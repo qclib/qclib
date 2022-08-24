@@ -44,14 +44,10 @@ class CvoqramInitialize(InitializeSparse):
             else:
                 self.with_aux = opt_params.get("with_aux")
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            label = "CVOSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
+        super().__init__(self._name, self.num_qubits, params.items(), label=label)
 
     def _define(self):
         self.definition = self._define_initialize()
