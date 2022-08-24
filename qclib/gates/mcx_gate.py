@@ -21,66 +21,93 @@ import qiskit
 import numpy as np
 
 
-def _mcx_no_ancilla(circuit, controls, free, targ):
+def mcx_no_ancilla(circuit: qiskit.QuantumCircuit, \
+                   controls: qiskit.QuantumRegister, \
+                   free: list, \
+                   targ: int):
+    """
+    Parameters
+    ----------
+    circuit: qiskit.QuantumCircuit
+    controls: qiskit.QuantumRegister
+    free: list
+    targ: int
+
+    Returns
+    -------
+    quantum circuit implementing mcx with free qubits without ancilla
+    """
+
     n_controls = len(controls)
     n_free = len(free)
     targ = [targ] + free[::-1]
 
-    for k in range(2):
+    for _ in range(2):
         for i, _ in enumerate(controls):
             if i < n_controls - 2:
-                circuit.ccx(control_qubit1=controls[n_controls - i - 1], control_qubit2=free[n_free - i - 1], target_qubit=targ[i])
+                circuit.ccx(control_qubit1=controls[n_controls - i - 1], \
+                            control_qubit2=free[n_free - i - 1], \
+                            target_qubit=targ[i])
             else:
-                circuit.ccx(control_qubit1=controls[n_controls - i - 2], control_qubit2=controls[n_controls - i - 1], target_qubit=targ[i])
-                
+                circuit.ccx(control_qubit1=controls[n_controls - i - 2], \
+                            control_qubit2=controls[n_controls - i - 1], \
+                            target_qubit=targ[i])
+
                 break
-        
+
         for i, _ in enumerate(free[1:]):
-            circuit.ccx(control_qubit1=controls[2 + i], control_qubit2=free[i], target_qubit=free[i + 1])
+            circuit.ccx(control_qubit1=controls[2 + i], \
+                        control_qubit2=free[i], \
+                        target_qubit=free[i + 1])
 
-    return
 
-
-def mcx(n_qubits: int):
+def mcx(n_controls: int):
     """
     Parameters
     ----------
-    n_qubits: int
+    n_controls: int
 
     Returns
     -------
-    quantum circuit implementing mcx with ancilla
+    quantum circuit implementing decomposed mcx with ancilla
     """
 
-    k1 = int(np.ceil(n_qubits / 2))
-    k2 = int(np.floor(n_qubits / 2)) - 1
+    n_qubits = n_controls + 1
+    k_1 = int(np.ceil(n_qubits / 2))
+    k_2 = int(np.floor(n_qubits / 2)) - 1
 
-    qr_k1_controls = QuantumRegister(k1, 'k1_control')
-    qr_k2_controls = QuantumRegister(k2, 'k2_control')
-    qr_target = QuantumRegister(1, 'target')
-    qr_ancilla = QuantumRegister(1, 'ancilla')
-    n_free_k1 = k1 - 2
-    n_free_k2 = k2 + 1 - 2
-    qr_free_k1 = list(range(n_qubits - n_free_k1, n_qubits))
-    qr_free_k2 = list(range(n_qubits - k2 - n_free_k2 - 1, n_qubits - k2 - 1))
-    qr_k2_plus_one_controls = list(range(k1, k1 + k2 + 1))
+    qr_k_1_controls = qiskit.QuantumRegister(k_1, 'k_1_control')
+    qr_k_2_controls = qiskit.QuantumRegister(k_2, 'k_2_control')
+    qr_target = qiskit.QuantumRegister(1, 'target')
+    qr_ancilla = qiskit.QuantumRegister(1, 'ancilla')
+    n_free_k_1 = k_1 - 2
+    n_free_k_2 = (k_2 + 1) - 2
+    qr_free_k_1 = list(range(n_qubits - n_free_k_1, n_qubits))
+    qr_free_k_2 = list(range(n_qubits - k_2 - n_free_k_2 - 1, n_qubits - k_2 - 1))
+    qr_k_2_plus_one_controls = list(range(k_1, k_1 + k_2 + 1))
 
-    qc_mcx = QuantumCircuit(qr_k1_controls, qr_k2_controls, qr_target, qr_ancilla)
+    qc_mcx = qiskit.QuantumCircuit(qr_k_1_controls, qr_k_2_controls, qr_target, qr_ancilla)
 
-    _mcx_no_ancilla(circuit=qc_mcx, controls=qr_k1_controls, free=qr_free_k1, targ=qr_ancilla)
+    mcx_no_ancilla(circuit=qc_mcx, controls=qr_k_1_controls, free=qr_free_k_1, targ=qr_ancilla)
 
     qc_mcx.h(qr_target)
     qc_mcx.s(qr_ancilla)
 
-    _mcx_no_ancilla(circuit=qc_mcx, controls=qr_k2_plus_one_controls[::-1], free=qr_free_k2[::-1], targ=qr_ancilla)
+    mcx_no_ancilla(circuit=qc_mcx, \
+                   controls=qr_k_2_plus_one_controls[::-1], \
+                   free=qr_free_k_2[::-1], \
+                   targ=qr_ancilla)
 
     qc_mcx.sdg(qr_ancilla)
 
-    _mcx_no_ancilla(circuit=qc_mcx, controls=qr_k1_controls, free=qr_free_k1, targ=qr_ancilla)
+    mcx_no_ancilla(circuit=qc_mcx, controls=qr_k_1_controls, free=qr_free_k_1, targ=qr_ancilla)
 
     qc_mcx.s(qr_ancilla)
 
-    _mcx_no_ancilla(circuit=qc_mcx, controls=qr_k2_plus_one_controls[::-1], free=qr_free_k2[::-1], targ=qr_ancilla)
+    mcx_no_ancilla(circuit=qc_mcx, \
+                   controls=qr_k_2_plus_one_controls[::-1], \
+                   free=qr_free_k_2[::-1], \
+                   targ=qr_ancilla)
 
     qc_mcx.h(qr_target)
     qc_mcx.sdg(qr_ancilla)
