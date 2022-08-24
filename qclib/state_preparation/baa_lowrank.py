@@ -35,35 +35,23 @@ class _OptParams:
             self.max_combination_size = 0
             self.use_low_rank = False
         else:
-            if opt_params.get("max_fidelity_loss") is None:
-                self.max_fidelity_loss = 0.0
-            else:
-                self.max_fidelity_loss = opt_params.get("max_fidelity_loss")
+            self.max_fidelity_loss = 0.0 if opt_params.get("max_fidelity_loss") is None \
+                else opt_params.get("max_fidelity_loss")
 
-            if opt_params.get("iso_scheme") is None:
-                self.isometry_scheme = "ccd"
-            else:
-                self.isometry_scheme = opt_params.get("iso_scheme")
+            self.isometry_scheme = "ccd" if opt_params.get("iso_scheme") is None else \
+                opt_params.get("iso_scheme")
 
-            if opt_params.get("unitary_scheme") is None:
-                self.unitary_scheme = "qsd"
-            else:
-                self.unitary_scheme = opt_params.get("unitary_scheme")
+            self.unitary_scheme = "qsd" if opt_params.get("unitary_scheme") is None else \
+                opt_params.get("unitary_scheme")
 
-            if opt_params.get("strategy") is None:
-                self.strategy = "greedy"
-            else:
-                self.strategy = opt_params.get("strategy")
+            self.strategy = "greedy" if opt_params.get("strategy") is None else \
+                opt_params.get("strategy")
 
-            if opt_params.get("max_combination_size") is None:
-                self.max_combination_size = 0
-            else:
-                self.max_combination_size = opt_params.get("max_combination_size")
+            self.max_combination_size = 0 if opt_params.get("max_combination_size") is None else \
+                opt_params.get("max_combination_size")
 
-            if opt_params.get("use_low_rank") is None:
-                self.use_low_rank = False
-            else:
-                self.use_low_rank = opt_params.get("use_low_rank")
+            self.use_low_rank = False if opt_params.get("use_low_rank") is None else \
+                opt_params.get("use_low_rank")
 
         if self.max_fidelity_loss < 0 or self.max_fidelity_loss > 1:
             self.max_fidelity_loss = 0.0
