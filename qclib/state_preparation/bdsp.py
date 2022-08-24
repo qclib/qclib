@@ -39,7 +39,7 @@ class BdspInitialize(Initialize):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         """
         Parameters
         ----------

@@ -32,7 +32,7 @@ class IsometryInitialize(Initialize):
     This class implements an isometry based state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         """
         Parameters
         ----------

@@ -24,7 +24,7 @@ class MergeInitialize(InitializeSparse):
     https://ieeexplore.ieee.org/document/9586240
     """
 
-    def __init__(self, params, inverse=False, label=None):
+    def __init__(self, params, label=None):
         """
         Classical algorithm that creates a quantum circuit C that loads
         a sparse quantum state, applying a sequence of operations maping

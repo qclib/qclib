@@ -31,7 +31,7 @@ class FnPointsInitialize(InitializeSparse):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         """State preparation using Ventura and Martinez algorithm quant-ph/9807054
         Algorithm that requires a polynomial number of elementary operations for
         initializing a quantum system to represent only the m known points of a

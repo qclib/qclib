@@ -126,9 +126,7 @@ class TestIsometry(TestCase):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = IsometryInitialize(state_vector,
-                                        opt_params={'scheme':scheme}
-                                    ).definition
+        circuit = IsometryInitialize(state_vector, opt_params={'scheme': scheme}).definition
 
         state = get_state(circuit)
 
@@ -142,9 +140,7 @@ class TestIsometry(TestCase):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
-        circuit = IsometryInitialize(state_vector,
-                                        opt_params={'scheme':scheme}
-                                    ).definition
+        circuit = IsometryInitialize(state_vector, opt_params={'scheme': scheme}).definition
 
         state = get_state(circuit)
 

@@ -30,7 +30,7 @@ class UCGInitialize(Initialize):
         https://doi.org/10.48550/arXiv.quant-ph/0410066
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
 
         self._name = "ucg_initialize"
         self._get_num_qubits(params)

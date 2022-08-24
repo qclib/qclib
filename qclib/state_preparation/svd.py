@@ -21,7 +21,7 @@ import numpy as np
 from qiskit import QuantumRegister, QuantumCircuit
 from qclib.unitary import unitary
 from qclib.gates.initialize import Initialize
-import topdown
+from .topdown import TopDownInitialize
 
 
 class SVDInitialize(Initialize):
@@ -30,7 +30,7 @@ class SVDInitialize(Initialize):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None):
+    def __init__(self, params, label=None):
         """
         Parameters
         ----------
@@ -67,7 +67,7 @@ class SVDInitialize(Initialize):
             gate = SVDInitialize(matrix_d)
             circuit.append(gate, reg_b)
         else:
-            gate = topdown.TopDownInitialize(matrix_d)
+            gate = TopDownInitialize(matrix_d)
             circuit.append(gate, reg_b)
 
         for k in range(int(n_qubits // 2)):

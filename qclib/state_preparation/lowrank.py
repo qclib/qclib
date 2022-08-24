@@ -20,7 +20,7 @@ defined at https://arxiv.org/abs/1003.5760.
 from math import ceil, log2
 import numpy as np
 from qiskit import QuantumCircuit
-import topdown
+from .topdown import TopDownInitialize
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
 from qclib.gates.initialize import Initialize
@@ -37,7 +37,7 @@ class LowRankInitialize(Initialize):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         """
         Parameters
         ----------
@@ -110,7 +110,7 @@ class LowRankInitialize(Initialize):
     def _define_initialize(self):
 
         if self.num_qubits < 2:
-            return topdown.TopDownInitialize(self.params).definition
+            return TopDownInitialize(self.params).definition
 
         circuit, reg_a, reg_b = self._create_quantum_circuit()
 
@@ -158,13 +158,10 @@ class LowRankInitialize(Initialize):
         """
         if data.shape[1] == 1:
             # state preparation
-            gate_u = LowRankInitialize(
-                data[:, 0],
-                opt_params={
-                    "iso_scheme": self.isometry_scheme,
-                    "unitary_scheme": self.unitary_scheme,
-                },
-            )
+            gate_u = LowRankInitialize(data[:, 0], opt_params={
+                "iso_scheme": self.isometry_scheme,
+                "unitary_scheme": self.unitary_scheme,
+            })
 
         elif data.shape[0] // 2 == data.shape[1]:
             # isometry 2^(n-1) to 2^n.

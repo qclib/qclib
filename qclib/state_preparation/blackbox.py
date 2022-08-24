@@ -36,7 +36,7 @@ class BlackBoxInitialize(Initialize):
     Gate U2 in PRL 85.6 (2000) is implemented with uniformly controlled rotations
     """
 
-    def __init__(self, params, inverse=False, label=None):
+    def __init__(self, params, label=None):
         self._name = "blackbox"
         self._get_num_qubits(params)
         self.num_qubits += 1

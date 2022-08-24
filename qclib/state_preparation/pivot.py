@@ -26,7 +26,7 @@ from qclib.gates.initialize_sparse import InitializeSparse
 class PivotInitialize(InitializeSparse):
     """Pivot State Preparation arXiv:2006.00016"""
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         self._name = "pivot"
         self._get_num_qubits(params)
 

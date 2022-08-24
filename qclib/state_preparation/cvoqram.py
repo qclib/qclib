@@ -30,7 +30,7 @@ class CvoqramInitialize(InitializeSparse):
     This class implements a sparse state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         self._name = "cvoqram"
         self._get_num_qubits(params)
         self.norm = 1

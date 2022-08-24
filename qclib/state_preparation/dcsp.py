@@ -39,7 +39,7 @@ class DcspInitialize(Initialize):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None):
+    def __init__(self, params, label=None):
         """
         Parameters
         ----------
