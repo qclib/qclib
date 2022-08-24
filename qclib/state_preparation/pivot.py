@@ -17,8 +17,8 @@
 import numpy as np
 import qiskit
 from qiskit import QuantumCircuit
-from qclib.state_preparation import LowRankInitialize
-from qclib.state_preparation.initialize_sparse import InitializeSparse
+from .lowrank import LowRankInitialize
+from qclib.gates.initialize_sparse import InitializeSparse
 
 # pylint: disable=maybe-no-member
 

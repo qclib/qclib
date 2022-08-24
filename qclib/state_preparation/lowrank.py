@@ -20,10 +20,10 @@ defined at https://arxiv.org/abs/1003.5760.
 from math import ceil, log2
 import numpy as np
 from qiskit import QuantumCircuit
-from qclib.state_preparation import TopDownInitialize
+import topdown
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_rank
 
 # pylint: disable=maybe-no-member
@@ -113,7 +113,7 @@ class LowRankInitialize(Initialize):
     def _define_initialize(self):
 
         if self.num_qubits < 2:
-            return TopDownInitialize(self.params).definition
+            return topdown.TopDownInitialize(self.params).definition
 
         circuit, reg_a, reg_b = self._create_quantum_circuit()
 

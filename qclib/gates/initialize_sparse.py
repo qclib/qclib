@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from re import match
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 
 
 class InitializeSparse(Initialize):

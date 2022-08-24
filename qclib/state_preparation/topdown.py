@@ -20,7 +20,7 @@
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.state_preparation.util.state_tree_preparation import (
     Amplitude,
     state_decomposition,

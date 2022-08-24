@@ -21,7 +21,7 @@ from math import ceil, log2
 import numpy as np
 from qiskit import QuantumCircuit
 
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.state_preparation.util.state_tree_preparation import (
     Amplitude,
     state_decomposition,

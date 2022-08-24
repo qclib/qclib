@@ -20,7 +20,7 @@ Physical review letters 85.6 (2000): 1334.
 Gate U2 in PRL 85.6 (2000) is implemented with uniformly controlled rotations
 """
 
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.extensions import UCRYGate, UCRZGate

@@ -18,8 +18,8 @@ https://arxiv.org/abs/2111.03132
 """
 
 from qiskit import QuantumCircuit
-from qclib.state_preparation.initialize import Initialize
-from qclib.state_preparation import LowRankInitialize
+from qclib.gates.initialize import Initialize
+from lowrank import LowRankInitialize
 from qclib.state_preparation.util.baa import adaptive_approximation
 
 

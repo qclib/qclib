@@ -21,7 +21,7 @@ https://arxiv.org/abs/2108.10182
 from math import log2
 from qiskit import QuantumCircuit
 
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.state_preparation.util.state_tree_preparation import (
     Amplitude,
     state_decomposition,

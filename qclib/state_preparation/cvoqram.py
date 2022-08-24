@@ -18,7 +18,7 @@ import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library.standard_gates import UGate
 from qclib.util import _compute_matrix_angles
-from qclib.state_preparation.initialize_sparse import InitializeSparse
+from qclib.gates.initialize_sparse import InitializeSparse
 
 # pylint: disable=maybe-no-member
 

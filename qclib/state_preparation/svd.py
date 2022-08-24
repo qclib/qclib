@@ -20,8 +20,8 @@ defined at https://arxiv.org/abs/1003.5760.
 import numpy as np
 from qiskit import QuantumRegister, QuantumCircuit
 from qclib.unitary import unitary
-from qclib.state_preparation.initialize import Initialize
-from qclib.state_preparation import TopDownInitialize
+from qclib.gates.initialize import Initialize
+import topdown
 
 
 class SVDInitialize(Initialize):
@@ -71,7 +71,7 @@ class SVDInitialize(Initialize):
             gate = SVDInitialize(matrix_d)
             circuit.append(gate, reg_b)
         else:
-            gate = TopDownInitialize(matrix_d)
+            gate = topdown.TopDownInitialize(matrix_d)
             circuit.append(gate, reg_b)
 
         for k in range(int(n_qubits // 2)):

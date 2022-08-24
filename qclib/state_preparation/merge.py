@@ -15,7 +15,7 @@ import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UGate
 from qclib.gates.mc_gate import mc_gate
-from qclib.state_preparation.initialize_sparse import InitializeSparse
+from qclib.gates.initialize_sparse import InitializeSparse
 
 
 class MergeInitialize(InitializeSparse):

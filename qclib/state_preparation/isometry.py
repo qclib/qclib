@@ -19,7 +19,7 @@ https://journals.aps.org/pra/abstract/10.1103/PhysRevA.93.032318
 
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.isometry import decompose
 
 
