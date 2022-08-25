@@ -20,11 +20,11 @@ defined at https://arxiv.org/abs/1003.5760.
 from math import ceil, log2
 import numpy as np
 from qiskit import QuantumCircuit
-from .topdown import TopDownInitialize
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
 from qclib.gates.initialize import Initialize
 from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_rank
+from .topdown import TopDownInitialize
 
 # pylint: disable=maybe-no-member
 
@@ -217,12 +217,12 @@ def cnot_count(
     low_rank=0,
     isometry_scheme="ccd",
     unitary_scheme="qsd",
-    partition=None,
-    method="estimate",
+    partition=None
 ):
     """
     Estimate the number of CNOTs to build the state preparation circuit.
     """
+    method = "estimate"
 
     n_qubits = _to_qubits(len(state_vector))
     if n_qubits < 2:
@@ -263,8 +263,7 @@ def _cnots(data, iso_scheme="ccd", uni_scheme="qsd", method="estimate"):
         return cnot_count(
             data[:, 0],
             isometry_scheme=iso_scheme,
-            unitary_scheme=uni_scheme,
-            method=method,
+            unitary_scheme=uni_scheme
         )
 
     if data.shape[0] // 2 == data.shape[1]:
