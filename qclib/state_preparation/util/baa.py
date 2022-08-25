@@ -493,19 +493,17 @@ def _count_saved_cnots(
 
     cnots_originally = schmidt_cnots(
         original_vector,
-        method=method,
         partition=original_partition,
         low_rank=original_rank,
     )
     cnots_phase_3 = schmidt_cnots(
         subsystem1_vector,
-        method=method,
         partition=subsystem_local_partition,
         low_rank=subsystem_rank,
     )
 
     cnots_phase_4 = 0
     if subsystem2_vector is not None:
-        cnots_phase_4 = schmidt_cnots(subsystem2_vector, method=method)
+        cnots_phase_4 = schmidt_cnots(subsystem2_vector)
 
     return cnots_originally - cnots_phase_3 - cnots_phase_4
