@@ -50,7 +50,7 @@ def build_unitary(gate, decomposition="qsd", iso=0):
     unitary matrix gate using the cosine sine decomposition.
     """
     size = len(gate)
-    if size > 4:
+    if decomposition == 'qsd' and size > 4:
         n_qubits = int(log2(size))
 
         qubits = QuantumRegister(n_qubits)
@@ -86,6 +86,8 @@ def build_unitary(gate, decomposition="qsd", iso=0):
         circuit.compose(gate_right, qubits, inplace=True)
 
         return circuit
+    elif decomposition == 'qr':
+        return _qrd(gate)
 
     circuit = QuantumCircuit(int(log2(size)), name="qsd2q")
     circuit.append(UnitaryGate(gate), circuit.qubits)
@@ -334,3 +336,27 @@ def _apply_a2(circ):
         qc3 = two_qubit_decompose.two_qubit_cnot_decompose(mat2)
         ccirc.data[ind2] = (qc3.to_gate(), qargs, cargs)
     return ccirc
+
+# QR decomposition
+
+def _qrd(gate: np.ndarray):
+
+    n_qubits = int(np.log2(len(gate)))
+
+    qubits = QuantumRegister(n_qubits)
+    circuit = QuantumCircuit(qubits)
+
+    gate_sequence = _build_qr_gate_sequence(gate, n_qubits)
+    circuit = _build_qr_circuit(gate_sequence)
+
+    return circuit
+
+def _build_qr_gate_sequence(gate, n_qubits):
+    for col_idx in range(2**n_qubits):
+        for row_idx in range(col_idx, 2**n_qubits):
+            # create q_matrix
+            Q = np.eye(2**n_qubits)
+
+def _build_qr_circuit(gate_sequence):
+    return None
+    
