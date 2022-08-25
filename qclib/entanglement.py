@@ -20,7 +20,6 @@ from typing import Union, Tuple, List
 import numpy as np
 import tensorly as tl
 from tensorly.decomposition import parafac
-from tensorly.cp_tensor import CPTensor
 
 
 def _get_iota(qubit_idx: int, qubits: int, selector_bit: int, basis_state: int):
@@ -122,7 +121,6 @@ def geometric_entanglement(
 
     """
     shape = tuple([2] * _to_qubits(len(state_vector)))
-    rank = [1] * _to_qubits(len(state_vector))
     tensor = tl.tensor(state_vector).reshape(shape)
     results = {}
     # The Tucker decomposition is actually a randomized algorithm.
