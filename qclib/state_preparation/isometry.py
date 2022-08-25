@@ -19,7 +19,7 @@ https://journals.aps.org/pra/abstract/10.1103/PhysRevA.93.032318
 
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.isometry import decompose
 
 
@@ -32,7 +32,7 @@ class IsometryInitialize(Initialize):
     This class implements an isometry based state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         """
         Parameters
         ----------
@@ -56,14 +56,11 @@ class IsometryInitialize(Initialize):
             else:
                 self.scheme = opt_params.get("scheme")
 
-        self._label = label
+
         if label is None:
-            self._label = "SP"
+            label = "ISOSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

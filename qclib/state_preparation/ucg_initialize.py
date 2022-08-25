@@ -20,7 +20,7 @@
 import numpy as np
 import numpy.linalg as la
 from qiskit import QuantumCircuit, QuantumRegister
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.gates.uc_gate import UCGate
 
 
@@ -30,19 +30,16 @@ class UCGInitialize(Initialize):
         https://doi.org/10.48550/arXiv.quant-ph/0410066
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
 
         self._name = "ucg_initialize"
         self._get_num_qubits(params)
         self.target_state = 0 if opt_params is None else opt_params.get("target_state")
 
         if label is None:
-            self._label = "ucg_initialize"
+            label = "ucg_initialize"
 
-            if inverse:
-                self._label = "ucg_initialize_dg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

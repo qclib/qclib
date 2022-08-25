@@ -21,7 +21,7 @@ https://arxiv.org/abs/2108.10182
 from math import log2
 from qiskit import QuantumCircuit
 
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.state_preparation.util.state_tree_preparation import (
     Amplitude,
     state_decomposition,
@@ -39,7 +39,7 @@ class DcspInitialize(Initialize):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None):
+    def __init__(self, params, label=None):
         """
         Parameters
         ----------
@@ -51,14 +51,10 @@ class DcspInitialize(Initialize):
         self._name = "dcsp"
         self._get_num_qubits(params)
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            self._label = "DCSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

@@ -418,7 +418,7 @@ def _cnot_count_estimate_ccd(log_lines, log_cols):
 
             if _k_s(k, i) == 0 and _b(k, i + 1) != 0:
                 # MCG implemented as a UCG up to a diagonal
-                n_qubits = sum([k_bin[q] == "1" for q in control + ancilla]) + 1
+                n_qubits = sum(k_bin[q] == "1" for q in control + ancilla) + 1
                 cnots += 2 ** (n_qubits - 1) - 1
 
             # UCG up to a diagonal
