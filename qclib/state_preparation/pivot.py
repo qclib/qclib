@@ -39,7 +39,7 @@ class PivotInitialize(InitializeSparse):
             else:
                 self.aux = opt_params.get("aux")
 
-        self.non_zero = len(self.params)
+        self.non_zero = len(params)
 
         self.register = qiskit.QuantumRegister(self.num_qubits, name="q")
         self.index_differ = None
@@ -48,7 +48,7 @@ class PivotInitialize(InitializeSparse):
         if label is None:
             self.label = "PivotSP"
 
-        super().__init__(self._name, self.num_qubits, params.items(), label=label)
+        super().__init__("PivotInitialize", self.num_qubits, params.items(), label=label)
 
     def _define(self):
         self.definition = self._define_initialize()
