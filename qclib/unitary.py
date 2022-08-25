@@ -340,6 +340,7 @@ def _apply_a2(circ):
 # QR decomposition
 
 def _qrd(gate: np.ndarray):
+    """"""
 
     n_qubits = int(np.log2(len(gate)))
 
@@ -352,10 +353,26 @@ def _qrd(gate: np.ndarray):
     return circuit
 
 def _build_qr_gate_sequence(gate, n_qubits):
+    gate_sequence = []
     for col_idx in range(2**n_qubits):
-        for row_idx in range(col_idx, 2**n_qubits):
+        for row_idx in range(col_idx+1, 2**n_qubits):
             # create q_matrix
-            Q = np.eye(2**n_qubits)
+            Q = np.eye(2**n_qubits, dtype=gate.dtype)
+            # computing norm
+            norm = np.linalg.norm([gate[row_idx-1, col_idx], 
+                                   gate[row_idx, col_idx]])
+
+            # computing Q
+            Q[row_idx-1, col_idx] = gate[row_idx-1, col_idx] / norm
+            Q[row_idx, col_idx] = gate[row_idx, col_idx] / norm
+
+            Q[row_idx-1, col_idx+1] = gate[row_idx, col_idx] / norm
+            Q[row_idx, col_idx+1] = -gate[row_idx-1, col_idx] / norm
+
+            # applyting Q to the unitary
+            gate = Q @ gate
+            gate_sequence.append(Q)
+    return np.array(gate_sequence)
 
 def _build_qr_circuit(gate_sequence):
     return None
