@@ -15,7 +15,6 @@
 from unittest import TestCase
 import numpy as np
 from qclib.entanglement import geometric_entanglement
-from qclib.state_preparation.util.baa import adaptive_approximation
 
 class TestEntanglement(TestCase):
     def test_geometric_measure_entanglement(self):
@@ -24,7 +23,7 @@ class TestEntanglement(TestCase):
         ghz4[15] = 1 / np.sqrt(2)
         gme = geometric_entanglement(ghz4)
         self.assertTrue(np.isclose(gme, 0.5))
-        
+
         nqbits = 5
         w6 = np.zeros(2**nqbits)
         for k in range(nqbits):
@@ -32,4 +31,3 @@ class TestEntanglement(TestCase):
 
         gme = geometric_entanglement(w6)
         self.assertTrue(np.abs(gme - 0.59) < 1e-3)
-
