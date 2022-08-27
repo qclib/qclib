@@ -73,8 +73,8 @@ class TestUCGInitialize(TestCase):
 
         initialize = UCGInitialize.initialize
         circuit = QuantumCircuit(nqubits)
-
-        initialize(circuit, state.tolist(), opt_params={"target_state": target})
+        params = {"target_state": target, "preserve_previous": True}
+        initialize(circuit, state.tolist(), opt_params=params)
 
         output_state = get_state(circuit)
 
