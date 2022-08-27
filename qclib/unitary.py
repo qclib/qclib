@@ -348,7 +348,7 @@ def _qrd(gate: np.ndarray):
     circuit = QuantumCircuit(qubits)
 
     gate_sequence = _build_qr_gate_sequence(gate, n_qubits)
-    circuit = _build_qr_circuit(gate_sequence)
+    circuit = _build_qr_circuit(gate_sequence, n_qubits)
 
     return circuit
 
@@ -374,8 +374,31 @@ def _build_qr_gate_sequence(gate, n_qubits):
             gate_sequence.append(Q)
     return np.array(gate_sequence)
 
-def _build_qr_circuit(gate_sequence):
-    for Q_i in gate_sequence:
+def _build_qr_circuit(gate_sequence, n_qubits):
+    '''
+    This function was coded for real numbers only
+    Input:
+    gate_sequence: Sequence of unitary matrixes with the majority of the elements being 1s in the diagonal, except for 4 elements:
+    "a and -a" in the diagonal and "2 elements b" outside the diagonal. Since they are unitary, the position of the two b's outside the diagonal are related
+    n_qubits: Number of qubits
+
+    '''
+    
+
+    dim_matrix = 2**n_qubits
+    for Q in gate_sequence:
+        #Find the position and values of a,b
+        a=0, b=0
+        col=0, row=0
+        for col_idx in range(dim_matrix):
+            for row_idx in range(col_idx+1):
+                if Q[row_idx][col_id]!=0:
+                        b=Q[row_idx][col_id]
+                        col = col_idx
+                        row = row_idx
+                        a = Q[row_idx][row_idx]
         
+
+
     return None
     
