@@ -375,5 +375,7 @@ def _build_qr_gate_sequence(gate, n_qubits):
     return np.array(gate_sequence)
 
 def _build_qr_circuit(gate_sequence):
+    for Q_i in gate_sequence:
+        
     return None
     
