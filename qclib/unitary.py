@@ -22,7 +22,7 @@ import numpy as np
 import scipy as sp
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit import transpile
-from qiskit.circuit.library import RYGate, CZGate
+from qiskit.circuit.library import RYGate, CZGate, MCMT
 from qiskit.extensions import UnitaryGate, UCRYGate, UCRZGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
 from qiskit.quantum_info.synthesis import two_qubit_decompose
@@ -374,6 +374,18 @@ def _build_qr_gate_sequence(gate, n_qubits):
             gate_sequence.append(Q)
     return np.array(gate_sequence)
 
+def _get_row_col(Q, dim_matrix):
+    for row_idx in range(dim_matrix):
+        for col_idx in range(row_idx):
+            if Q[row_idx][col_idx] != 0:
+                b = Q[row_idx][col_idx]
+                a = Q[col_idx][col_idx]
+                col = col_idx
+                row = row_idx
+
+    return a, b, row, col
+
+''''''
 def _build_qr_circuit(gate_sequence, n_qubits):
     '''
     This function was coded for real numbers only
@@ -383,22 +395,66 @@ def _build_qr_circuit(gate_sequence, n_qubits):
     n_qubits: Number of qubits
 
     '''
-    
-
+    #inverter e tirar o complex conjugado de gate_sequence
     dim_matrix = 2**n_qubits
+    qubits = QuantumRegister(n_qubits)
+    circuit = QuantumCircuit(qubits)
     for Q in gate_sequence:
         #Find the position and values of a,b
-        a=0, b=0
-        col=0, row=0
-        for col_idx in range(dim_matrix):
-            for row_idx in range(col_idx+1):
-                if Q[row_idx][col_id]!=0:
-                        b=Q[row_idx][col_id]
-                        col = col_idx
-                        row = row_idx
-                        a = Q[row_idx][row_idx]
-        
+        a,b,row,col = _get_row_col(Q, 2**3)
+        print(row, col)
+
+        #bit-wise operation to determine the qubits
+        col_qubits = []
+        row_qubits = []
+        diff_qubits = np.zeros(n_qubits)
+        n_diff = 0
+        for m in range(n_qubits):
+            base = 2**m
+            if(col & base == 0):
+                col_qubits.append(0)
+            else:
+                col_qubits.append(1)
+            if (row & base == 0):
+                row_qubits.append(0)
+            else:
+                row_qubits.append(1)
+            if(row_qubits[m] != col_qubits[m]):
+                n_diff +=1
+                diff_qubits[m]=1
+        print(row_qubits)
+        print(col_qubits)
+        print(diff_qubits)
+        print(n_diff)
+
+        #for m in range(n_qubits):
+        #   base = 2**m
+        #    if(base & diff):
+        #        #diff_qubits.append(m)
+        #        n_diff+=1
+        while(n_diff>1):
+            n_diff= n_diff-1
+        U = [[a,b], [b, -a]]
+        #print(U)
+        print(diff_qubits)
+        gate = UnitaryGate(U)
+        qubits_list=[]
+        for m in range(n_qubits):
+            if(diff_qubits[m]==0):
+                if(row_qubits[m]==0):
+                    circuit.x(m)
+                qubits_list.append(m)
+            else:
+                diffqubit = m
+        qubits_list.append(diffqubit)
+        print(qubits_list)
+        circuit.append(MCMT(gate, n_qubits-1,1), qubits_list)
+        circuit.draw()
+                
 
 
-    return None
+
+
+
+    return circuit
     
