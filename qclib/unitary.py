@@ -493,7 +493,7 @@ def _build_qr_circuit(gate_sequence, n_qubits):
             prep_gates.append(memory)
             n_diff-=1     
         U = np.array([[a, b], 
-                      [c, -np.conj(a)]])
+                      [c, d]])
         #print(U.round(3))
         gate = UnitaryGate(U)
         qubits_list=[]
