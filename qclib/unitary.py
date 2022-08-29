@@ -384,65 +384,23 @@ def _get_row_col(Q, dim_matrix):
     for row_idx in range(dim_matrix):
         for col_idx in range(row_idx):
             if Q[row_idx][col_idx] != 0:
-                b = Q[row_idx][col_idx]
+                
                 a = Q[col_idx][col_idx]
+                b = Q[row_idx][col_idx]
+                c = Q[col_idx][row_idx]
+                d = Q[row_idx][row_idx]
                 col = col_idx
                 row = row_idx
 
-    return a, b, row, col
+    return a, b, c, d, row, col
 
-''''''
-def _build_qr_circuit(gate_sequence, n_qubits):
-    '''
-    This function was coded for real numbers only
-    Input:
-    gate_sequence: Sequence of unitary matrixes with the majority of the elements being 1s in the diagonal, except for 4 elements:
-    "a and -a" in the diagonal and "2 elements b" outside the diagonal. Since they are unitary, the position of the two b's outside the diagonal are related
-    n_qubits: Number of qubits
-
-    '''
-    #inverter e tirar o complex conjugado de gate_sequence
-    dim_matrix = 2**n_qubits
+def _apply_MCXs(n_qubits, row_qubits_new, col_qubits_new):
     qubits = QuantumRegister(n_qubits)
     circuit = QuantumCircuit(qubits)
-    for Q in gate_sequence:
-        #Find the position and values of a,b
-        a,b,row,col = _get_row_col(Q, 2**n_qubits)
-
-        #bit-wise operation to determine the qubits
-        col_qubits = []
-        row_qubits = []
-        diff_qubits = np.zeros(n_qubits)
-        n_diff = 0
-        for m in range(n_qubits):
-            base = 2**m
-            if(col & base == 0):
-                col_qubits.append(0)
-            else:
-                col_qubits.append(1)
-            if (row & base == 0):
-                row_qubits.append(0)
-            else:
-                row_qubits.append(1)
-            if(row_qubits[m] != col_qubits[m]):
-                n_diff +=1
-                diff_qubits[m]=1
-        #print(row_qubits)
-        #print(col_qubits)
-        #print(diff_qubits)
-        #print(n_diff)
-        row_qubits_new = row_qubits
-        col_qubits_new = col_qubits
-        # Apply MCXs to only have one qubit different
-        #prep_gates and memory saves information about the gates we used, so we can use them again later
-        prep_gates =[]
-        
-        while(n_diff>1):
-            for m in range(n_qubits):
+    for m in range(n_qubits):
                 if(row_qubits_new[m]==0 and  col_qubits_new[m]==1):
                     qubits_list=[]
                     memory = np.ones(shape= n_qubits, dtype = int)
-
                     for n in range(n_qubits):
                         if(n!=m):
                             if(row_qubits_new[n]==0):
@@ -457,7 +415,6 @@ def _build_qr_circuit(gate_sequence, n_qubits):
                     for n in range(n_qubits):
                         if(n!=m and row_qubits_new[n]==0):
                                 circuit.x(n)
-                    prep_gates.append(memory)
                     break
                 if(row_qubits_new[m]==1 and  col_qubits_new[m]==0):
                     qubits_list=[]
@@ -477,12 +434,67 @@ def _build_qr_circuit(gate_sequence, n_qubits):
                     for n in range(n_qubits):
                         if(n!=m and col_qubits_new[n]==0):
                                 circuit.x(n)
-                    prep_gates.append(memory)
+                    
                     break
-            n_diff-=1     
-        U = np.array([[a, np.conj(b)], 
-                      [b, -np.conj(a)]])
+    return circuit, memory, row_qubits_new, col_qubits_new
 
+''''''
+def _build_qr_circuit(gate_sequence, n_qubits):
+    '''
+    This function was coded for real numbers only
+    Input:
+    gate_sequence: Sequence of unitary matrixes with the majority of the elements being 1s in the diagonal, except for 4 elements:
+    "a and -a" in the diagonal and "2 elements b" outside the diagonal. Since they are unitary, the position of the two b's outside the diagonal are related
+    n_qubits: Number of qubits
+
+    '''
+    #inverter e tirar o complex conjugado de gate_sequence
+    dim_matrix = 2**n_qubits
+    qubits = QuantumRegister(n_qubits)
+    circuit = QuantumCircuit(qubits)
+    gate_sequence = gate_sequence[1:]
+    for Q in gate_sequence:
+        #Find the position and values of a,b
+        #print("Q")
+        #print(Q.round(3))
+        a,b,c,d,row,col = _get_row_col(Q, 2**n_qubits)
+        #print("a,b,c,d")
+        #print(a,b,c,d)
+        #bit-wise operation to determine the qubits
+        col_qubits = []
+        row_qubits = []
+        diff_qubits = np.zeros(n_qubits)
+        n_diff = 0
+        for m in range(n_qubits):
+            base = 2**m
+            if(col & base == 0):
+                col_qubits.append(0)
+            else:
+                col_qubits.append(1)
+            if (row & base == 0):
+                row_qubits.append(0)
+            else:
+                row_qubits.append(1)
+            if(row_qubits[m] != col_qubits[m]):
+                n_diff +=1
+                diff_qubits[m]=1
+        row_qubits_new = row_qubits
+        col_qubits_new = col_qubits
+        #print(n_diff)
+        #rint(row_qubits)
+        # Apply MCXs to only have one qubit different
+        #prep_gates and memory saves information about the gates we used, so we can use them again later
+        prep_gates =[]
+        
+        while(n_diff>1):
+            diff_circ, memory, row_qubits_new, col_qubits_new = _apply_MCXs(n_qubits, row_qubits_new, col_qubits_new)
+            qubits_list = range(n_qubits)
+            circuit.append(diff_circ, qubits_list)
+            prep_gates.append(memory)
+            n_diff-=1     
+        U = np.array([[a, b], 
+                      [c, -np.conj(a)]])
+        #print(U.round(3))
         gate = UnitaryGate(U)
         qubits_list=[]
         for m in range(n_qubits):
@@ -493,7 +505,6 @@ def _build_qr_circuit(gate_sequence, n_qubits):
             else:
                 diffqubit = m
         qubits_list.append(diffqubit)
-        print(qubits_list)
         circuit.append(MCMT(gate, n_qubits-1,1), qubits_list)
         for m in range(n_qubits):
             if(col_qubits_new[m]==row_qubits_new[m]):
