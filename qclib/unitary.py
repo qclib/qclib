@@ -407,8 +407,7 @@ def _build_qr_circuit(gate_sequence, n_qubits):
     circuit = QuantumCircuit(qubits)
     for Q in gate_sequence:
         #Find the position and values of a,b
-        a,b,row,col = _get_row_col(Q, 2**3)
-        print(row, col)
+        a,b,row,col = _get_row_col(Q, 2**n_qubits)
 
         #bit-wise operation to determine the qubits
         col_qubits = []
@@ -443,8 +442,7 @@ def _build_qr_circuit(gate_sequence, n_qubits):
                 if(row_qubits_new[m]==0 and  col_qubits_new[m]==1):
                     qubits_list=[]
                     memory = np.ones(shape= n_qubits, dtype = int)
-                    print("memory start")
-                    print(memory)
+
                     for n in range(n_qubits):
                         if(n!=m):
                             if(row_qubits_new[n]==0):
@@ -464,8 +462,7 @@ def _build_qr_circuit(gate_sequence, n_qubits):
                 if(row_qubits_new[m]==1 and  col_qubits_new[m]==0):
                     qubits_list=[]
                     memory = np.ones(shape= n_qubits, dtype = int)
-                    print("memory start")
-                    print(memory)
+
                     for n in range(n_qubits):
                         if(n!=m):
                             if(col_qubits_new[n]==0):
@@ -483,11 +480,9 @@ def _build_qr_circuit(gate_sequence, n_qubits):
                     prep_gates.append(memory)
                     break
             n_diff-=1     
-        U = [[a,b], [b, -a]]
-        #print(U)
-        print("qubits final")
-        print(row_qubits_new)
-        print(col_qubits_new )
+        U = np.array([[a, np.conj(b)], 
+                      [b, -np.conj(a)]])
+
         gate = UnitaryGate(U)
         qubits_list=[]
         for m in range(n_qubits):
@@ -524,14 +519,6 @@ def _build_qr_circuit(gate_sequence, n_qubits):
             for m in range(n_qubits):
                 if(aux[m]==0):
                     circuit.x(m)
-
-
-        circuit.draw()
-                
-
-
-
-
 
     return circuit
     
