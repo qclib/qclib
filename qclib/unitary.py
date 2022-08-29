@@ -381,9 +381,10 @@ def _build_qr_gate_sequence(gate, n_qubits):
     return np.array(gate_sequence)
 
 def _get_row_col(Q, dim_matrix):
+    a, b, c, d = 1., 0., 0., 1.
     for row_idx in range(dim_matrix):
         for col_idx in range(row_idx):
-            if Q[row_idx][col_idx] != 0:
+            if Q[row_idx][col_idx] != 0 and np.not_equal(Q[row_idx][col_idx], 1):
                 
                 a = Q[col_idx][col_idx]
                 b = Q[row_idx][col_idx]
@@ -391,51 +392,50 @@ def _get_row_col(Q, dim_matrix):
                 d = Q[row_idx][row_idx]
                 col = col_idx
                 row = row_idx
-
     return a, b, c, d, row, col
 
 def _apply_MCXs(n_qubits, row_qubits_new, col_qubits_new):
     qubits = QuantumRegister(n_qubits)
     circuit = QuantumCircuit(qubits)
     for m in range(n_qubits):
-                if(row_qubits_new[m]==0 and  col_qubits_new[m]==1):
-                    qubits_list=[]
-                    memory = np.ones(shape= n_qubits, dtype = int)
-                    for n in range(n_qubits):
-                        if(n!=m):
-                            if(row_qubits_new[n]==0):
-                                circuit.x(n)
-                                memory[n] = 0
-                            qubits_list.append(n)
-                    qubits_list.append(m)
-                    #for the target qubit
-                    memory[m] = 2
-                    circuit.append(MCXGate(n_qubits-1), qubits_list)
-                    row_qubits_new[m]=1
-                    for n in range(n_qubits):
-                        if(n!=m and row_qubits_new[n]==0):
-                                circuit.x(n)
-                    break
-                if(row_qubits_new[m]==1 and  col_qubits_new[m]==0):
-                    qubits_list=[]
-                    memory = np.ones(shape= n_qubits, dtype = int)
+        if(row_qubits_new[m]==0 and  col_qubits_new[m]==1):
+            qubits_list=[]
+            memory = np.ones(shape= n_qubits, dtype = int)
+            for n in range(n_qubits):
+                if(n!=m):
+                    if(row_qubits_new[n]==0):
+                        circuit.x(n)
+                        memory[n] = 0
+                    qubits_list.append(n)
+            qubits_list.append(m)
+            #for the target qubit
+            memory[m] = 2
+            circuit.append(MCXGate(n_qubits-1), qubits_list)
+            row_qubits_new[m]=1
+            for n in range(n_qubits):
+                if(n!=m and row_qubits_new[n]==0):
+                        circuit.x(n)
+            break
+        if(row_qubits_new[m]==1 and  col_qubits_new[m]==0):
+            qubits_list=[]
+            memory = np.ones(shape= n_qubits, dtype = int)
 
-                    for n in range(n_qubits):
-                        if(n!=m):
-                            if(col_qubits_new[n]==0):
-                                circuit.x(n)
-                                memory[n] = 0
-                            qubits_list.append(n)
-                    qubits_list.append(m)
-                    #for the target qubit
-                    memory[m] = 2
-                    circuit.append(MCXGate(n_qubits-1), qubits_list)
-                    col_qubits_new[m]=1
-                    for n in range(n_qubits):
-                        if(n!=m and col_qubits_new[n]==0):
-                                circuit.x(n)
-                    
-                    break
+            for n in range(n_qubits):
+                if(n!=m):
+                    if(col_qubits_new[n]==0):
+                        circuit.x(n)
+                        memory[n] = 0
+                    qubits_list.append(n)
+            qubits_list.append(m)
+            #for the target qubit
+            memory[m] = 2
+            circuit.append(MCXGate(n_qubits-1), qubits_list)
+            col_qubits_new[m]=1
+            for n in range(n_qubits):
+                if(n!=m and col_qubits_new[n]==0):
+                        circuit.x(n)
+            
+            break
     return circuit, memory, row_qubits_new, col_qubits_new
 
 ''''''
@@ -452,15 +452,11 @@ def _build_qr_circuit(gate_sequence, n_qubits):
     dim_matrix = 2**n_qubits
     qubits = QuantumRegister(n_qubits)
     circuit = QuantumCircuit(qubits)
-    gate_sequence = gate_sequence[1:]
+    #gate_sequence = gate_sequence[1:]
     for Q in gate_sequence:
-        #Find the position and values of a,b
-        #print("Q")
-        #print(Q.round(3))
-        a,b,c,d,row,col = _get_row_col(Q, 2**n_qubits)
-        #print("a,b,c,d")
-        #print(a,b,c,d)
-        #bit-wise operation to determine the qubits
+
+        a, b, c, d, row, col = _get_row_col(Q, 2**n_qubits)
+
         col_qubits = []
         row_qubits = []
         diff_qubits = np.zeros(n_qubits)
