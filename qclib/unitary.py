@@ -385,7 +385,7 @@ def _get_row_col(Q, dim_matrix):
     for row_idx in range(dim_matrix):
         for col_idx in range(row_idx):
             if Q[row_idx][col_idx] != 0 and np.not_equal(Q[row_idx][col_idx], 1):
-
+                
                 a = Q[col_idx][col_idx]
                 b = Q[row_idx][col_idx]
                 c = Q[col_idx][row_idx]
