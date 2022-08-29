@@ -78,15 +78,16 @@ class TestUnitary(TestCase):
             self._test_unitary('qr', n_qubits)
 
     def test_qr_gate_sequence(self):
-        n_qubits = 2
-        unitary_matrix = unitary_group.rvs(2**n_qubits)
-        gate_sequence = _build_qr_gate_sequence(unitary_matrix, n_qubits)
-        
-        unitary_rebuilt = np.eye(2**n_qubits)
-        for g in gate_sequence:
-            unitary_rebuilt = g @ unitary_rebuilt
 
-        self.assertTrue(np.allclose(unitary_rebuilt, unitary_matrix))
+        for n_qubits in range(2, 5):
+            unitary_matrix = unitary_group.rvs(2**n_qubits)
+            gate_sequence = _build_qr_gate_sequence(unitary_matrix, n_qubits)
+            
+            unitary_rebuilt = np.eye(2**n_qubits)
+            for g in gate_sequence:
+                unitary_rebuilt = g @ unitary_rebuilt
+
+            self.assertTrue(np.allclose(unitary_rebuilt, unitary_matrix))
 
     # QSD
 

@@ -376,6 +376,7 @@ def _build_qr_gate_sequence(gate, n_qubits):
             gate = Q @ gate
             gate_sequence.append(Q.conj().T)
 
+    gate_sequence.append(gate)
     gate_sequence = list(reversed(gate_sequence))
     return np.array(gate_sequence)
 
