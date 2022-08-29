@@ -354,24 +354,29 @@ def _qrd(gate: np.ndarray):
 
 def _build_qr_gate_sequence(gate, n_qubits):
     gate_sequence = []
-    for col_idx in range(2**n_qubits):
+    for col_idx in range(2**n_qubits - 1):
         for row_idx in range(col_idx+1, 2**n_qubits):
             # create q_matrix
+            
             Q = np.eye(2**n_qubits, dtype=gate.dtype)
             # computing norm
-            norm = np.linalg.norm([gate[row_idx-1, col_idx], 
+            norm = np.linalg.norm([gate[col_idx, col_idx], 
                                    gate[row_idx, col_idx]])
 
             # computing Q
-            Q[row_idx-1, col_idx] = gate[row_idx-1, col_idx] / norm
-            Q[row_idx, col_idx] = gate[row_idx, col_idx] / norm
+            a = gate[col_idx, col_idx] / norm
+            b = gate[row_idx, col_idx] / norm
+            Q[col_idx, col_idx] = np.conj(a)
+            Q[col_idx, row_idx] = np.conj(b)
 
-            Q[row_idx-1, col_idx+1] = gate[row_idx, col_idx] / norm
-            Q[row_idx, col_idx+1] = -gate[row_idx-1, col_idx] / norm
+            Q[row_idx, col_idx] = b
+            Q[row_idx, row_idx] = -a
 
             # applyting Q to the unitary
             gate = Q @ gate
-            gate_sequence.append(Q)
+            gate_sequence.append(Q.conj().T)
+
+    gate_sequence = list(reversed(gate_sequence))
     return np.array(gate_sequence)
 
 def _get_row_col(Q, dim_matrix):

@@ -18,7 +18,7 @@ from unittest import TestCase
 from scipy.stats import unitary_group
 import numpy as np
 import qiskit
-from qclib.unitary import unitary, _compute_gates, cnot_count
+from qclib.unitary import unitary, _compute_gates, cnot_count, _build_qr_gate_sequence
 from qclib.util import get_state
 
 class TestUnitary(TestCase):
@@ -70,6 +70,23 @@ class TestUnitary(TestCase):
         """ Testing qclib.unitary.cnot_count csd"""
         for n_qubits in range(2, 6):
             self._test_counting('csd', n_qubits)
+
+    # QR
+    def test_unitary_qr(self):
+        """ Testing qclib.unitary csd"""
+        for n_qubits in range(2, 5):
+            self._test_unitary('qr', n_qubits)
+
+    def test_qr_gate_sequence(self):
+        n_qubits = 2
+        unitary_matrix = unitary_group.rvs(2**n_qubits)
+        gate_sequence = _build_qr_gate_sequence(unitary_matrix, n_qubits)
+        
+        unitary_rebuilt = np.eye(2**n_qubits)
+        for g in gate_sequence:
+            unitary_rebuilt = g @ unitary_rebuilt
+
+        self.assertTrue(np.allclose(unitary_rebuilt, unitary_matrix))
 
     # QSD
 
