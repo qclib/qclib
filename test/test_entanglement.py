@@ -58,5 +58,5 @@ class TestEntanglement(TestCase):
                 0.48220629 + 0.07876658j,
             ]
         )
-        gme = geometric_entanglement(vector)
+        gme = geometric_entanglement(vector.tolist())
         self.assertTrue(gme > 0)

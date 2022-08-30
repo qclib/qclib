@@ -19,7 +19,7 @@ from typing import Union, Tuple, List
 
 import numpy as np
 import tensorly as tl
-from tensorly.decomposition import parafac
+from tensorly.decomposition import tucker
 
 def _get_iota(qubit_idx: int, qubits: int, selector_bit: int, basis_state: int):
     assert selector_bit in [0, 1]
@@ -126,8 +126,8 @@ def geometric_entanglement(
     # We take four shots and take the min of it.
 
     for _ in range(4):
-        decomp_tensor = parafac(tensor, rank=1, normalize_factors=True, init="random")
-        fidelity_loss = 1 - np.abs(decomp_tensor.weights[0]) ** 2
+        decomp_tensor = tucker(tensor, rank=1, init="random")
+        fidelity_loss = 1 - np.abs(decomp_tensor.core.flatten()[0]) ** 2
         results[fidelity_loss] = decomp_tensor
 
     min_fidelity_loss = min(results)
