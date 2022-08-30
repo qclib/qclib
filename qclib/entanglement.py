@@ -133,6 +133,7 @@ def geometric_entanglement(
     min_fidelity_loss = min(results)
 
     if return_product_state:
+        decomp_tensor = results[min_fidelity_loss]
         product_state = 1
         for factor in decomp_tensor.factors:
             product_state = np.kron(product_state, factor)
