@@ -20,6 +20,7 @@ from typing import Union, Tuple, List
 import numpy as np
 import tensorly as tl
 from tensorly.decomposition import tucker
+from tensorly.tucker_tensor import tucker_to_vec
 
 def _get_iota(qubit_idx: int, qubits: int, selector_bit: int, basis_state: int):
     assert selector_bit in [0, 1]
@@ -133,11 +134,7 @@ def geometric_entanglement(
     min_fidelity_loss = min(results)
 
     if return_product_state:
-        decomp_tensor = results[min_fidelity_loss]
-        product_state = 1
-        for factor in decomp_tensor.factors:
-            product_state = np.kron(product_state, factor)
-        product_state = product_state.flatten()
+        product_state = tucker_to_vec(decomp_tensor)
 
         return min_fidelity_loss, product_state
 
