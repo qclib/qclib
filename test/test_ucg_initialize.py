@@ -42,7 +42,7 @@ class TestUCGInitialize(TestCase):
         initialize(circuit, state.tolist(), opt_params={"target_state": 10})
 
         output_state = get_state(circuit)
-        print(output_state @ state.T)
+
         self.assertTrue(np.allclose(output_state, state))
 
     def test_three_qubit_state_complex(self):
@@ -59,7 +59,7 @@ class TestUCGInitialize(TestCase):
         initialize(circuit, state.tolist(), opt_params={"target_state": 7})
 
         output_state = get_state(circuit)
-        print(output_state @ state.T)
+
         self.assertTrue(np.allclose(output_state, state))
 
     def test_four_qubit_state_preserve(self):
