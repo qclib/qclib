@@ -60,7 +60,7 @@ class TestUCGInitialize(TestCase):
 
             circuit.append(gate, circuit.qubits)
             output_state = get_state(circuit)
-            print(output_state)
+
             self.assertTrue(np.allclose(np.abs(output_state[0]), 1))
 
     def test_ucg(self):
