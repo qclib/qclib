@@ -18,7 +18,7 @@ https://arxiv.org/abs/quant-ph/9807054
 
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
-from qclib.state_preparation.initialize_sparse import InitializeSparse
+from qclib.gates.initialize_sparse import InitializeSparse
 
 # pylint: disable=maybe-no-member
 
@@ -31,7 +31,7 @@ class FnPointsInitialize(InitializeSparse):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         """State preparation using Ventura and Martinez algorithm quant-ph/9807054
         Algorithm that requires a polynomial number of elementary operations for
         initializing a quantum system to represent only the m known points of a
@@ -75,17 +75,12 @@ class FnPointsInitialize(InitializeSparse):
                 self.n_output_values = default_n_output_values
             else:
                 self.n_output_values = opt_params.get("n_output_values")
-                if self.n_output_values < default_n_output_values:
-                    self.n_output_values = default_n_output_values
+                self.n_output_values = max(self.n_output_values, default_n_output_values)
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            self._label = "FNSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
+        super().__init__(self._name, self.num_qubits, params.items(), label)
 
     def _define(self):
         self.definition = self._define_initialize()
@@ -104,8 +99,8 @@ class FnPointsInitialize(InitializeSparse):
             bits_z = [int(k) for k in input_z]
 
             circuit.x(reg_c[1])
-            for j, _ in enumerate(bits_z):
-                if bits_z0[j] != bits_z[j]:
+            for j, k in enumerate(bits_z):
+                if bits_z0[j] != k:
                     circuit.cx(reg_c[1], reg_x[j])
 
             bits_z0 = bits_z
@@ -113,7 +108,7 @@ class FnPointsInitialize(InitializeSparse):
             circuit.x(reg_c[1])
 
             self._apply_smatrix(
-                circuit, idx_p, self.n_output_values, output_s.real, reg_c
+                circuit, idx_p, output_s.real, reg_c
             )
 
             self._flipflop01(bits_z, circuit, reg_x)
@@ -152,13 +147,13 @@ class FnPointsInitialize(InitializeSparse):
 
         return circuit
 
-    def _apply_smatrix(self, circuit, idx_p, n_output_values, output_s, reg_c):
+    def _apply_smatrix(self, circuit, idx_p, output_s, reg_c):
         theta = -2 * np.arccos(np.sqrt(idx_p / (idx_p + 1)))
         # This sign is here for the smaller values of "s" to be represented by
         # negative amplitudes and the larger ones by positive amplitudes.
         # In the paper this negative sign is missing. Without it the matrix S
         # is not unitary.
-        lamb = -output_s * 2 * np.pi / n_output_values
+        lamb = -output_s * 2 * np.pi / self.n_output_values
 
         phi = -lamb
         circuit.cu(theta, phi, lamb, 0, reg_c[0], reg_c[1])

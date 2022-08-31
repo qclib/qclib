@@ -33,7 +33,7 @@ class TestCvoqram(TestCase):
     def test_cvoqram_without_aux(self):
         """ Testing cvoqram 2 amplitudes and with auxiliary qubits """
         data = {'001':1j * np.sqrt(1/3), '110':np.sqrt(2j/3)}
-        qc_cvoqram = CvoqramInitialize(data, opt_params={'with_aux':False}).definition
+        qc_cvoqram = CvoqramInitialize(data, opt_params={'with_aux': False}).definition
         state = get_state(qc_cvoqram)
         self.assertTrue(np.isclose(state[0b1100], np.sqrt(2j/3)))
         self.assertTrue(np.isclose(state[0b0010], 1j * np.sqrt(1/3)))
@@ -106,7 +106,7 @@ class TestPivotingSP(TestCase):
         data = double_sparse(n_qubits, log_npatterns, prob)
         data = {''.join(map(str, b)):d for b, d in data}
 
-        circuit = PivotInitialize(data, opt_params={'aux':True}).definition
+        circuit = PivotInitialize(data, opt_params={'aux': True}).definition
         state = get_state(circuit)
         for pattern, amp in data.items():
             index = pattern + '0'  # padding work qubits

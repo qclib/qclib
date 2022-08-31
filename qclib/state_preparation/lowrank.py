@@ -20,11 +20,11 @@ defined at https://arxiv.org/abs/1003.5760.
 from math import ceil, log2
 import numpy as np
 from qiskit import QuantumCircuit
-from qclib.state_preparation import TopDownInitialize
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_rank
+from .topdown import TopDownInitialize
 
 # pylint: disable=maybe-no-member
 
@@ -37,7 +37,7 @@ class LowRankInitialize(Initialize):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         """
         Parameters
         ----------
@@ -98,14 +98,11 @@ class LowRankInitialize(Initialize):
             else:
                 self.unitary_scheme = opt_params.get("unitary_scheme")
 
-        self._label = label
+
         if label is None:
-            self._label = "SP"
+            label = "LRSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()
@@ -161,13 +158,10 @@ class LowRankInitialize(Initialize):
         """
         if data.shape[1] == 1:
             # state preparation
-            gate_u = LowRankInitialize(
-                data[:, 0],
-                opt_params={
-                    "iso_scheme": self.isometry_scheme,
-                    "unitary_scheme": self.unitary_scheme,
-                },
-            )
+            gate_u = LowRankInitialize(data[:, 0], opt_params={
+                "iso_scheme": self.isometry_scheme,
+                "unitary_scheme": self.unitary_scheme,
+            })
 
         elif data.shape[0] // 2 == data.shape[1]:
             # isometry 2^(n-1) to 2^n.
@@ -223,12 +217,12 @@ def cnot_count(
     low_rank=0,
     isometry_scheme="ccd",
     unitary_scheme="qsd",
-    partition=None,
-    method="estimate",
+    partition=None
 ):
     """
     Estimate the number of CNOTs to build the state preparation circuit.
     """
+    method = "estimate"
 
     n_qubits = _to_qubits(len(state_vector))
     if n_qubits < 2:
@@ -269,8 +263,7 @@ def _cnots(data, iso_scheme="ccd", uni_scheme="qsd", method="estimate"):
         return cnot_count(
             data[:, 0],
             isometry_scheme=iso_scheme,
-            unitary_scheme=uni_scheme,
-            method=method,
+            unitary_scheme=uni_scheme
         )
 
     if data.shape[0] // 2 == data.shape[1]:

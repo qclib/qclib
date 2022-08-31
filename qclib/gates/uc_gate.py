@@ -1,3 +1,7 @@
+"""
+    qiskit UCGate with fixed inverse()
+"""
+
 from qiskit.extensions.quantum_initializer import UCGate as qUCGate
 from qiskit.circuit.gate import Gate
 from qiskit.circuit.quantumcircuit import QuantumCircuit
@@ -7,9 +11,6 @@ class UCGate(qUCGate):
     """
     qiskit UCGate with fixed inverse()
     """
-
-    def __init__(self, gate_list, up_to_diagonal=False):
-        super().__init__(gate_list, up_to_diagonal)
 
     def inverse(self):
         """Return the inverse.
@@ -23,7 +24,7 @@ class UCGate(qUCGate):
 
         definition = QuantumCircuit(*self.definition.qregs)
         for inst in reversed(self._definition):
-            definition._append(inst.replace(operation=inst.operation.inverse()))
+            definition._append(inst.replace(operation=inst.operation.inverse())) # pylint: disable=W0212
 
         definition.global_phase = -self.definition.global_phase
 
