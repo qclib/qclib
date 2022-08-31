@@ -218,7 +218,7 @@ def schmidt_composition(svd_u, svd_v, singular_values, partition):
 
     n_qubits = _to_qubits(svd_u.shape[0]) + _to_qubits(svd_v.shape[1])
 
-    sep_matrix = (svd_u * singular_values) @ svd_v
+    sep_matrix = (svd_u @ singular_values) @ svd_v
 
     state_vector = _undo_separation_matrix(n_qubits, sep_matrix, partition)
 
