@@ -50,7 +50,7 @@ def build_unitary(gate, decomposition="qsd", iso=0):
     unitary matrix gate using the cosine sine decomposition.
     """
     size = len(gate)
-    if decomposition == 'qsd' and size > 4:
+    if decomposition != 'qr' and size > 4:
         n_qubits = int(log2(size))
 
         qubits = QuantumRegister(n_qubits)
