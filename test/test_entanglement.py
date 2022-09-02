@@ -16,7 +16,9 @@
 
 from unittest import TestCase
 import numpy as np
-from qclib.entanglement import geometric_entanglement
+from qclib.entanglement import geometric_entanglement, \
+                               schmidt_decomposition, \
+                               schmidt_composition
 
 class TestEntanglement(TestCase):
     """ Tests for entanglement.py"""
@@ -35,6 +37,20 @@ class TestEntanglement(TestCase):
 
         gme = geometric_entanglement(w6_state)
         self.assertTrue(np.abs(gme - 0.59) < 1e-3)
+
+    def test_schmidt_composition(self):
+        state = np.random.rand(2**8) + np.random.rand(2**8) * 1.0j
+        state = state / np.linalg.norm(state)
+        svd_u, svd_s, svd_v = schmidt_decomposition(state, [0, 1, 2])
+        svd_s = svd_s / np.linalg.norm(svd_s)
+
+        rank = len(svd_s)
+        svd_u = svd_u[:, :rank]
+        svd_v = svd_v[:rank, :]
+
+        state_rebuilt = schmidt_composition(svd_u, svd_v, svd_s, [0, 1, 2])
+
+        self.assertTrue(np.allclose(state_rebuilt, state))
 
     def test_geometric_positive(self):
         """Test if geometric entanglemen is positive"""
