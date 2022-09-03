@@ -17,8 +17,7 @@
 """
 from unittest import TestCase
 import numpy as np
-from qiskit import QuantumCircuit, transpile
-
+from qiskit import QuantumCircuit
 from qclib.state_preparation import UCGInitialize
 from qclib.util import get_state
 
@@ -29,9 +28,13 @@ class TestUCGInitialize(TestCase):
     def _test_ucg(self, n_qubits):
         state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
         state = state / np.linalg.norm(state)
-        
+
         for target_state in range(2**n_qubits):
-            gate = UCGInitialize(state.tolist(), opt_params={"target_state": target_state}).definition
+            gate = UCGInitialize(state.tolist(),
+                                    opt_params={
+                                        "target_state": target_state
+                                    }
+                                ).definition
 
             circuit = QuantumCircuit(n_qubits)
 
@@ -51,7 +54,12 @@ class TestUCGInitialize(TestCase):
             state[target_state - 1] = 0
             state = state / np.linalg.norm(state)
 
-            gate = UCGInitialize(state.tolist(), opt_params={"target_state": target_state, "preserve_previous": True}).definition
+            gate = UCGInitialize(state.tolist(),
+                                    opt_params={
+                                        "target_state": target_state,
+                                        "preserve_previous": True
+                                    }
+                                ).definition
 
             circuit = QuantumCircuit(n_qubits)
 
@@ -65,10 +73,12 @@ class TestUCGInitialize(TestCase):
             self.assertTrue(np.allclose(output_state, state))
 
     def test_ucg(self):
+        """Test UCGInitialize"""
         for n_qubits in range(3, 5):
             self._test_ucg(n_qubits)
 
     def test_ucg_preserve(self):
+        """Test UCGInitialize with `preserve_previous`"""
         for n_qubits in range(3, 5):
             self._test_ucg_preserve(n_qubits)
 
