@@ -32,8 +32,7 @@ class TestUCGInitialize(TestCase):
         
         for target_state in range(2**n_qubits):
             gate = UCGInitialize(state.tolist(), opt_params={"target_state": target_state}).definition
-            gate = transpile(gate, basis_gates=['u', 'cx'], optimization_level=0)
-        
+
             circuit = QuantumCircuit(n_qubits)
 
             for j, bit in enumerate(f'{target_state:0{n_qubits}b}'[::-1]):
@@ -49,26 +48,28 @@ class TestUCGInitialize(TestCase):
         state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
 
         for target_state in range(1, 2**n_qubits):
-            if target_state > 0:
-                state[target_state - 1] = 0
+            state[target_state - 1] = 0
             state = state / np.linalg.norm(state)
 
             gate = UCGInitialize(state.tolist(), opt_params={"target_state": target_state, "preserve_previous": True}).definition
-            gate = transpile(gate, basis_gates=['u', 'cx'], optimization_level=0)
-        
+
             circuit = QuantumCircuit(n_qubits)
+
+            for j, bit in enumerate(f'{target_state:0{n_qubits}b}'[::-1]):
+                if bit == '1':
+                    circuit.x(j)
 
             circuit.append(gate, circuit.qubits)
             output_state = get_state(circuit)
 
-            self.assertTrue(np.allclose(np.abs(output_state[0]), 1))
+            self.assertTrue(np.allclose(output_state, state))
 
     def test_ucg(self):
-        for n_qubits in range(3, 6):
+        for n_qubits in range(3, 5):
             self._test_ucg(n_qubits)
 
     def test_ucg_preserve(self):
-        for n_qubits in range(3, 6):
+        for n_qubits in range(3, 5):
             self._test_ucg_preserve(n_qubits)
 
     def test_real(self):
