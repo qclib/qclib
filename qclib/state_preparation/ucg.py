@@ -116,16 +116,14 @@ class UCGInitialize(Initialize):
         mux[r_gate] = np.eye(2)
 
         out_gate_ctrl = list(range(0, target)) + list(range(target + 1, self.num_qubits))
+        ctrl_state = self.str_target[0:target][::-1]
 
-        control = []
-        for i in out_gate_ctrl:
-            if self.str_target[i] == "1":
-                control.append(i)
+        if len(ctrl_state) < self.num_qubits - 1:
+            ctrl_state = bin(r_gate)[2:].zfill(len(mult_controls)) + ctrl_state
 
-        if len(control) > 0:
-            gate = qc_gate.control(len(control))
+        gate = qc_gate.control(self.num_qubits - 1, ctrl_state=ctrl_state)
 
-            self.circuit.compose(gate, control + [target], inplace=True)
+        self.circuit.compose(gate, out_gate_ctrl + [target], inplace=True)
 
     @staticmethod
     def _update_parent(children):
