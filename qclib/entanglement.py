@@ -120,14 +120,15 @@ def geometric_entanglement(
             If return_product_state == True, returns a tuple with a list of product state vectors.
 
     """
-    shape = tuple([2] * _to_qubits(len(state_vector)))
+    n_qubits = _to_qubits(len(state_vector))
+    shape = tuple([2] * n_qubits)
     tensor = tl.tensor(state_vector).reshape(shape)
     results = {}
     # The Tucker decomposition is actually a randomized algorithm.
     # We take four shots and take the min of it.
 
     for _ in range(4):
-        decomp_tensor = tucker(tensor, rank=1, init="random")
+        decomp_tensor = tucker(tensor, rank=[1] * n_qubits, init="random")
         fidelity_loss = 1 - np.abs(decomp_tensor.core.flatten()[0]) ** 2
         results[fidelity_loss] = decomp_tensor
 
@@ -218,7 +219,8 @@ def schmidt_composition(svd_u, svd_v, singular_values, partition):
 
     n_qubits = _to_qubits(svd_u.shape[0]) + _to_qubits(svd_v.shape[1])
 
-    sep_matrix = (svd_u * singular_values) @ svd_v
+    rank = len(singular_values)
+    sep_matrix = (svd_u[:, :rank] * singular_values) @ svd_v[:rank, :]
 
     state_vector = _undo_separation_matrix(n_qubits, sep_matrix, partition)
 
