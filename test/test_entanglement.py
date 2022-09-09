@@ -44,10 +44,6 @@ class TestEntanglement(TestCase):
         svd_u, svd_s, svd_v = schmidt_decomposition(state, [0, 1, 2])
         svd_s = svd_s / np.linalg.norm(svd_s)
 
-        rank = len(svd_s)
-        svd_u = svd_u[:, :rank]
-        svd_v = svd_v[:rank, :]
-
         state_rebuilt = schmidt_composition(svd_u, svd_v, svd_s, [0, 1, 2])
 
         self.assertTrue(np.allclose(state_rebuilt, state))
