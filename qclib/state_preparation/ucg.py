@@ -67,8 +67,8 @@ class UCGInitialize(Initialize):
 
         return self.circuit.inverse()
 
-    def _disentangle_qubit(self, children: list[float],
-                           parent: list[float],
+    def _disentangle_qubit(self, children: 'list[float]',
+                           parent: 'list[float]',
                            r_gate: int, tree_level: int):
         """ Apply UCGate to disentangle qubit target"""
 
@@ -83,7 +83,7 @@ class UCGInitialize(Initialize):
 
         return bit_target, ucg
 
-    def _define_mult(self, children: list[float], parent: list[float], tree_level: int):
+    def _define_mult(self, children: 'list[float]', parent: 'list[float]', tree_level: int):
 
         current_level_mux = self._build_multiplexor(parent,
                                                     children,
@@ -92,8 +92,8 @@ class UCGInitialize(Initialize):
 
         return current_level_mux, mult_controls, target
 
-    def _apply_ucg(self, current_level_mux: list[np.ndarray],
-                   mult_controls: list[int],
+    def _apply_ucg(self, current_level_mux: 'list[np.ndarray]',
+                   mult_controls: 'list[int]',
                    target: int):
         """ Creates and applies multiplexer """
 
@@ -104,8 +104,8 @@ class UCGInitialize(Initialize):
             self.circuit.unitary(current_level_mux[0], target) # pylint: disable=maybe-no-member
         return ucg
 
-    def _preserve_previous(self, mux: list[np.ndarray],
-                           mult_controls: list[int],
+    def _preserve_previous(self, mux: 'list[np.ndarray]',
+                           mult_controls: 'list[int]',
                            r_gate: int, target: int):
         """
         Remove one gate from mux and apply separately to avoid changing previous base vectors
@@ -134,7 +134,7 @@ class UCGInitialize(Initialize):
         return parent
 
     @staticmethod
-    def _apply_diagonal(bit_target: str, parent: list[float], ucg: UCGate):
+    def _apply_diagonal(bit_target: str, parent: 'list[float]', ucg: UCGate):
 
         children = parent
         if bit_target == '1':
@@ -152,8 +152,8 @@ class UCGInitialize(Initialize):
 
         return controls, target
 
-    def _build_multiplexor(self, parent_amplitudes: list[float],
-                           children_amplitudes: list[float], str_target: str):
+    def _build_multiplexor(self, parent_amplitudes: 'list[float]',
+                           children_amplitudes: 'list[float]', str_target: str):
         """
         Infers the unitary to be used in the uniformily controlled multiplexor
         defined by Bergholm et al (2005).
