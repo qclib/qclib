@@ -105,6 +105,22 @@ class TestLowRank(TestCase):
 
         self.assertTrue(np.allclose(state_vector, state))
 
+    def test_initialize_real(self):
+        n_qubits = 5
+        state_vector = np.random.rand(2**n_qubits)
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        qubits = list(range(n_qubits))
+        partitions = combinations(qubits, (n_qubits+1)//2)
+        for partition in partitions:
+            circuit = QuantumCircuit(n_qubits)
+            opt_params = {'partition': partition}
+            LowRankInitialize.initialize(circuit, state_vector, opt_params=opt_params)
+
+            state = get_state(circuit)
+
+            self.assertTrue(np.allclose(state_vector, state))
+
     def test_initialize_rank_4(self):
         self._test_initialize_mae(4, max_mae=10**-10)
 

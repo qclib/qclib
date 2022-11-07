@@ -39,6 +39,7 @@ def adaptive_approximation(
     strategy="greedy",
     max_combination_size=0,
     use_low_rank=False,
+    svd="auto"
 ):
     """
     It reduces the entanglement of the given state, producing an approximation
@@ -77,6 +78,10 @@ def adaptive_approximation(
             If set to True, ``rank``>1 approximations are also considered. This is fine
             tuning for high-entanglement states and is slower.
             The default value is False.
+        svd (string):
+            Function to compute the SVD, acceptable values are 'auto' (default), 'normal',
+            and 'randomized'. 'auto' sets `svd='randomized'` for `n_qubits>=10` and
+            `svd='normal'` for `n_qubits<10`.
     Returns:
         Node: a node with the data required to build the quantum circuit.
     """
@@ -98,7 +103,7 @@ def adaptive_approximation(
 
     root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, ranks, partitions, [])
     _build_approximation_tree(
-        root_node, max_fidelity_loss, strategy, max_combination_size, use_low_rank
+        root_node, max_fidelity_loss, strategy, max_combination_size, use_low_rank, svd
     )
 
     leaves = []
@@ -203,7 +208,7 @@ class Node:
 
 
 def _build_approximation_tree(
-    node, max_fidelity_loss, strategy="brute_force", max_k=0, use_low_rank=False
+    node, max_fidelity_loss, strategy="brute_force", max_k=0, use_low_rank=False, svd="auto"
 ):
     # Ignore states that are already completely or partially disentangled.
     node_data = [
@@ -216,7 +221,7 @@ def _build_approximation_tree(
             max_k = len(entangled_qubits) // 2
 
         if strategy == "greedy":
-            combs = _greedy_combinations(entangled_vector, entangled_qubits, max_k)
+            combs = _greedy_combinations(entangled_vector, entangled_qubits, max_k, svd)
         elif strategy == "split":
             combs = _split_combinations(entangled_qubits, max_k)
         elif strategy == "canonical":
@@ -231,7 +236,7 @@ def _build_approximation_tree(
             # If the bipartition cannot be fully disentangled, an approximate
             # state is returned.
             entanglement_info = _reduce_entanglement(
-                entangled_vector, entangled_qubits, partition, use_low_rank
+                entangled_vector, entangled_qubits, partition, svd, use_low_rank
             )
 
             node_fidelity_loss = np.array(
@@ -252,9 +257,9 @@ def _build_approximation_tree(
                         node.nodes.append(new_node)
 
     if len(node.nodes) > 0:  # If it is not the end of the recursion,
-        node.vectors.clear()  # clear vectors and qubits to save memory.
+        node.vectors.clear() # clear vectors and qubits to save memory.
         node.qubits.clear()  # This information is no longer needed from this point
-        # on (but may be needed in the future).
+                             # on (but may be needed in the future).
     if len(node.nodes) > 0 and strategy in ("greedy", "canonical"):
         # Locally optimal choice at each stage.
         node.nodes = [_search_best(node.nodes)]
@@ -263,7 +268,7 @@ def _build_approximation_tree(
         # call _build_approximation_tree recurrently for each new node.
         if not new_node.is_leaf:  # Saves one call for each leaf node.
             _build_approximation_tree(
-                new_node, max_fidelity_loss, strategy, max_k, use_low_rank
+                new_node, max_fidelity_loss, strategy, max_k, use_low_rank, svd
             )
 
 
@@ -284,7 +289,7 @@ def _all_combinations(entangled_qubits, max_k):
     return chain(*(combinations(entangled_qubits, k) for k in range(1, max_k)), combs)
 
 
-def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
+def _greedy_combinations(entangled_vector, entangled_qubits, max_k, svd):
     """
     Combinations with a qubit-by-qubit analysis.
     Returns only one representative of the partitions of size k (1<=k<=max_k).
@@ -300,7 +305,7 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
         # Disentangles one qubit at a time.
         for qubit_to_disentangle in current_qubits:
             entanglement_info = _reduce_entanglement(
-                current_vector, current_qubits, (qubit_to_disentangle,)
+                current_vector, current_qubits, (qubit_to_disentangle,), svd
             )
 
             new_node = _create_node(node, entanglement_info[0])
@@ -317,7 +322,7 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
     return (tuple(sorted(chain(*node.qubits[:k]))) for k in range(1, max_k + 1))
 
 
-def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
+def _reduce_entanglement(state_vector, register, partition, svd, use_low_rank=False):
     local_partition = []
     # Maintains the relative position between the qubits of the two subsystems.
     for qubit_to_disentangle in partition:
@@ -325,7 +330,7 @@ def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
 
     local_partition = tuple(local_partition)
 
-    svd_u, svd_s, svd_v = schmidt_decomposition(state_vector, local_partition)
+    svd_u, svd_s, svd_v = schmidt_decomposition(state_vector, local_partition, svd)
 
     entanglement_info = []
 

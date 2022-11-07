@@ -157,7 +157,7 @@ def _separation_matrix(n_qubits, state_vector, partition):
     return sep_matrix
 
 
-def schmidt_decomposition(state_vector, partition):
+def schmidt_decomposition(state_vector, partition, svd='normal'):
     """
     Execute the Schmidt decomposition of a state vector.
 
@@ -174,13 +174,21 @@ def schmidt_decomposition(state_vector, partition):
         The valid range for indexes is ``0 <= index < n_qubits``. The number of indexes
         in the partition must be greater than or equal to ``1`` and less than or equal
         to ``n_qubits//2`` (``n_qubits//2+1`` if ``n_qubits`` is odd).
+
+    svd: str
+        Function to compute the SVD, acceptable values are 'auto', 'normal' (default),
+        and 'randomized'. 'auto' sets `svd='randomized'` for `n_qubits>=10` and
+        `svd='normal'` for `n_qubits<10`.
     """
 
     n_qubits = _to_qubits(len(state_vector))
 
     sep_matrix = _separation_matrix(n_qubits, state_vector, partition)
 
-    return np.linalg.svd(sep_matrix)
+    if svd == 'randomized' or (svd == 'auto' and n_qubits >= 10):
+        return randomized_svd(sep_matrix)
+    
+    return np.linalg.svd(sep_matrix, full_matrices=sep_matrix.shape[0] == sep_matrix.shape[1])
 
 
 def _to_qubits(n_state_vector):
@@ -225,3 +233,58 @@ def schmidt_composition(svd_u, svd_v, singular_values, partition):
     state_vector = _undo_separation_matrix(n_qubits, sep_matrix, partition)
 
     return state_vector
+
+
+# Randomized SVD.
+# Complexity O(N log(sqrt(N)/2)) vs. O(sqrt(N)^3).
+# https://arxiv.org/abs/0909.4061
+
+def randomized_range_finder(A, n_dims, n_iter=2, random_state=None):
+    """
+    Borrowed from Tensorly while their new version is not released.
+    https://github.com/tensorly/tensorly/blob/main/tensorly/tenalg/svd.py
+
+    Computes an orthonormal matrix (Q) whose range approximates the range of A,  i.e., Q Q^H A ≈ A
+    
+    """
+    rng = tl.check_random_state(random_state)
+    dim_1, dim_2 = tl.shape(A)
+    Q = tl.tensor(rng.normal(size=(dim_2, n_dims)), **tl.context(A))
+    Q, _ = tl.qr(tl.dot(A, Q))
+
+    # Perform power iterations when spectrum decays slowly
+    A_H = tl.conj(tl.transpose(A))
+    for i in range(n_iter):
+        Q, _ = tl.qr(tl.dot(A_H, Q))
+        Q, _ = tl.qr(tl.dot(A, Q))
+
+    return Q
+
+
+def randomized_svd(matrix, n_iter=2, random_state=None):
+    """
+    Borrowed from Tensorly while their new version is not released.
+    https://github.com/tensorly/tensorly/blob/main/tensorly/tenalg/svd.py
+
+    Computes a truncated randomized SVD.
+
+    """
+
+    dim_1, dim_2 = tl.shape(matrix)
+    if dim_1 == dim_2:
+        return np.linalg.svd(matrix)
+
+    min_dim = min(dim_1, dim_2)
+    n_dims = min_dim//2
+
+    Q = randomized_range_finder(
+        matrix, n_dims=n_dims, n_iter=n_iter, random_state=random_state
+    )
+    Q_H = tl.conj(tl.transpose(Q))
+    matrix_reduced = tl.dot(Q_H, matrix)
+
+    U, S, V = np.linalg.svd(matrix_reduced, full_matrices=False)
+
+    U = tl.dot(Q, U)
+
+    return U, S, V
