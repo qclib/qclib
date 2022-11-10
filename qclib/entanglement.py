@@ -18,9 +18,13 @@ Functions to compute entanglement measures.
 from typing import Union, Tuple, List
 
 import numpy as np
+from numpy.random import default_rng
 import tensorly as tl
+from math import log, sqrt, ceil
 from tensorly.decomposition import tucker
 from tensorly.tucker_tensor import tucker_to_vec
+
+_rng = default_rng()
 
 def _get_iota(qubit_idx: int, qubits: int, selector_bit: int, basis_state: int):
     assert selector_bit in [0, 1]
@@ -187,7 +191,7 @@ def schmidt_decomposition(state_vector, partition, svd='normal'):
 
     if svd == 'randomized' or (svd == 'auto' and n_qubits >= 10):
         return randomized_svd(sep_matrix)
-    
+
     return np.linalg.svd(sep_matrix, full_matrices=sep_matrix.shape[0] == sep_matrix.shape[1])
 
 
@@ -235,56 +239,75 @@ def schmidt_composition(svd_u, svd_v, singular_values, partition):
     return state_vector
 
 
-# Randomized SVD.
-# Complexity O(N log(sqrt(N)/2)) vs. O(sqrt(N)^3).
-# https://arxiv.org/abs/0909.4061
+def _separation_tensor(n_qubits, state_vector, partitions):
 
-def randomized_range_finder(A, n_dims, n_iter=2, random_state=None):
+    qubit_shape = tuple([2] * n_qubits)
+    qubit_vector = np.array(state_vector).reshape(qubit_shape)
+
+    start = 1
+    for p in partitions:
+        from_move = sorted(p)
+        to_move = (n_qubits - np.arange(start, start + len(p)))[::-1]
+        qubit_vector = np.moveaxis(qubit_vector, from_move, to_move)
+        start += len(p)
+
+    new_shape = tuple(2 ** len(p) for p in partitions)
+    remain_qubits = n_qubits - start + 1
+    if remain_qubits > 0:
+        new_shape = tuple(2 ** remain_qubits, *new_shape)
+
+    sep_tensor = qubit_vector.reshape(new_shape)
+
+    return sep_tensor
+
+
+def randomized_svd(A, rank=1, n_iter=2, over_sampling=10):
     """
-    Borrowed from Tensorly while their new version is not released.
-    https://github.com/tensorly/tensorly/blob/main/tensorly/tenalg/svd.py
-
-    Computes an orthonormal matrix (Q) whose range approximates the range of A,  i.e., Q Q^H A ≈ A
-    
-    """
-    rng = tl.check_random_state(random_state)
-    dim_1, dim_2 = tl.shape(A)
-    Q = tl.tensor(rng.normal(size=(dim_2, n_dims)), **tl.context(A))
-    Q, _ = tl.qr(tl.dot(A, Q))
-
-    # Perform power iterations when spectrum decays slowly
-    A_H = tl.conj(tl.transpose(A))
-    for i in range(n_iter):
-        Q, _ = tl.qr(tl.dot(A_H, Q))
-        Q, _ = tl.qr(tl.dot(A, Q))
-
-    return Q
-
-
-def randomized_svd(matrix, n_iter=2, random_state=None):
-    """
-    Borrowed from Tensorly while their new version is not released.
-    https://github.com/tensorly/tensorly/blob/main/tensorly/tenalg/svd.py
-
     Computes a truncated randomized SVD.
 
+    https://arxiv.org/pdf/0909.4061.pdf
+    https://arxiv.org/abs/2001.07124
+
     """
 
-    dim_1, dim_2 = tl.shape(matrix)
-    if dim_1 == dim_2:
-        return np.linalg.svd(matrix)
+    m, n = A.shape
 
-    min_dim = min(dim_1, dim_2)
-    n_dims = min_dim//2
+    O = _rng.standard_normal(size=(n, rank + over_sampling))
+    Y = A @ O
+    Q, _ = np.linalg.qr(Y, mode='reduced')
 
-    Q = randomized_range_finder(
-        matrix, n_dims=n_dims, n_iter=n_iter, random_state=random_state
-    )
-    Q_H = tl.conj(tl.transpose(Q))
-    matrix_reduced = tl.dot(Q_H, matrix)
+    # Power iterations
+    A_dagger = A.T.conj()
+    for i in range(n_iter):
+        Q, _ = np.linalg.qr(A_dagger @ Q)
+        Q, _ = np.linalg.qr(A @ Q)
 
-    U, S, V = np.linalg.svd(matrix_reduced, full_matrices=False)
+    B = Q.T.conj() @ A
+    U, S, V = np.linalg.svd(B, full_matrices=False)
+    U = Q @ U[:, :rank]
 
-    U = tl.dot(Q, U)
+    return U, S[:rank], V[:rank, :]
 
-    return U, S, V
+def randomized_low_rank_approximation(A, rank=1, n_iter=2, over_sampling=10):
+    """
+    Computes a randomized low rank approximation (QB approximation).
+
+    https://arxiv.org/abs/2001.07124
+
+    """
+
+    m, n = A.shape
+
+    O = _rng.standard_normal(size=(n, rank + over_sampling))
+    Y = A @ O
+    Q, _ = np.linalg.qr(Y, mode='reduced')
+
+    # Power iterations
+    A_dagger = A.T.conj()
+    for i in range(n_iter):
+        Q, _ = np.linalg.qr(A_dagger @ Q)
+        Q, _ = np.linalg.qr(A @ Q)
+
+    B = Q.T.conj() @ A
+
+    return Q[:,:rank] @ B[:rank, :]
