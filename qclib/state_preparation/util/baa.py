@@ -24,11 +24,12 @@ from math import log2, sqrt
 import numpy as np
 from tensorly.tenalg.core_tenalg import kronecker
 
-from qclib.entanglement import schmidt_composition, schmidt_decomposition
-from qclib.state_preparation.lowrank import (
-    cnot_count as schmidt_cnots,
-    low_rank_approximation,
+from qclib.entanglement import (
+    schmidt_composition,
+    schmidt_decomposition,
+    low_rank_approximation
 )
+from qclib.state_preparation.lowrank import cnot_count as schmidt_cnots
 
 # pylint: disable=missing-class-docstring
 
@@ -38,8 +39,7 @@ def adaptive_approximation(
     max_fidelity_loss,
     strategy="greedy",
     max_combination_size=0,
-    use_low_rank=False,
-    svd="auto"
+    use_low_rank=False
 ):
     """
     It reduces the entanglement of the given state, producing an approximation
@@ -78,10 +78,6 @@ def adaptive_approximation(
             If set to True, ``rank``>1 approximations are also considered. This is fine
             tuning for high-entanglement states and is slower.
             The default value is False.
-        svd (string):
-            Function to compute the SVD, acceptable values are 'auto' (default), 'normal',
-            and 'randomized'. 'auto' sets `svd='randomized'` for `n_qubits>=10` and
-            `svd='normal'` for `n_qubits<10`.
     Returns:
         Node: a node with the data required to build the quantum circuit.
     """
@@ -103,7 +99,7 @@ def adaptive_approximation(
 
     root_node = Node(0, 0, 0.0, 0.0, vectors, qubits, ranks, partitions, [])
     _build_approximation_tree(
-        root_node, max_fidelity_loss, strategy, max_combination_size, use_low_rank, svd
+        root_node, max_fidelity_loss, strategy, max_combination_size, use_low_rank
     )
 
     leaves = []
@@ -208,7 +204,7 @@ class Node:
 
 
 def _build_approximation_tree(
-    node, max_fidelity_loss, strategy="brute_force", max_k=0, use_low_rank=False, svd="auto"
+    node, max_fidelity_loss, strategy="brute_force", max_k=0, use_low_rank=False
 ):
     # Ignore states that are already completely or partially disentangled.
     node_data = [
@@ -221,7 +217,7 @@ def _build_approximation_tree(
             max_k = len(entangled_qubits) // 2
 
         if strategy == "greedy":
-            combs = _greedy_combinations(entangled_vector, entangled_qubits, max_k, svd)
+            combs = _greedy_combinations(entangled_vector, entangled_qubits, max_k)
         elif strategy == "split":
             combs = _split_combinations(entangled_qubits, max_k)
         elif strategy == "canonical":
@@ -236,7 +232,7 @@ def _build_approximation_tree(
             # If the bipartition cannot be fully disentangled, an approximate
             # state is returned.
             entanglement_info = _reduce_entanglement(
-                entangled_vector, entangled_qubits, partition, svd, use_low_rank
+                entangled_vector, entangled_qubits, partition, use_low_rank
             )
 
             node_fidelity_loss = np.array(
@@ -268,7 +264,7 @@ def _build_approximation_tree(
         # call _build_approximation_tree recurrently for each new node.
         if not new_node.is_leaf:  # Saves one call for each leaf node.
             _build_approximation_tree(
-                new_node, max_fidelity_loss, strategy, max_k, use_low_rank, svd
+                new_node, max_fidelity_loss, strategy, max_k, use_low_rank
             )
 
 
@@ -289,7 +285,7 @@ def _all_combinations(entangled_qubits, max_k):
     return chain(*(combinations(entangled_qubits, k) for k in range(1, max_k)), combs)
 
 
-def _greedy_combinations(entangled_vector, entangled_qubits, max_k, svd):
+def _greedy_combinations(entangled_vector, entangled_qubits, max_k):
     """
     Combinations with a qubit-by-qubit analysis.
     Returns only one representative of the partitions of size k (1<=k<=max_k).
@@ -305,7 +301,7 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k, svd):
         # Disentangles one qubit at a time.
         for qubit_to_disentangle in current_qubits:
             entanglement_info = _reduce_entanglement(
-                current_vector, current_qubits, (qubit_to_disentangle,), svd
+                current_vector, current_qubits, (qubit_to_disentangle,)
             )
 
             new_node = _create_node(node, entanglement_info[0])
@@ -322,7 +318,7 @@ def _greedy_combinations(entangled_vector, entangled_qubits, max_k, svd):
     return (tuple(sorted(chain(*node.qubits[:k]))) for k in range(1, max_k + 1))
 
 
-def _reduce_entanglement(state_vector, register, partition, svd, use_low_rank=False):
+def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
     local_partition = []
     # Maintains the relative position between the qubits of the two subsystems.
     for qubit_to_disentangle in partition:
@@ -330,7 +326,11 @@ def _reduce_entanglement(state_vector, register, partition, svd, use_low_rank=Fa
 
     local_partition = tuple(local_partition)
 
-    svd_u, svd_s, svd_v = schmidt_decomposition(state_vector, local_partition, svd)
+    rank, svd_u, svd_s, svd_v = schmidt_decomposition(
+        state_vector,
+        local_partition,
+        rank=int(not use_low_rank) # `use_low_rank==True` means "no SVD truncation", so `rank=0`.
+    )                              # `use_low_rank==False` means "separate state", so `rank=1`.
 
     entanglement_info = []
 
@@ -342,7 +342,7 @@ def _reduce_entanglement(state_vector, register, partition, svd, use_low_rank=Fa
     for ebits in range(0, max_ebits + 1):
         low_rank = 2**ebits
 
-        rank, low_rank_u, low_rank_v, low_rank_s = low_rank_approximation(
+        rank, low_rank_u, low_rank_s, low_rank_v = low_rank_approximation(
             low_rank, svd_u, svd_v, svd_s
         )
 
@@ -363,6 +363,7 @@ def _reduce_entanglement(state_vector, register, partition, svd, use_low_rank=Fa
                 fidelity_loss,
             )
         )
+
     return entanglement_info
 
 
@@ -494,7 +495,6 @@ def _count_saved_cnots(
     original_rank=0,
     subsystem_rank=0,
 ):
-    method = "estimate"
 
     cnots_originally = schmidt_cnots(
         original_vector,

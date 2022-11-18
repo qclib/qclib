@@ -17,13 +17,12 @@ Implements the state preparation
 defined at https://arxiv.org/abs/1003.5760.
 """
 
-from math import ceil, log2
 import numpy as np
 from qiskit import QuantumCircuit
 from qclib.unitary import unitary as decompose_unitary, cnot_count as cnots_unitary
 from qclib.isometry import decompose as decompose_isometry, cnot_count as cnots_isometry
 from qclib.gates.initialize import Initialize
-from qclib.entanglement import schmidt_decomposition, _to_qubits, _effective_rank
+from qclib.entanglement import schmidt_decomposition, _to_qubits
 from .topdown import TopDownInitialize
 
 # pylint: disable=maybe-no-member
@@ -76,6 +75,9 @@ class LowRankInitialize(Initialize):
                 to ``n_qubits//2`` (``n_qubits//2+1`` if ``n_qubits`` is odd).
                 Default is ``partition=list(range(n_qubits//2 + odd))``.
 
+            svd: string
+                Function to compute the SVD, acceptable values are 'auto' (default), 'regular',
+                and 'randomized'. 'auto' sets `svd='randomized'` for `n_qubits>=12 and rank==1`.
         """
         self._name = "low_rank"
         self._get_num_qubits(params)
@@ -85,6 +87,7 @@ class LowRankInitialize(Initialize):
             self.unitary_scheme = "qsd"
             self.low_rank = 0
             self.partition = None
+            self.svd = "auto"
         else:
             self.low_rank = 0 if opt_params.get("lr") is None else opt_params.get("lr")
             self.partition = opt_params.get("partition")
@@ -97,6 +100,11 @@ class LowRankInitialize(Initialize):
                 self.unitary_scheme = "qsd"
             else:
                 self.unitary_scheme = opt_params.get("unitary_scheme")
+
+            if opt_params.get("svd") is None:
+                self.svd = "auto"
+            else:
+                self.svd = opt_params.get("svd")
 
 
         if label is None:
@@ -115,10 +123,8 @@ class LowRankInitialize(Initialize):
         circuit, reg_a, reg_b = self._create_quantum_circuit()
 
         # Schmidt decomposition
-        svd_u, singular_values, svd_v = schmidt_decomposition(self.params, reg_a)
-
-        rank, svd_u, svd_v, singular_values = low_rank_approximation(
-            self.low_rank, svd_u, svd_v, singular_values
+        rank, svd_u, singular_values, svd_v = schmidt_decomposition(
+            self.params, reg_a, rank=self.low_rank, svd=self.svd
         )
 
         # Schmidt measure of entanglement
@@ -161,6 +167,7 @@ class LowRankInitialize(Initialize):
             gate_u = LowRankInitialize(data[:, 0], opt_params={
                 "iso_scheme": self.isometry_scheme,
                 "unitary_scheme": self.unitary_scheme,
+                "svd": self.svd
             })
 
         elif data.shape[0] // 2 == data.shape[1]:
@@ -188,25 +195,6 @@ class LowRankInitialize(Initialize):
         return circuit, self.partition[::-1], complement[::-1]
 
 
-def low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
-    """
-    Low-rank approximation from the SVD.
-    """
-    effective_rank = _effective_rank(singular_values)
-
-    if 0 < low_rank < effective_rank:
-        effective_rank = low_rank
-
-    # To use isometries, the rank needs to be a power of 2.
-    rank = int(2 ** ceil(log2(effective_rank)))
-
-    svd_u = svd_u[:, :rank]
-    svd_v = svd_v[:rank, :]
-    singular_values = singular_values[:rank]
-
-    return rank, svd_u, svd_v, singular_values
-
-
 def _default_partition(n_qubits):
     odd = n_qubits % 2
     return list(range(n_qubits // 2 + odd))
@@ -217,12 +205,13 @@ def cnot_count(
     low_rank=0,
     isometry_scheme="ccd",
     unitary_scheme="qsd",
-    partition=None
+    partition=None,
+    method = "estimate",
+    svd="auto"
 ):
     """
     Estimate the number of CNOTs to build the state preparation circuit.
     """
-    method = "estimate"
 
     n_qubits = _to_qubits(len(state_vector))
     if n_qubits < 2:
@@ -233,10 +222,11 @@ def cnot_count(
 
     cnots = 0
 
-    svd_u, singular_values, svd_v = schmidt_decomposition(state_vector, partition)
-
-    rank, svd_u, svd_v, singular_values = low_rank_approximation(
-        low_rank, svd_u, svd_v, singular_values
+    rank, svd_u, singular_values, svd_v = schmidt_decomposition(
+        state_vector,
+        partition,
+        rank=low_rank,
+        svd=svd
     )
 
     # Schmidt measure of entanglement
@@ -246,24 +236,26 @@ def cnot_count(
     if ebits > 0:
         singular_values = singular_values / np.linalg.norm(singular_values)
         cnots += _cnots(
-            singular_values.reshape(rank, 1), isometry_scheme, unitary_scheme, method
+            singular_values.reshape(rank, 1), isometry_scheme, unitary_scheme, method, svd
         )
     # Phase 2.
     cnots += ebits
 
     # Phases 3 and 4.
-    cnots += _cnots(svd_u, isometry_scheme, unitary_scheme, method)
-    cnots += _cnots(svd_v.T, isometry_scheme, unitary_scheme, method)
+    cnots += _cnots(svd_u, isometry_scheme, unitary_scheme, method, svd)
+    cnots += _cnots(svd_v.T, isometry_scheme, unitary_scheme, method, svd)
 
     return cnots
 
 
-def _cnots(data, iso_scheme="ccd", uni_scheme="qsd", method="estimate"):
+def _cnots(data, iso_scheme="ccd", uni_scheme="qsd", method="estimate", svd="auto"):
     if data.shape[1] == 1:
         return cnot_count(
             data[:, 0],
             isometry_scheme=iso_scheme,
-            unitary_scheme=uni_scheme
+            unitary_scheme=uni_scheme,
+            method=method,
+            svd=svd
         )
 
     if data.shape[0] // 2 == data.shape[1]:
