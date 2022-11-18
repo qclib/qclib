@@ -19,8 +19,8 @@ import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.quantum_info.random import random_unitary
 from qiskit.quantum_info import Operator
-#from qiskit.extensions.quantum_initializer.uc import UCGate
 from qclib.gates.uc_gate import UCGate
+
 
 class TestUCGate(TestCase):
     """ Testing qclib.gates.ucgate """

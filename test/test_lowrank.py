@@ -20,7 +20,7 @@ from unittest import TestCase
 from itertools import combinations
 import numpy as np
 from qiskit import QuantumCircuit, ClassicalRegister, execute, transpile
-from qiskit.providers.aer.backends import AerSimulator
+from qiskit_aer import AerSimulator
 from qclib.state_preparation import LowRankInitialize
 from qclib.state_preparation.lowrank import cnot_count
 

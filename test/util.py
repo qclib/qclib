@@ -11,7 +11,7 @@ def measurement(circuit, n_qubits, classical_register, backend, shots):
 
     counts2 = {}
     for k in range(2 ** n_qubits):
-        pattern = '{:0{}b}'.format(k, n_qubits)
+        pattern = f'{k:0{n_qubits}b}'
         if pattern in counts:
             counts2[pattern] = counts[pattern]
         else:

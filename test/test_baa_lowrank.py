@@ -19,7 +19,7 @@ Tests for the baa_lowrank.py module.
 from unittest import TestCase
 import numpy as np
 from qiskit import ClassicalRegister, execute
-from qiskit.providers.aer.backends import AerSimulator
+from qiskit_aer import AerSimulator
 from qclib.util import get_state
 from qclib.state_preparation import BaaLowRankInitialize
 
