@@ -1,5 +1,4 @@
 qiskit
-graphviz
 deprecation
 numpy
 tensorly
