@@ -183,3 +183,22 @@ class TestBaaLowRank(TestCase):
                 fidelities2.append(fidelity2)
 
         self.assertTrue(np.allclose(fidelities1, fidelities2, rtol=0.14, atol=0.0))
+
+    def test_large_state(self):
+        # Builds a separable state.
+        n_qubits = 16
+
+        state_vector1 = np.random.rand(2**(n_qubits//2)) + np.random.rand(2**(n_qubits//2)) * 1j
+        state_vector1 = state_vector1 / np.linalg.norm(state_vector1)
+
+        state_vector2 = np.random.rand(2**(n_qubits//2)) + np.random.rand(2**(n_qubits//2)) * 1j
+        state_vector2 = state_vector2 / np.linalg.norm(state_vector2)
+
+        state_vector = np.kron(state_vector1, state_vector2)
+
+        opt_params = {'max_fidelity_loss' : 0.1, 'strategy' : 'brute_force'}
+        circuit = BaaLowRankInitialize(state_vector, opt_params=opt_params).definition
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))

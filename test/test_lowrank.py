@@ -174,3 +174,22 @@ class TestLowRank(TestCase):
 
         zero_state = [1]+[0]*(2**n_qubits-1)
         self.assertTrue(np.allclose(zero_state, state))
+
+    def test_large_state(self):
+        # Builds a separable state.
+        n_qubits = 16
+
+        state_vector1 = np.random.rand(2**(n_qubits//2)) + np.random.rand(2**(n_qubits//2)) * 1j
+        state_vector1 = state_vector1 / np.linalg.norm(state_vector1)
+
+        state_vector2 = np.random.rand(2**(n_qubits//2)) + np.random.rand(2**(n_qubits//2)) * 1j
+        state_vector2 = state_vector2 / np.linalg.norm(state_vector2)
+
+        state_vector = np.kron(state_vector1, state_vector2)
+
+        circuit = QuantumCircuit(n_qubits)
+        LowRankInitialize.initialize(circuit, state_vector, opt_params={'lr': 1, 'svd':'auto'})
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))
