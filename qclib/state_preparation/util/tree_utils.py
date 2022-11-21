@@ -17,6 +17,9 @@ https://arxiv.org/abs/2108.10182
 """
 
 
+from graphviz import Digraph
+
+
 def is_leaf(tree):
     """
     :param tree: a tree node
@@ -190,3 +193,25 @@ def subtree_level_nodes(tree, level, level_nodes):
             subtree_level_nodes(tree.right, level, level_nodes)
     else:
         level_nodes.append(tree)
+
+
+def tree_visual_representation(tree, dot=None):
+    """
+    :param tree: A binary tree, with str(tree) defined
+    """
+
+    if dot is None:
+        dot = Digraph()
+        dot.node(str(tree))
+
+    if tree.left:
+        dot.node(str(tree.left))
+        dot.edge(str(tree), str(tree.left))
+        dot = tree_visual_representation(tree.left, dot=dot)
+
+    if tree.right:
+        dot.node(str(tree.right))
+        dot.edge(str(tree), str(tree.right))
+        dot = tree_visual_representation(tree.right, dot=dot)
+
+    return dot

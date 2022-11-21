@@ -2,3 +2,4 @@ qiskit
 deprecation
 numpy
 tensorly
+graphviz
