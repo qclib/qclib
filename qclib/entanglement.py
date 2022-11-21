@@ -196,7 +196,7 @@ def schmidt_decomposition(state_vector, partition, rank=0, svd='auto'):
 
     svd: str
         Function to compute the SVD, acceptable values are 'auto', 'regular' (default),
-        and 'randomized'. 'auto' sets `svd='randomized'` for `n_qubits>=12 and rank==1`.
+        and 'randomized'. 'auto' sets `svd='randomized'` for `n_qubits>=14 and rank==1`.
     """
 
     n_qubits = _to_qubits(len(state_vector))

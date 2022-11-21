@@ -77,7 +77,7 @@ class LowRankInitialize(Initialize):
 
             svd: string
                 Function to compute the SVD, acceptable values are 'auto' (default), 'regular',
-                and 'randomized'. 'auto' sets `svd='randomized'` for `n_qubits>=12 and rank==1`.
+                and 'randomized'. 'auto' sets `svd='randomized'` for `n_qubits>=14 and rank==1`.
         """
         self._name = "low_rank"
         self._get_num_qubits(params)
