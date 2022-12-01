@@ -53,7 +53,6 @@ def create_angles_tree(state_tree):
     if state_tree.mag != 0.0:
         mag = state_tree.right.mag / state_tree.mag
 
-    arg = 0.0
     arg = state_tree.right.arg - state_tree.arg
 
     # Avoid out-of-domain value due to numerical error.
