@@ -77,7 +77,8 @@ class TestTopDown(TestCase):
 
         state = get_state(circuit)
 
-        self.assertTrue(np.allclose(state_vector, state))
+        self.assertTrue(np.allclose(np.imag(state_vector), np.imag(state)))
+        self.assertTrue(np.allclose(np.real(state_vector), np.real(state)))
 
     def test_topdown_measure(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
@@ -99,4 +100,5 @@ class TestTopDown(TestCase):
 
         state = get_state(circuit)
 
-        self.assertTrue(np.allclose(state_vector, state))
+        self.assertTrue(np.allclose(np.imag(state_vector), np.imag(state)))
+        self.assertTrue(np.allclose(np.real(state_vector), np.real(state)))
