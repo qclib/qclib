@@ -17,7 +17,7 @@ qclib auxiliary functions
 """
 
 from qiskit import execute, transpile
-from qiskit.providers.aer.backends import AerSimulator
+from qiskit_aer import AerSimulator
 import numpy as np
 from scipy import sparse
 
@@ -239,6 +239,6 @@ def build_state_dict(state):
     state_dict = {}
     for (value_idx, value) in enumerate(state):
         if value != 0:
-            binary_string = "{:0{}b}".format(value_idx, n_qubits)[::-1]
+            binary_string = f"{value_idx:0{n_qubits}b}"[::-1]
             state_dict[binary_string] = value
     return state_dict

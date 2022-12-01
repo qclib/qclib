@@ -19,7 +19,7 @@ Tests for the topdown.py module.
 from unittest import TestCase
 import numpy as np
 from qiskit import ClassicalRegister, execute
-from qiskit.providers.aer.backends import AerSimulator
+from qiskit_aer import AerSimulator
 from qclib.state_preparation import TopDownInitialize
 from qclib.util import get_state
 
@@ -77,7 +77,8 @@ class TestTopDown(TestCase):
 
         state = get_state(circuit)
 
-        self.assertTrue(np.allclose(state_vector, state))
+        self.assertTrue(np.allclose(np.imag(state_vector), np.imag(state)))
+        self.assertTrue(np.allclose(np.real(state_vector), np.real(state)))
 
     def test_topdown_measure(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
@@ -87,3 +88,17 @@ class TestTopDown(TestCase):
 
         self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
                         rtol=1e-01, atol=0.005))
+
+    def test_topdown_fixed_state(self):
+        state_vector = [
+            0, np.sqrt(2/8)*np.exp(-1.0j * np.pi/7),
+            np.sqrt(3/8)*np.exp(-1.0j * np.pi/3),0,
+            0,0,np.sqrt(3/8),0
+        ]
+
+        circuit = TopDownInitialize(state_vector).definition
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(np.imag(state_vector), np.imag(state)))
+        self.assertTrue(np.allclose(np.real(state_vector), np.real(state)))

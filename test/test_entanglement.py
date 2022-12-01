@@ -15,12 +15,20 @@
 """ Test for entanglement.py module"""
 
 from unittest import TestCase
+import time
 import numpy as np
-from qclib.entanglement import geometric_entanglement, \
-                               schmidt_decomposition, \
-                               schmidt_composition
+from qclib.entanglement import (
+    geometric_entanglement,
+    schmidt_decomposition,
+    schmidt_composition,
+    randomized_svd,
+    _separation_matrix,
+    qb_approximation,
+    _undo_separation_matrix
+)
 
 class TestEntanglement(TestCase):
+
     """ Tests for entanglement.py"""
     def test_geometric_measure_entanglement(self):
         """ Test geometric measure of entanglement """
@@ -38,15 +46,17 @@ class TestEntanglement(TestCase):
         gme = geometric_entanglement(w6_state)
         self.assertTrue(np.abs(gme - 0.59) < 1e-3)
 
+
     def test_schmidt_composition(self):
         state = np.random.rand(2**8) + np.random.rand(2**8) * 1.0j
         state = state / np.linalg.norm(state)
-        svd_u, svd_s, svd_v = schmidt_decomposition(state, [0, 1, 2])
+        _, svd_u, svd_s, svd_v = schmidt_decomposition(state, [0, 1, 2])
         svd_s = svd_s / np.linalg.norm(svd_s)
 
         state_rebuilt = schmidt_composition(svd_u, svd_v, svd_s, [0, 1, 2])
 
         self.assertTrue(np.allclose(state_rebuilt, state))
+
 
     def test_geometric_positive(self):
         """Test if geometric entanglemen is positive"""
@@ -72,3 +82,103 @@ class TestEntanglement(TestCase):
         )
         gme = geometric_entanglement(vector.tolist())
         self.assertTrue(gme > 0)
+
+
+    def test_randomized_svd(self):
+        print_output = False
+
+        n_qubits = 20
+
+        iters = 3
+        rank = 1
+
+        partition_size = round(n_qubits/2.5)+1
+        partition = list(range(partition_size))
+
+        random = []
+        regular = []
+        rnd_qb = []
+        for i in range(iters):
+            state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1.0j
+            state = state / np.linalg.norm(state)
+
+            sep_matrix = _separation_matrix(n_qubits, state, partition)
+
+            # regular numpy SVD
+            start_time = time.time()
+            reg_u, reg_s, reg_v = np.linalg.svd(sep_matrix, full_matrices=False)
+            reg_u, reg_s, reg_v = reg_u[:, :rank], reg_s[:rank], reg_v[:rank, :]
+            reg_approx = schmidt_composition(reg_u, reg_v, reg_s, partition)
+            reg_time = (time.time() - start_time)+10**-8
+
+            # randomized truncated SVD
+            start_time = time.time()
+            rnd_u, rnd_s, rnd_v = randomized_svd(sep_matrix, rank=rank, n_iter=2, over_sampling=12)
+            rnd_approx = schmidt_composition(rnd_u, rnd_v, rnd_s, partition)
+            rnd_time = (time.time() - start_time)+10**-8
+
+            # randomized QB approximation
+            start_time = time.time()
+            qb_approx = qb_approximation(sep_matrix, rank=rank, n_iter=3, over_sampling=0)
+            qb_approx = _undo_separation_matrix(n_qubits, qb_approx, partition)
+            qb_time = (time.time() - start_time)+10**-8
+
+            random.append(rnd_time)
+            regular.append(reg_time)
+            rnd_qb.append(qb_time)
+
+            if print_output:
+                print(
+                    f'{i}\t'
+                    f'regular={reg_time:.6f}\t'
+                    f'random={rnd_time:.6f}\t'
+                    f'qb={qb_time:.6f}\t'
+                    f'ratio rnd={reg_time/rnd_time:.6f}\t'
+                    f'ratio qb={reg_time/qb_time:.6f}'
+                )
+
+            self.assertTrue(reg_time > rnd_time)
+            self.assertTrue(reg_time > qb_time)
+            self.assertTrue(np.allclose(reg_approx, rnd_approx, rtol=1e-04, atol=0.0))
+            self.assertTrue(np.allclose(reg_approx, qb_approx, rtol=1e-04, atol=0.0))
+
+        if print_output:
+            avg_regular = sum(regular)/iters
+            avg_random = sum(random)/iters
+            avg_qb = sum(rnd_qb)/iters
+            avg_rnd_ratio = sum(np.array(regular)/random)/iters
+            avg_qb_ratio = sum(np.array(regular)/rnd_qb)/iters
+
+            print(
+                f'avg.\t'
+                f'regular={avg_regular:.6f}\t'
+                f'random={avg_random:.6f}\t'
+                f'qb={avg_qb:.6f}\t'
+                f'ratio rnd={avg_rnd_ratio:.6f}\t'
+                f'ratio qb={avg_qb_ratio:.6f}'
+            )
+
+
+    def test_randomized_svd_singular_values(self):
+        n_qubits = 20
+
+        iters = 3
+        rank = 1
+
+        partition_size = round(n_qubits/2.5)+1
+        partition = list(range(partition_size))
+
+        for _ in range(iters):
+            state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1.0j
+            state = state / np.linalg.norm(state)
+
+            sep_matrix = _separation_matrix(n_qubits, state, partition)
+
+            # regular numpy SVD
+            _, regular_s, _ = np.linalg.svd(sep_matrix, full_matrices=False)
+            regular_s = regular_s[:rank]
+
+            # randomized truncated SVD
+            _, rnd_s, _ = randomized_svd(sep_matrix, rank=rank, n_iter=2*rank**7, over_sampling=12)
+
+            self.assertTrue(np.allclose(rnd_s, regular_s))

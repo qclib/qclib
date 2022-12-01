@@ -15,12 +15,16 @@
 """
 Functions to compute entanglement measures.
 """
-from typing import Union, Tuple, List
 
+from typing import Union, Tuple, List
+from math import log2, ceil
 import numpy as np
+from numpy.random import default_rng
 import tensorly as tl
 from tensorly.decomposition import tucker
 from tensorly.tucker_tensor import tucker_to_vec
+
+_rng = default_rng()
 
 def _get_iota(qubit_idx: int, qubits: int, selector_bit: int, basis_state: int):
     assert selector_bit in [0, 1]
@@ -157,7 +161,22 @@ def _separation_matrix(n_qubits, state_vector, partition):
     return sep_matrix
 
 
-def schmidt_decomposition(state_vector, partition):
+def low_rank_approximation(low_rank, svd_u, svd_v, singular_values):
+    """
+    Low-rank approximation from the SVD.
+    """
+    effective_rank = _effective_rank(singular_values)
+
+    if 0 < low_rank < effective_rank:
+        effective_rank = low_rank
+
+    # To use isometries, the rank needs to be a power of 2.
+    rank = int(2 ** ceil(log2(effective_rank)))
+
+    return rank, svd_u[:, :rank], singular_values[:rank], svd_v[:rank, :]
+
+
+def schmidt_decomposition(state_vector, partition, rank=0, svd='auto'):
     """
     Execute the Schmidt decomposition of a state vector.
 
@@ -174,13 +193,38 @@ def schmidt_decomposition(state_vector, partition):
         The valid range for indexes is ``0 <= index < n_qubits``. The number of indexes
         in the partition must be greater than or equal to ``1`` and less than or equal
         to ``n_qubits//2`` (``n_qubits//2+1`` if ``n_qubits`` is odd).
+
+    svd: str
+        Function to compute the SVD, acceptable values are 'auto', 'regular' (default),
+        and 'randomized'. 'auto' sets `svd='randomized'` for `n_qubits>=14 and rank==1`.
     """
 
     n_qubits = _to_qubits(len(state_vector))
 
     sep_matrix = _separation_matrix(n_qubits, state_vector, partition)
 
-    return np.linalg.svd(sep_matrix)
+    if (
+        svd == 'randomized' or
+        (
+            svd == 'auto' and
+            rank==1 and
+            n_qubits >= 14 and
+            len(partition) > round(n_qubits/2.5)
+        )
+    ):
+        # The randomized SVD approximation for `rank==1` is excellent.
+        # There is no reason not to use it for large states.
+        svd_u, singular_values, svd_v = randomized_svd(sep_matrix, rank=rank)
+
+        return rank, svd_u, singular_values, svd_v
+
+    svd_u, singular_values, svd_v = \
+        np.linalg.svd(
+            sep_matrix,
+            full_matrices=sep_matrix.shape[0] == sep_matrix.shape[1]
+        )
+
+    return low_rank_approximation(rank, svd_u, svd_v, singular_values)
 
 
 def _to_qubits(n_state_vector):
@@ -225,3 +269,56 @@ def schmidt_composition(svd_u, svd_v, singular_values, partition):
     state_vector = _undo_separation_matrix(n_qubits, sep_matrix, partition)
 
     return state_vector
+
+
+def randomized_svd(matrix, rank=1, n_iter=2, over_sampling=12):
+    """
+    Computes a truncated randomized SVD.
+
+    https://arxiv.org/pdf/0909.4061.pdf
+    https://arxiv.org/abs/2001.07124
+
+    """
+
+    columns = matrix.shape[1]
+
+    random_matrix = _rng.standard_normal(size=(columns, rank + over_sampling))
+    compact_form = matrix @ random_matrix
+    orthonormal_basis, _ = np.linalg.qr(compact_form, mode='reduced')
+
+    # Power iterations
+    matrix_dagger = matrix.T.conj()
+    for _ in range(n_iter):
+        orthonormal_basis, _ = np.linalg.qr(matrix_dagger @ orthonormal_basis)
+        orthonormal_basis, _ = np.linalg.qr(matrix @ orthonormal_basis)
+
+    reduced_matrix = orthonormal_basis.T.conj() @ matrix
+    svd_u, svd_s, svd_v = np.linalg.svd(reduced_matrix, full_matrices=False)
+    svd_u = orthonormal_basis @ svd_u[:, :rank]
+
+    return svd_u, svd_s[:rank], svd_v[:rank, :]
+
+
+def qb_approximation(matrix, rank=1, n_iter=3, over_sampling=12):
+    """
+    Computes a randomized low rank approximation (QB approximation).
+
+    https://arxiv.org/abs/2001.07124
+
+    """
+
+    columns = matrix.shape[1]
+
+    random_matrix = _rng.standard_normal(size=(columns, rank + over_sampling))
+    compact_form = matrix @ random_matrix
+    orthonormal_basis, _ = np.linalg.qr(compact_form, mode='reduced')
+
+    # Power iterations
+    matrix_dagger = matrix.T.conj()
+    for _ in range(n_iter):
+        orthonormal_basis, _ = np.linalg.qr(matrix_dagger @ orthonormal_basis)
+        orthonormal_basis, _ = np.linalg.qr(matrix @ orthonormal_basis)
+
+    reduced_matrix = orthonormal_basis.T.conj()[:rank, :] @ matrix
+
+    return orthonormal_basis[:, :rank] @ reduced_matrix
