@@ -16,9 +16,10 @@
 
 from unittest import TestCase
 import numpy as np
+from qiskit.quantum_info import Operator
 from qclib.state_preparation import CvoqramInitialize, PivotInitialize
 from qclib.util import double_sparse, get_state
-from qiskit.quantum_info import Operator
+
 
 class TestCvoqram(TestCase):
     """ Testing qclib.state_preparation.cvoqram """
@@ -44,7 +45,6 @@ class TestCvoqram(TestCase):
         log_npatterns = 2
         prob = 0.2
         data = double_sparse(n_qubits, log_npatterns, prob)
-        data = {''.join(map(str, b)):d for b, d in data}
 
         qc_cvoqram = CvoqramInitialize(data).definition
         state = get_state(qc_cvoqram)
@@ -60,9 +60,8 @@ class TestCvoqram(TestCase):
         prob = 0.8
         data = double_sparse(n_qubits, log_npatterns, prob)
         norm = 0
-        for k, _ in enumerate(data):
-            norm = norm + np.abs(data[k][1])**2
-            self.assertTrue(np.sum(data[k][0]) <= np.sum(data[k][0]))
+        for _, val in data.items():
+            norm = norm + np.abs(val)**2
 
         self.assertTrue(np.isclose(norm, 1))
 
@@ -91,7 +90,6 @@ class TestPivotingSP(TestCase):
         log_npatterns = 2
         prob = 0.2
         data = double_sparse(n_qubits, log_npatterns, prob)
-        data = {''.join(map(str, b)):d for b, d in data}
 
         circuit = PivotInitialize(data).definition
         state = get_state(circuit)
@@ -104,7 +102,6 @@ class TestPivotingSP(TestCase):
         log_npatterns = 2
         prob = 0.2
         data = double_sparse(n_qubits, log_npatterns, prob)
-        data = {''.join(map(str, b)):d for b, d in data}
 
         circuit = PivotInitialize(data, opt_params={'aux': True}).definition
         state = get_state(circuit)

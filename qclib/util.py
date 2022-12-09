@@ -186,9 +186,9 @@ def double_sparse(nbits, log_size, p_1):
 
     binary = _double_sparse_binary(nbits, log_size, 1 - p_1, p_1)
     bin_data = [(binary[i], data[i]) for i in range(2**log_size)]
-
     bin_data.sort(key=_count_ones)
-    return bin_data
+    
+    return {''.join(map(str, b)):d for b, d in bin_data}
 
 
 def _compute_matrix_angles(feature, norm):
