@@ -17,10 +17,16 @@
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library.standard_gates import UGate
+from qiskit.quantum_info import Operator
 from qclib.util import _compute_matrix_angles
 from qclib.gates.initialize_sparse import InitializeSparse
+from qclib.gates.mcg import mcg
+
 
 # pylint: disable=maybe-no-member
+
+
+QuantumCircuit.mcg = mcg
 
 
 class CvoqramInitialize(InitializeSparse):
@@ -41,11 +47,17 @@ class CvoqramInitialize(InitializeSparse):
         default_with_aux = True
         if opt_params is None:
             self.with_aux = default_with_aux
+            self.use_linear_mcg = True
         else:
             if opt_params.get("with_aux") is None:
                 self.with_aux = default_with_aux
             else:
                 self.with_aux = opt_params.get("with_aux")
+
+            if opt_params.get("use_linear_mcg") is None:
+                self.use_linear_mcg = True
+            else:
+                self.use_linear_mcg = opt_params.get("use_linear_mcg")
 
         if label is None:
             label = "CVOSP"
@@ -137,8 +149,12 @@ class CvoqramInitialize(InitializeSparse):
             if self.with_aux:
                 self._mcuvchain(circuit, theta, phi, lam)
             else:
-                gate = UGate(theta, phi, lam).control(len(control))
-                circuit.append(gate, memory[control] + [self.aux[0]])
+                gate = UGate(theta, phi, lam)
+                if self.use_linear_mcg:
+                    gate_op = Operator(gate).data
+                    circuit.mcg(gate_op, memory[control], [self.aux[0]])
+                else:
+                    circuit.append(gate.control(len(control)), memory[control] + [self.aux[0]])
 
         self.norm = self.norm - np.absolute(np.power(feature, 2))
 
