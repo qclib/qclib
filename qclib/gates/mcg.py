@@ -44,11 +44,12 @@ def mcg(
     if num_ctrl == 0:
         self.unitary(unitary, [target])
     else:
-        if num_ctrl > 1 and _check_su2(unitary) and _check_real_diag(unitary):
+        if num_ctrl > 1 and _check_su2(unitary):
             self.linear_mcg_su2(unitary, controls, target, ctrl_state)
         else:
-            u_gate = QuantumCircuit(1).unitary(unitary).control(num_ctrl, ctrl_state=ctrl_state)
-            self.append(u_gate, [*controls, target])
+            u_gate = QuantumCircuit(1)
+            u_gate.unitary(unitary, 0)
+            self.append(u_gate.control(num_ctrl, ctrl_state=ctrl_state), [*controls, target])
 
 
 QuantumCircuit.mcg = mcg
@@ -67,11 +68,6 @@ def _check_u2(matrix):
 def _check_su2(matrix):
     return isclose(np.linalg.det(matrix), 1.0)
 
-def _check_real_diag(matrix):
-    is_primary_diag_real = matrix[0,0].imag == 0.0 and matrix[1,1].imag == 0.0
-    is_secondary_diag_real = matrix[0,1].imag == 0.0 and matrix[1,0].imag == 0.0
-    return is_primary_diag_real or is_secondary_diag_real
-
 
 def linear_mcg_su2(
     self,
@@ -84,9 +80,9 @@ def linear_mcg_su2(
     Multicontrolled gate decomposition with linear cost.
     `unitary` must be a SU(2) matrix with at least one real diagonal.
     """
-    is_main_diag_real  = unitary[0, 0].imag == 0.0 and unitary[1, 1].imag == 0.0
+    is_main_diag_real = unitary[0, 0].imag == 0.0 and unitary[1, 1].imag == 0.0
     is_secondary_diag_real = unitary[0,1].imag == 0.0 and unitary[1,0].imag == 0.0
-    
+
     if  not is_main_diag_real and not is_secondary_diag_real:
         self.linear_depth_any_mcsu2(
             unitary=unitary,
@@ -99,7 +95,7 @@ def linear_mcg_su2(
             x = unitary[0,1]
             z = unitary[1,1]
         else:
-            x = - unitary[0,1].real
+            x = -unitary[0,1].real
             z = unitary[1,1] - unitary[0,1].imag * 1.0j
             self.h(target)
 
@@ -288,14 +284,14 @@ def linear_depth_mcv(
 QuantumCircuit.linear_depth_mcv = linear_depth_mcv
 
 def linear_depth_any_mcsu2(
-    self, 
+    self,
     unitary,
     controls: Union[QuantumRegister, List[Qubit]],
     target: Qubit,
     ctrl_state: str=None
 ):
     """
-        Implements the gate decompostion of any gate in SU(2) 
+        Implements the gate decompostion of any gate in SU(2)
         presented in Lemma 7.9 of https://arxiv.org/abs/quant-ph/9503016
     """
     theta, phi, lamb, _ = OneQubitEulerDecomposer._params_zyz(unitary)
@@ -304,11 +300,11 @@ def linear_depth_any_mcsu2(
 
     self._apply_abc(
         controls=controls,
-        target=target, 
+        target=target,
         su2_gates=(a_gate, b_gate, c_gate),
         ctrl_state=ctrl_state
     )
-  
+
 QuantumCircuit.linear_depth_any_mcsu2 = linear_depth_any_mcsu2
 
 def get_abc_operators(beta, gamma, delta):
@@ -336,26 +332,26 @@ def get_abc_operators(beta, gamma, delta):
 
 
 def _apply_abc(
-    self, 
-    controls: Union[QuantumRegister, List[Qubit]], 
-    target: Qubit, 
+    self,
+    controls: Union[QuantumRegister, List[Qubit]],
+    target: Qubit,
     su2_gates: Tuple[UnitaryGate],
     ctrl_state: str = None
 ):
     """
         Applies ABC matrices to the quantum circuit according to theorem 5
-        of Iten et al. 2016 (arXiv:1501.06911). 
+        of Iten et al. 2016 (arXiv:1501.06911).
         Where su2_gates is a tuple of UnitaryGates in SU(2) eg.: (A,  B, C).
-    """ 
+    """
     a_gate, b_gate, c_gate = su2_gates
-    if len(controls) < 8: 
+    if len(controls) < 8:
         self.append(c_gate, target)
         self.mcx(controls, target)
         self.append(b_gate, target)
         self.mcx(controls, target)
         self.append(a_gate, target)
-        
-    else: 
+
+    else:
         ancilla = controls[-1]
         # setting gate controls
         controlled_a = a_gate.control(1)
@@ -378,7 +374,7 @@ def _apply_abc(
             ctrl_state=ctrl_state
         )
         self.append(controlled_a, [ancilla, target], [])
-    
+
     return self
 
 QuantumCircuit._apply_abc = _apply_abc
