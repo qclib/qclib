@@ -53,6 +53,21 @@ class TestCvoqram(TestCase):
 
             self.assertTrue(np.isclose(state[int(index, 2)], amp))
 
+    def test_cvoqram_random_without_aux(self):
+        """ Testing cvoqram 4 amplitudes and without auxiliary qubits """
+        n_qubits = 4
+        log_npatterns = 2
+        prob = 0.2
+        data = double_sparse(n_qubits, log_npatterns, prob)
+
+        qc_cvoqram = CvoqramInitialize(data, opt_params={'with_aux': False}).definition
+        state = get_state(qc_cvoqram)
+
+        for pattern, amp in data.items():
+            index = pattern + '0'  # padding aux qubit
+
+            self.assertTrue(np.isclose(state[int(index, 2)], amp))
+
     def test_double_sparse(self):
         """ Test double sparse random generation """
         n_qubits = 6
