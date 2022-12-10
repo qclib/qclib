@@ -328,6 +328,7 @@ def get_abc_operators(beta, gamma, delta):
     a_gate = UnitaryGate(a_matrix, label='A')
     b_gate = UnitaryGate(b_matrix, label='B')
     c_gate = UnitaryGate(c_matrix, label='C')
+
     return a_gate, b_gate, c_gate
 
 
@@ -344,12 +345,19 @@ def _apply_abc(
         Where su2_gates is a tuple of UnitaryGates in SU(2) eg.: (A,  B, C).
     """
     a_gate, b_gate, c_gate = su2_gates
-    if len(controls) < 8:
-        self.append(c_gate, target)
-        self.mcx(controls, target)
-        self.append(b_gate, target)
-        self.mcx(controls, target)
-        self.append(a_gate, target)
+
+    if ctrl_state is not None:
+        for i, ctrl in enumerate(ctrl_state[::-1]):
+            if ctrl == '0':
+                self.x(controls[i])
+
+    if len(controls) < 3:
+
+        self.append(c_gate, [target])
+        self.mcx(controls, [target])
+        self.append(b_gate, [target])
+        self.mcx(controls, [target])
+        self.append(a_gate, [target])
 
     else:
         ancilla = controls[-1]
@@ -359,22 +367,16 @@ def _apply_abc(
         controlled_c = c_gate.control(1)
 
         # applying controlled_gates to circuit
-        self.append(controlled_c, [ancilla, target], [])
-        self.mcx_v_chain_dirty(
-            controls=controls[:-1],
-            target=target,
-            ancillae=ancilla,
-            ctrl_state=ctrl_state
-        )
-        self.append(controlled_b, [ancilla, target], [])
-        self.mcx_v_chain_dirty(
-            controls=controls[:-1],
-            target=target,
-            ancillae=ancilla,
-            ctrl_state=ctrl_state
-        )
-        self.append(controlled_a, [ancilla, target], [])
+        self.append(controlled_c, [ancilla, target])
+        self.mcx(controls[:-1], [target], [ancilla], mode='recursion')
+        self.append(controlled_b, [ancilla, target])
+        self.mcx(controls[:-1], [target], [ancilla], mode='recursion')
+        self.append(controlled_a, [ancilla, target])
 
-    return self
+    if ctrl_state is not None:
+        for i, ctrl in enumerate(ctrl_state[::-1]):
+            if ctrl == '0':
+                self.x(controls[i])
+
 
 QuantumCircuit._apply_abc = _apply_abc
