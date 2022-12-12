@@ -23,6 +23,7 @@ from qiskit.circuit.library import C3XGate
 from qiskit.circuit.library import RZGate, RYGate
 from qiskit.extensions import UnitaryGate
 from qiskit.quantum_info import OneQubitEulerDecomposer
+from .mcx_gate import linear_mcx
 
 
 # pylint: disable=maybe-no-member
@@ -292,7 +293,7 @@ def linear_depth_any_mcsu2(
 ):
     """
         Implements the gate decompostion of any gate in SU(2)
-        presented in Lemma 7.9 of https://arxiv.org/abs/quant-ph/9503016
+        presented in Lemma 7.9 in Barenco et al. 1995 (arXiv:quant-ph/9503016)
     """
     theta, phi, lamb, _ = OneQubitEulerDecomposer._params_zyz(unitary)
 
@@ -368,9 +369,9 @@ def _apply_abc(
 
         # applying controlled_gates to circuit
         self.append(controlled_c, [ancilla, target])
-        self.mcx(controls[:-1], [target], [ancilla], mode='recursion')
+        linear_mcx(self, controls[:-1], [target], [ancilla])
         self.append(controlled_b, [ancilla, target])
-        self.mcx(controls[:-1], [target], [ancilla], mode='recursion')
+        linear_mcx(self, controls[:-1], [target], [ancilla])
         self.append(controlled_a, [ancilla, target])
 
     if ctrl_state is not None:
