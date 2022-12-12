@@ -23,7 +23,7 @@ from qiskit.circuit.library import C3XGate
 from qiskit.circuit.library import RZGate, RYGate
 from qiskit.extensions import UnitaryGate
 from qiskit.quantum_info import OneQubitEulerDecomposer
-from .mcx_gate import linear_mcx
+from .mcx_gate import linear_mcx, mcx_v_chain_dirty
 
 
 # pylint: disable=maybe-no-member
@@ -115,103 +115,6 @@ def linear_mcg_su2(
 QuantumCircuit.linear_mcg_su2 = linear_mcg_su2
 
 
-def mcx_v_chain_dirty(
-    self,
-    controls,
-    target,
-    ancillae,
-    ctrl_state=None,
-    relative_phase=False,
-    action_only=False
-):
-    """
-        In-place application of k-controlled X gate with k - 2 dirty ancilla qubits.
-        This decomposition uses the optimization shown in Lemma 9 of
-        https://arxiv.org/abs/1501.06911), which contains at most 8k - 6 `cx`.
-
-        Parameters
-        ----------
-        circuit : quantum circuit where the k-controlled X will be applied
-        controls : k control qubits
-        ancillae : at least k - 2 dirty ancilla qubits
-        target : target qubit of the operation
-    """
-
-    num_ctrl = len(controls)
-    num_ancilla = num_ctrl - 2
-    targets = [target] + ancillae[:num_ancilla][::-1]
-
-    if ctrl_state is not None:
-        for i, ctrl in enumerate(ctrl_state[::-1]):
-            if ctrl == '0':
-                self.x(controls[i])
-
-    if num_ctrl < 3:
-        self.mcx(
-            control_qubits=controls,
-            target_qubit=target,
-            mode="noancilla"
-        )
-    elif num_ctrl == 3:
-        self.append(C3XGate(), [*controls[:], target], [])
-    else:
-        for m in range(2):
-            for i, _ in enumerate(controls):      # action part
-                if i < num_ctrl - 2:
-                    if targets[i] != target or relative_phase:  # gate cancelling
-                        theta = np.pi / 4.
-
-                        # cancel rightmost gates of action part with leftmost gates of reset part
-                        if (relative_phase and targets[i] == target and m == 1):
-                            self.cx(ancillae[num_ancilla - i - 1], targets[i])
-                            self.u(theta=theta, phi=0., lam=0., qubit=targets[i])
-                            self.cx(controls[num_ctrl - i - 1], targets[i])
-                            self.u(theta=theta, phi=0., lam=0., qubit=targets[i])
-                        else:
-                            self.u(theta=-theta, phi=0., lam=0., qubit=targets[i])
-                            self.cx(controls[num_ctrl - i - 1], targets[i])
-                            self.u(theta=-theta, phi=0., lam=0., qubit=targets[i])
-                            self.cx(ancillae[num_ancilla - i - 1], targets[i])
-
-                    else:
-                        self.ccx(
-                            control_qubit1=controls[num_ctrl - i - 1],
-                            control_qubit2=ancillae[num_ancilla - i - 1],
-                            target_qubit=targets[i]
-                        )
-                else:
-                    theta = np.pi / 4.
-
-                    self.u(theta=-theta, phi=0., lam=0., qubit=targets[i])
-                    self.cx(controls[num_ctrl - i - 2], targets[i])
-                    self.u(theta=-theta, phi=0., lam=0., qubit=targets[i])
-                    self.cx(controls[num_ctrl - i - 1], targets[i])
-                    self.u(theta=theta, phi=0., lam=0., qubit=targets[i])
-                    self.cx(controls[num_ctrl - i - 2], targets[i])
-                    self.u(theta=theta, phi=0., lam=0., qubit=targets[i])
-
-                    break
-
-            for i, _ in enumerate(ancillae[1:]):      # reset part
-                theta = np.pi / 4.
-                self.cx(ancillae[i], ancillae[i + 1])
-                self.u(theta=theta, phi=0., lam=0., qubit=ancillae[i + 1])
-                self.cx(controls[2 + i], ancillae[i + 1])
-                self.u(theta=theta, phi=0., lam=0., qubit=ancillae[i + 1])
-
-
-            if action_only:
-                break
-
-    if ctrl_state is not None:
-        for i, ctrl in enumerate(ctrl_state[::-1]):
-            if ctrl == '0':
-                self.x(controls[i])
-
-
-QuantumCircuit.mcx_v_chain_dirty = mcx_v_chain_dirty
-
-
 def linear_depth_mcv(
     self,
     x,
@@ -252,32 +155,36 @@ def linear_depth_mcv(
         ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
         ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
-    self.mcx_v_chain_dirty(
-        controls=controls[:k_1],
-        target=target,
-        ancillae=controls[k_1:2 * k_1 - 2],
-        ctrl_state=ctrl_state_k_1
+    mcx_v_chain_dirty(
+        self,
+        controls[:k_1],
+        target,
+        controls[k_1:2 * k_1 - 2],
+        ctrl_state_k_1
     )
     self.append(s_gate, [target])
-    self.mcx_v_chain_dirty(
-        controls=controls[k_1:],
-        target=target,
-        ancillae=controls[k_1 - k_2 + 1:k_1],
-        ctrl_state=ctrl_state_k_2
+    mcx_v_chain_dirty(
+        self,
+        controls[k_1:],
+        target,
+        controls[k_1 - k_2 + 1:k_1],
+        ctrl_state_k_2
     )
     self.append(s_gate.inverse(), [target])
-    self.mcx_v_chain_dirty(
-        controls=controls[:k_1],
-        target=target,
-        ancillae=controls[k_1:2 * k_1 - 2],
-        ctrl_state=ctrl_state_k_1
+    mcx_v_chain_dirty(
+        self,
+        controls[:k_1],
+        target,
+        controls[k_1:2 * k_1 - 2],
+        ctrl_state_k_1
     )
     self.append(s_gate, [target])
-    self.mcx_v_chain_dirty(
-        controls=controls[k_1:],
-        target=target,
-        ancillae=controls[k_1 - k_2 + 1:k_1],
-        ctrl_state=ctrl_state_k_2
+    mcx_v_chain_dirty(
+        self,
+        controls[k_1:],
+        target,
+        controls[k_1 - k_2 + 1:k_1],
+        ctrl_state_k_2
     )
     self.append(s_gate.inverse(), [target])
 
