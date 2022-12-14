@@ -19,7 +19,6 @@ import numpy as np
 
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Qubit
-from qiskit.circuit.library import C3XGate
 from qiskit.circuit.library import RZGate, RYGate
 from qiskit.extensions import UnitaryGate
 from qiskit.quantum_info import OneQubitEulerDecomposer
@@ -27,6 +26,7 @@ from .mcx_gate import linear_mcx, mcx_v_chain_dirty
 
 
 # pylint: disable=maybe-no-member
+# pylint: disable=protected-access
 
 
 def mcg(
@@ -46,14 +46,11 @@ def mcg(
         self.unitary(unitary, [target])
     else:
         if num_ctrl > 1 and _check_su2(unitary):
-            self.linear_mcg_su2(unitary, controls, target, ctrl_state)
+            linear_mcg_su2(self, unitary, controls, target, ctrl_state)
         else:
             u_gate = QuantumCircuit(1)
             u_gate.unitary(unitary, 0)
             self.append(u_gate.control(num_ctrl, ctrl_state=ctrl_state), [*controls, target])
-
-
-QuantumCircuit.mcg = mcg
 
 
 def _check_u2(matrix):
@@ -85,7 +82,8 @@ def linear_mcg_su2(
     is_secondary_diag_real = unitary[0,1].imag == 0.0 and unitary[1,0].imag == 0.0
 
     if  not is_main_diag_real and not is_secondary_diag_real:
-        self.linear_depth_any_mcsu2(
+        linear_depth_any_mcsu2(
+            self,
             unitary=unitary,
             controls=controls,
             target=target,
@@ -100,7 +98,8 @@ def linear_mcg_su2(
             z = unitary[1,1] - unitary[0,1].imag * 1.0j
             self.h(target)
 
-        self.linear_depth_mcv(
+        linear_depth_mcv(
+            self,
             x,
             z,
             controls,
@@ -110,9 +109,6 @@ def linear_mcg_su2(
 
         if not is_secondary_diag_real:
             self.h(target)
-
-
-QuantumCircuit.linear_mcg_su2 = linear_mcg_su2
 
 
 def linear_depth_mcv(
@@ -189,8 +185,6 @@ def linear_depth_mcv(
     self.append(s_gate.inverse(), [target])
 
 
-QuantumCircuit.linear_depth_mcv = linear_depth_mcv
-
 def linear_depth_any_mcsu2(
     self,
     unitary,
@@ -206,14 +200,14 @@ def linear_depth_any_mcsu2(
 
     a_gate, b_gate, c_gate = get_abc_operators(phi, theta, lamb)
 
-    self._apply_abc(
+    _apply_abc(
+        self,
         controls=controls,
         target=target,
         su2_gates=(a_gate, b_gate, c_gate),
         ctrl_state=ctrl_state
     )
 
-QuantumCircuit.linear_depth_any_mcsu2 = linear_depth_any_mcsu2
 
 def get_abc_operators(beta, gamma, delta):
     """
@@ -285,6 +279,3 @@ def _apply_abc(
         for i, ctrl in enumerate(ctrl_state[::-1]):
             if ctrl == '0':
                 self.x(controls[i])
-
-
-QuantumCircuit._apply_abc = _apply_abc
