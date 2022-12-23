@@ -56,6 +56,20 @@ def get_state(circ):
     return np.array(state_vector)
 
 
+def get_cnot_count(circ):
+    """
+    Parameters
+    ----------
+    circ: QuantumCircuit
+
+    Returns
+    -------
+    cnot_count: number of cnot gates in the quantum circuit
+    """
+    tcirc = transpile(circ, basis_gates=['u', 'cx'])
+    return tcirc.count_ops().get('cx', 0)
+
+
 def replace_all_values_with(new_value, dataset):
     """
         Given a list of tuples (v, b),where v is the value
@@ -168,7 +182,7 @@ def _double_sparse_binary(nbits, log_size, p_1, p_0):
     return bin_data
 
 
-def double_sparse(nbits, log_size, p_1):
+def double_sparse(nbits, log_size, p_1, complex_amplitudes=True):
     """
     Parameters
     ----------
@@ -180,15 +194,18 @@ def double_sparse(nbits, log_size, p_1):
     -------
     \\sum_{k} x_k |p_k>, each bit of p_k is equal to 1 with probability p1
     """
-    data = np.random.rand(2**log_size) + np.random.rand(2**log_size) * 1j
+    if complex_amplitudes:
+        data = np.random.rand(2**log_size) + np.random.rand(2**log_size) * 1j
+    else:
+        data = np.random.rand(2**log_size)
     length = np.linalg.norm(data)
     data = (1 / length) * data
 
     binary = _double_sparse_binary(nbits, log_size, 1 - p_1, p_1)
     bin_data = [(binary[i], data[i]) for i in range(2**log_size)]
-
     bin_data.sort(key=_count_ones)
-    return bin_data
+
+    return {''.join(map(str, b)):d for b, d in bin_data}
 
 
 def _compute_matrix_angles(feature, norm):

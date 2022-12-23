@@ -18,7 +18,6 @@ linear-depth n-qubit controlled X with ancilla
 
 
 import numpy as np
-from qiskit import QuantumCircuit
 from qiskit.circuit.library import C3XGate, C4XGate
 
 
@@ -116,9 +115,6 @@ def mcx_v_chain_dirty(
                 self.x(control_qubits[i])
 
 
-QuantumCircuit.mcx_v_chain_dirty = mcx_v_chain_dirty
-
-
 def linear_mcx(
     self,
     control_qubits,
@@ -127,8 +123,7 @@ def linear_mcx(
 ):
     """
         Linear-depth implementation of multicontrolled X with one dirty ancilla
-        following the decomposition first shown in
-            https://link.aps.org/doi/10.1103/PhysRevA.52.3457
+        following the decomposition first shown in Barenco et al. 1995 (arXiv:quant-ph/9503016)
     """
 
     if self.num_qubits < 5:
@@ -153,26 +148,27 @@ def linear_mcx(
         k_1 = int(np.ceil((num_ctrl + 1.) / 2.))
         k_2 = int(np.floor((num_ctrl + 1.) / 2.))
 
-        self.mcx_v_chain_dirty(
+        mcx_v_chain_dirty(
+            self,
             control_qubits=control_qubits[:k_1],
             target_qubit=ancilla_qubits,
             ancilla_qubits=control_qubits[k_1:k_1 + k_1 - 2]
         )
-        self.mcx_v_chain_dirty(
+        mcx_v_chain_dirty(
+            self,
             control_qubits=[*control_qubits[k_1:], ancilla_qubits],
             target_qubit=target_qubit,
             ancilla_qubits=control_qubits[k_1 - k_2 + 2:k_1]
         )
-        self.mcx_v_chain_dirty(
+        mcx_v_chain_dirty(
+            self,
             control_qubits=control_qubits[:k_1],
             target_qubit=ancilla_qubits,
             ancilla_qubits=control_qubits[k_1:k_1 + k_1 - 2]
         )
-        self.mcx_v_chain_dirty(
+        mcx_v_chain_dirty(
+            self,
             control_qubits=[*control_qubits[k_1:], ancilla_qubits],
             target_qubit=target_qubit,
             ancilla_qubits=control_qubits[k_1 - k_2 + 2:k_1]
         )
-
-
-QuantumCircuit.linear_mcx = linear_mcx
