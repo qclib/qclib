@@ -110,3 +110,4 @@ class TestMcg(TestCase):
             # self._su2_compare(alpha, beta, n_qubits)
             self._su2_count(alpha, beta, n_qubits)
             # n_cnots should be equal to 28 * n_qubits - 88 with n even
+

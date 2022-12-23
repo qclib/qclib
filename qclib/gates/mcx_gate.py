@@ -18,7 +18,9 @@ linear-depth n-qubit controlled X with ancilla
 
 
 import numpy as np
+
 from qiskit import QuantumRegister, QuantumCircuit
+
 from qiskit.circuit.library import C3XGate, C4XGate
 from qiskit.circuit import Gate
 
@@ -216,6 +218,7 @@ def mcx_v_chain_dirty(
                 self.x(control_qubits[i])
 
 
+
 class LinearMcx(Gate):
     def __init__(self, num_controls, action_only=False):
         self.action_only = action_only
@@ -299,6 +302,7 @@ def linear_mcx(
         k_1 = int(np.ceil((num_ctrl + 1.) / 2.))
         k_2 = int(np.floor((num_ctrl + 1.) / 2.))
 
+
         first_gate = McxVchainDirty(k_1).definition
         second_gate = McxVchainDirty(k_2).definition
         self.append(first_gate,
@@ -313,3 +317,4 @@ def linear_mcx(
         last_gate = McxVchainDirty(k_2, action_only=action_only).definition
         self.append(last_gate, [*control_qubits[k_1:],
                                 ancilla_qubit] + control_qubits[k_1 - k_2 + 2:k_1] + [target_qubit])
+
