@@ -22,7 +22,7 @@ from qiskit.circuit import Qubit
 from qiskit.circuit.library import RZGate, RYGate
 from qiskit.extensions import UnitaryGate
 from qiskit.quantum_info import OneQubitEulerDecomposer
-from .mcx_gate import linear_mcx, mcx_v_chain_dirty
+from .mcx_gate import linear_mcx, mcx_v_chain_dirty, LinearMcx
 
 
 # pylint: disable=maybe-no-member
@@ -263,6 +263,7 @@ def _apply_abc(
 
     else:
         ancilla = controls[-1]
+        mcx_gate = LinearMcx(len(controls[:-1]), action_only=True).definition
         # setting gate controls
         controlled_a = a_gate.control(1)
         controlled_b = b_gate.control(1)
@@ -270,9 +271,12 @@ def _apply_abc(
 
         # applying controlled_gates to circuit
         self.append(controlled_c, [ancilla, target])
-        linear_mcx(self, controls[:-1], [target], [ancilla])
+
+        # linear_mcx(self, controls[:-1], [target], [ancilla])
+        self.append(mcx_gate, controls[:-1] +[target] + [ancilla])
         self.append(controlled_b, [ancilla, target])
-        linear_mcx(self, controls[:-1], [target], [ancilla])
+        # linear_mcx(self, controls[:-1], [target], [ancilla])
+        self.append(mcx_gate.inverse(), controls[:-1] + [target] + [ancilla])
         self.append(controlled_a, [ancilla, target])
 
     if ctrl_state is not None:
