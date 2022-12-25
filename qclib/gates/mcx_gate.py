@@ -35,14 +35,19 @@ class McxVchainDirty(Gate):
         relative_phase
         action_only
         """
-        num_ancilla = num_controls - 2
         self.control_qubits = QuantumRegister(num_controls)
-        self.ancilla_qubits = QuantumRegister(num_ancilla)
         self.target_qubit = QuantumRegister(1)
         self.ctrl_state = ctrl_state
         self.relative_phase = relative_phase
         self.action_only = action_only
-        super().__init__('mcx_vc_dirty', 2 * num_controls - 1, [], "McxDirty")
+
+        num_ancilla = 0
+        self.ancilla_qubits = []
+        if num_controls - 2 > 0:
+            num_ancilla = num_controls - 2
+            self.ancilla_qubits = QuantumRegister(num_ancilla)
+
+        super().__init__('mcx_vc_dirty', num_controls + num_ancilla + 1, [], "McxDirty")
 
     def _define(self):
         self.definition = QuantumCircuit(self.control_qubits,
