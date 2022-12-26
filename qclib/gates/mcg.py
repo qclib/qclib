@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Union, List, Tuple
+from typing import Union, List # , Tuple
 
 from cmath import isclose, phase
 import numpy as np
 
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Qubit
-#from qiskit.circuit.library import RZGate, RYGate
-#from qiskit.extensions import UnitaryGate
-#from qiskit.quantum_info import OneQubitEulerDecomposer
+# from qiskit.circuit.library import RZGate, RYGate
+# from qiskit.extensions import UnitaryGate
+# from qiskit.quantum_info import OneQubitEulerDecomposer
 
 from .mcx_gate import McxVchainDirty
 #from .mcx_gate import linear_mcx, mcx_v_chain_dirty, LinearMcx, McxVchainDirty
@@ -115,11 +115,9 @@ def linear_mcg_su2(
         x_vecs, z_vecs = _get_x_z(eig_vecs)
         x_vals, z_vals = _get_x_z(np.diag(eig_vals))
 
-        action_only = True
-
-        half_linear_depth_mcv(self, x_vecs, z_vecs, controls, target, ctrl_state, action_only=action_only, inverse=True)
-        linear_depth_mcv(self, x_vals, z_vals, controls, target, ctrl_state, action_only=action_only)
-        half_linear_depth_mcv(self, x_vecs, z_vecs, controls, target, ctrl_state, action_only=action_only)
+        half_linear_depth_mcv(self, x_vecs, z_vecs, controls, target, ctrl_state, inverse=True)
+        linear_depth_mcv(self, x_vals, z_vals, controls, target, ctrl_state, general_su2_optimization=True)
+        half_linear_depth_mcv(self, x_vecs, z_vecs, controls, target, ctrl_state)
 
     else:
         x, z = _get_x_z(unitary)
@@ -160,7 +158,7 @@ def linear_depth_mcv(
     controls: Union[QuantumRegister, List[Qubit]],
     target: Qubit,
     ctrl_state: str=None,
-    action_only=False
+    general_su2_optimization=False
 ):
 
     alpha_r = np.sqrt(
@@ -195,16 +193,16 @@ def linear_depth_mcv(
         ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
         ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
-    if not action_only:
-        mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
-        self.append(mcx_1.reverse_ops(), controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+    if not general_su2_optimization:
+        mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
+        self.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
     self.append(s_gate, [target])
 
-    mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
-    self.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
+    mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2, action_only=general_su2_optimization).definition
+    self.append(mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
     self.append(s_gate.inverse(), [target])
 
-    mcx_3 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=False).definition
+    mcx_3 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
     self.append(mcx_3, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
     self.append(s_gate, [target])
 
@@ -220,7 +218,6 @@ def half_linear_depth_mcv(
     controls: Union[QuantumRegister, List[Qubit]],
     target: Qubit,
     ctrl_state: str=None,
-    action_only: bool=False,
     inverse: bool=False
 ):
 
@@ -254,28 +251,25 @@ def half_linear_depth_mcv(
         ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
         ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
-    mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
-
     if inverse:
         self.h(target)
 
         self.append(s_gate, [target])
+        mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2, action_only=True).definition
         self.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
-        
+
         self.append(s_gate.inverse(), [target])
 
         self.append(h_gate, [target])
-        if not action_only:
-            mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
-            self.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
-
+        
     else:
-        mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=False).definition
-        self.append(mcx_1.reverse_ops(), controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+        mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
+        self.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
         self.append(h_gate, [target])
 
         self.append(s_gate, [target])
-        
+
+        mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
         self.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
         self.append(s_gate.inverse(), [target])
 
