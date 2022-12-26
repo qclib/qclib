@@ -70,7 +70,7 @@ class TestMcg(TestCase):
         # Count cnots
         mcg_cx = get_cnot_count(mcg_circuit)
         qiskit_cx = get_cnot_count(qiskit_circuit)
-        print(n_qubits, mcg_cx, qiskit_cx)
+        
         self.assertTrue(mcg_cx <= qiskit_cx)
 
     def _su2_depth(self, alpha, beta, n_qubits):
@@ -79,7 +79,7 @@ class TestMcg(TestCase):
         # Count cnots
         mcg_dp = get_depth(mcg_circuit)
         qiskit_dp = get_depth(qiskit_circuit)
-        print(n_qubits,'|', mcg_dp,'|', qiskit_dp)
+        
         self.assertTrue(mcg_dp <= qiskit_dp)
 
     def _su2_compare(self, alpha, beta, n_qubits):
@@ -97,7 +97,7 @@ class TestMcg(TestCase):
         # Count cnots
         mcg_cx = get_cnot_count(mcg_circuit)
         qiskit_cx = get_cnot_count(qiskit_circuit)
-        print(n_qubits, mcg_cx, qiskit_cx)
+        
         self.assertTrue(mcg_cx <= qiskit_cx)
 
     def _u2_compare(self, unitary, n_qubits):
