@@ -36,7 +36,8 @@ def mcg(
     unitary,
     controls: Union[QuantumRegister, List[Qubit]],
     target: Qubit,
-    ctrl_state: str=None
+    ctrl_state: str=None,
+    up_to_diagonal: bool=False
 ):
     """
     Selects the most cost-effective multicontrolled gate decomposition.
@@ -46,21 +47,22 @@ def mcg(
     num_ctrl = len(controls)
     if num_ctrl == 0:
         self.unitary(unitary, [target])
+    elif num_ctrl == 1:
+        u_gate = QuantumCircuit(1)
+        u_gate.unitary(unitary, 0)
+        self.append(u_gate.control(num_ctrl, ctrl_state=ctrl_state), [*controls, target])
     else:
-        if num_ctrl > 1 and _check_su2(unitary):
+        if _check_su2(unitary):
             linear_mcg_su2(self, unitary, controls, target, ctrl_state)
-        elif num_ctrl == 1:
-            u_gate = QuantumCircuit(1)
-            u_gate.unitary(unitary, 0)
-            self.append(u_gate.control(num_ctrl, ctrl_state=ctrl_state), [*controls, target])
         else:
             su_2, phase = _u2_to_su2(unitary)
             self.mcg(su_2, controls, target, ctrl_state)
 
-            diag = np.diag([np.exp(1.0j*phase), np.exp(1.0j*phase)])
-            gate_d = QuantumCircuit(1)
-            gate_d.unitary(diag, 0)
-            self.append(gate_d.control(len(controls), ctrl_state=ctrl_state), [*controls, target])
+            if not up_to_diagonal:
+                diag = np.diag([np.exp(1.0j*phase), np.exp(1.0j*phase)])
+                gate_d = QuantumCircuit(1)
+                gate_d.unitary(diag, 0)
+                self.append(gate_d.control(len(controls), ctrl_state=ctrl_state), [*controls, target])
 
 
 def _u2_to_su2(u_2):
