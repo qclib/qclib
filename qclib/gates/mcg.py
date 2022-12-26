@@ -115,15 +115,11 @@ def linear_mcg_su2(
         x_vecs, z_vecs = _get_x_z(eig_vecs)
         x_vals, z_vals = _get_x_z(np.diag(eig_vals))
 
-        action_only = False
+        action_only = True
 
-        self.h(target)
         half_linear_depth_mcv(self, x_vecs, z_vecs, controls, target, ctrl_state, action_only=action_only, inverse=True)
-        self.h(target)
         linear_depth_mcv(self, x_vals, z_vals, controls, target, ctrl_state, action_only=action_only)
-        self.h(target)
         half_linear_depth_mcv(self, x_vecs, z_vecs, controls, target, ctrl_state, action_only=action_only)
-        self.h(target)
 
     else:
         x, z = _get_x_z(unitary)
@@ -199,8 +195,9 @@ def linear_depth_mcv(
         ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
         ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
-    mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
-    self.append(mcx_1.reverse_ops(), controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+    if not action_only:
+        mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
+        self.append(mcx_1.reverse_ops(), controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
     self.append(s_gate, [target])
 
     mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
@@ -242,6 +239,10 @@ def half_linear_depth_mcv(
     s_gate = QuantumCircuit(1)
     s_gate.unitary(s_op, 0)
 
+    # Hadamard equivalent definition
+    h_gate = QuantumCircuit(1)
+    h_gate.unitary(np.array([[-1, 1], [1, 1]]) * 1/np.sqrt(2), 0)
+    
     num_ctrl = len(controls)
     k_1 = int(np.ceil(num_ctrl / 2.))
     k_2 = int(np.floor(num_ctrl / 2.))
@@ -253,23 +254,32 @@ def half_linear_depth_mcv(
         ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
         ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
-    mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition    
+    mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
 
     if inverse:
+        self.h(target)
+
         self.append(s_gate, [target])
         self.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
-
-        mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
+        
         self.append(s_gate.inverse(), [target])
-        self.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+
+        self.append(h_gate, [target])
+        if not action_only:
+            mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
+            self.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
 
     else:
         mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=False).definition
         self.append(mcx_1.reverse_ops(), controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
-        self.append(s_gate, [target])
+        self.append(h_gate, [target])
 
+        self.append(s_gate, [target])
+        
         self.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
         self.append(s_gate.inverse(), [target])
+
+        self.h(target)
 
 
 # def linear_depth_any_mcsu2(
