@@ -105,7 +105,7 @@ def linear_mcg_su2(
         #     target=target,
         #     ctrl_state=ctrl_state
         #     )
-        
+
         # U = V D V^-1, where the entries of the diagonal D are the eigenvalues
         # `eig_vals` of U and the column vectors of V are the eigenvectors
         # `eig_vecs` of U. These columns are orthonormal and the main diagonal
@@ -199,20 +199,20 @@ def linear_depth_mcv(
         ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
         ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
-    first_mcx = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
-    second_mcx = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
-
-    self.append(first_mcx.reverse_ops(), controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+    mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
+    self.append(mcx_1.reverse_ops(), controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
     self.append(s_gate, [target])
 
-    self.append(second_mcx, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
+    mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
+    self.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
     self.append(s_gate.inverse(), [target])
 
-    first_mcx = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=False).definition
-    self.append(first_mcx, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+    mcx_3 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=False).definition
+    self.append(mcx_3, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
     self.append(s_gate, [target])
 
-    self.append(second_mcx, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
+    mcx_4 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
+    self.append(mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
     self.append(s_gate.inverse(), [target])
 
 
@@ -253,24 +253,22 @@ def half_linear_depth_mcv(
         ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
         ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
-    second_mcx = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
+    mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition    
 
     if inverse:
-        first_mcx = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
-
         self.append(s_gate, [target])
-        self.append(second_mcx, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
-        
+        self.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
+
+        mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=action_only).definition
         self.append(s_gate.inverse(), [target])
-        self.append(first_mcx, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+        self.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
 
     else:
-        first_mcx = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=False).definition
-
-        self.append(first_mcx, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+        mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1, action_only=False).definition
+        self.append(mcx_1.reverse_ops(), controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
         self.append(s_gate, [target])
 
-        self.append(second_mcx, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
+        self.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
         self.append(s_gate.inverse(), [target])
 
 
