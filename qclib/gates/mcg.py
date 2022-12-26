@@ -115,7 +115,7 @@ def linear_mcg_su2(
         x_vecs, z_vecs = _get_x_z(eig_vecs)
         x_vals, z_vals = _get_x_z(np.diag(eig_vals))
 
-        action_only = True
+        action_only = False
 
         self.h(target)
         half_linear_depth_mcv(self, x_vecs, z_vecs, controls, target, ctrl_state, action_only=action_only, inverse=True)
