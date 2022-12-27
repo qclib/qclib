@@ -40,7 +40,6 @@ class TestLinearMCX(TestCase):
     def test_linear_mcx_action_only(self):
         """ Test if linear_mcx is correct """
         self._operator_cmp_loop(
-            self,
             qubit_range=range(8, 9),
             McxMethod=LinearMcx,
             mode="recursion",
@@ -141,15 +140,6 @@ class TestMcxVchainDirty(TestCase):
             control_qubit_range=range(4, 6),
             McxMethod=McxVchainDirty,
             mode="v-chain-dirty"
-        )
-
-    def test_mcx_v_chain_dirty_action_only(self):
-        """ Test if mcx_v_chain_dirty is correct with action only"""
-        self._operator_cmp_loop(
-            control_qubit_range=range(4, 6),
-            McxMethod=McxVchainDirty,
-            mode="v-chain-dirty",
-            action_only=True
         )
 
     def _operator_cmp_loop(
