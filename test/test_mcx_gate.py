@@ -23,6 +23,40 @@ from qiskit.quantum_info import Operator
 from qclib.gates.mcx_gate import mcx_v_chain_dirty
 from qclib.gates.mcx_gate import linear_mcx, McxVchainDirty, LinearMcx
 
+def _operator_cmp_loop(
+    self,
+    qubit_range,
+    McxMethod: Union[LinearMcx, McxVchainDirty],
+    action_only=False
+):
+    """
+    Compares if the custom operator defined by the custom MCX method is the same
+    as the one defined by Qiskit MCX method.
+    Parameters
+    ----------
+    params: 
+        - qubit_range: The number of qubits with which our method needs to be tested
+        - McxMethod: The class definition of the method to be used. It must be either
+                     `LinearMcx` or `McxVchainDirty`
+        - action_only: Decide wether or not use only the action of the V-Chain of Toffoli
+                       gates
+    """
+    for num_qubits in qubit_range:
+        mcx_method = McxMethod(num_qubits-2, action_only=action_only).definition
+
+        mcx_qiskit = QuantumCircuit(num_qubits)
+
+        mcx_qiskit.mcx(
+            control_qubits=list(range(num_qubits - 2)),
+            target_qubit=num_qubits - 2,
+            ancilla_qubits=num_qubits - 1,
+            mode="recursion"
+        )
+
+        mcx_method_op = Operator(mcx_method).data
+        mcx_qiskit_op = Operator(mcx_qiskit).data
+
+        self.assertTrue(np.allclose(mcx_method_op, mcx_qiskit_op))
 
 def apply_control_state_on_quantum_circuit(
     quantum_circuit: QuantumCircuit,
