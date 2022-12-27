@@ -40,7 +40,6 @@ class TestLinearMCX(TestCase):
     def test_linear_mcx_action_only(self):
         """ Test if linear_mcx is correct """
         self._operator_cmp_loop(
-            self,
             qubit_range=range(8, 9),
             McxMethod=LinearMcx,
             mode="recursion",
