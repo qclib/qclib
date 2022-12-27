@@ -26,6 +26,12 @@ from qiskit.circuit import Gate
 
 
 class McxVchainDirty(Gate):
+    """
+    Implementation based on lemma 8 ofIten et al. (2016) arXiv:1501.06911.
+    Decomposition of a multicontrolled X gate with at least k <= ceil(n/2) ancilae
+    for n as the total number of qubits in the system. It also includes optimizations
+    using approximated Toffoli gates up to a diagonal.
+    """
     def __init__(self, num_controls: int, ctrl_state=None, relative_phase=False, action_only=False):
         """
         Parameters
@@ -225,6 +231,13 @@ def mcx_v_chain_dirty(
 
 
 class LinearMcx(Gate):
+    """
+    Implementation based on lemma 9 of Iten et al. (2016) arXiv:1501.06911.
+    Decomposition of a multicontrolled X gate with a dirty ancilla by splitting 
+    it into two sequences of two alternating multicontrolled X gates on 
+    k1 = ceil((n+1)/2) and k2 = floor((n+1)/2) qubits. For n the total
+    number of qubits in the system. Where it also reuses some optimizations available
+    """
     def __init__(self, num_controls, action_only=False):
         self.action_only = action_only
         super().__init__('linear_mcx', num_controls + 2, [], "mcx")
