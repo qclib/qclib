@@ -24,6 +24,11 @@ from qiskit import QuantumRegister, QuantumCircuit
 from qiskit.circuit.library import C3XGate, C4XGate
 from qiskit.circuit import Gate
 
+def _apply_ctrl_state(self):
+    if self.ctrl_state is not None:
+        for i, ctrl in enumerate(self.ctrl_state[::-1]):
+            if ctrl == '0':
+                self.definition.x(self.control_qubits[i])
 
 class McxVchainDirty(Gate):
     """
@@ -125,12 +130,7 @@ class McxVchainDirty(Gate):
 
         self._apply_ctrl_state()
 
-    def _apply_ctrl_state(self):
-        if self.ctrl_state is not None:
-            for i, ctrl in enumerate(self.ctrl_state[::-1]):
-                if ctrl == '0':
-                    self.definition.x(self.control_qubits[i])
-
+McxVchainDirty._apply_ctrl_state = _apply_ctrl_state
 
 def mcx_v_chain_dirty(
     self,
@@ -228,8 +228,6 @@ def mcx_v_chain_dirty(
             if ctrl == '0':
                 self.x(control_qubits[i])
 
-
-
 class LinearMcx(Gate):
     """
     Implementation based on lemma 9 of Iten et al. (2016) arXiv:1501.06911.
@@ -238,33 +236,35 @@ class LinearMcx(Gate):
     k1 = ceil((n+1)/2) and k2 = floor((n+1)/2) qubits. For n the total
     number of qubits in the system. Where it also reuses some optimizations available
     """
-    def __init__(self, num_controls, action_only=False):
+    def __init__(self, num_controls, ctrl_state=None, action_only=False):
         self.action_only = action_only
+        self.ctrl_state = ctrl_state
         super().__init__('linear_mcx', num_controls + 2, [], "mcx")
 
     def _define(self):
         self.definition = QuantumCircuit(self.num_qubits)
-        control_qubits = list(range(self.num_qubits - 2))
-        target_qubit = self.num_qubits - 2,
-        ancilla_qubit = self.num_qubits - 1
+        self.control_qubits = list(range(self.num_qubits - 2))
+        self.target_qubit = self.num_qubits - 2,
+        self.ancilla_qubit = self.num_qubits - 1
 
+        self._apply_ctrl_state()
         if self.num_qubits < 5:
             self.definition.mcx(
-                control_qubits=control_qubits,
-                target_qubit=target_qubit,
+                control_qubits=self.control_qubits,
+                target_qubit=self.target_qubit,
                 mode="noancilla"
             )
         elif self.num_qubits == 5:
-            self.definition.append(C3XGate(), [*control_qubits[:], target_qubit], [])
+            self.definition.append(C3XGate(), [*self.control_qubits[:], self.target_qubit], [])
         elif self.num_qubits == 6:
-            self.definition.append(C4XGate(), [*control_qubits[:], target_qubit], [])
+            self.definition.append(C4XGate(), [*self.control_qubits[:], self.target_qubit], [])
         elif self.num_qubits == 7:
-            self.definition.append(C3XGate(), [*control_qubits[:3], ancilla_qubit], [])
-            self.definition.append(C3XGate(), [*control_qubits[3:], ancilla_qubit, target_qubit], [])
-            self.definition.append(C3XGate(), [*control_qubits[:3], ancilla_qubit], [])
-            self.definition.append(C3XGate(), [*control_qubits[3:], ancilla_qubit, target_qubit], [])
+            self.definition.append(C3XGate(), [*self.control_qubits[:3], self.ancilla_qubit], [])
+            self.definition.append(C3XGate(), [*self.control_qubits[3:], self.ancilla_qubit, self.target_qubit], [])
+            self.definition.append(C3XGate(), [*self.control_qubits[:3], self.ancilla_qubit], [])
+            self.definition.append(C3XGate(), [*self.control_qubits[3:], self.ancilla_qubit, self.target_qubit], [])
         else:
-            num_ctrl = len(control_qubits)
+            num_ctrl = len(self.control_qubits)
 
             # split controls to halve the number of qubits used for each mcx
             k_1 = int(np.ceil((num_ctrl + 1.) / 2.))
@@ -273,18 +273,21 @@ class LinearMcx(Gate):
             first_gate = McxVchainDirty(k_1, relative_phase=True).definition
             second_gate = McxVchainDirty(k_2).definition
             self.definition.append(first_gate,
-                                   control_qubits[:k_1] + control_qubits[k_1:k_1 + k_1 - 2] + [ancilla_qubit])
+                                   self.control_qubits[:k_1] + self.control_qubits[k_1:k_1 + k_1 - 2] + [self.ancilla_qubit])
 
-            self.definition.append(second_gate, [*control_qubits[k_1:],
-                                      ancilla_qubit] + control_qubits[k_1 - k_2 + 2:k_1] + [target_qubit])
+            self.definition.append(second_gate, [*self.control_qubits[k_1:],
+                                      self.ancilla_qubit] + self.control_qubits[k_1 - k_2 + 2:k_1] + [self.target_qubit])
 
             self.definition.append(first_gate,
-                                   control_qubits[:k_1] + control_qubits[k_1:k_1 + k_1 - 2] + [ancilla_qubit])
+                                   self.control_qubits[:k_1] + self.control_qubits[k_1:k_1 + k_1 - 2] + [self.ancilla_qubit])
 
             last_gate = McxVchainDirty(k_2, action_only=self.action_only).definition
             self.definition.append(last_gate,
-                                   [*control_qubits[k_1:], ancilla_qubit] + control_qubits[k_1 - k_2 + 2:k_1] + [target_qubit])
+                                   [*self.control_qubits[k_1:], self.ancilla_qubit] + self.control_qubits[k_1 - k_2 + 2:k_1] + [self.target_qubit])
 
+        self._apply_ctrl_state()
+
+LinearMcx._apply_ctrl_state = _apply_ctrl_state
 
 def linear_mcx(
     self,
