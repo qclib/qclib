@@ -20,7 +20,7 @@ import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.quantum_info import Operator
 from qclib.gates.mcx_gate import mcx_v_chain_dirty
-from qclib.gates.mcx_gate import linear_mcx
+from qclib.gates.mcx_gate import linear_mcx, McxVchainDirty, LinearMcx
 
 
 class TestLinearMCX(TestCase):
@@ -39,13 +39,7 @@ class TestLinearMCX(TestCase):
             ancilla_qubits = QuantumRegister(num_ancilla)
             target_qubit = QuantumRegister(1)
 
-            mcx_v_chain = QuantumCircuit(control_qubits, ancilla_qubits, target_qubit)
-
-            mcx_v_chain.mcx_v_chain_dirty(
-                control_qubits=control_qubits,
-                target_qubit=target_qubit,
-                ancilla_qubits=ancilla_qubits
-            )
+            mcx_v_chain = McxVchainDirty(num_controls).definition
 
             mcx_v_chain_qiskit = QuantumCircuit(control_qubits, ancilla_qubits, target_qubit)
 
@@ -71,13 +65,7 @@ class TestLinearMCX(TestCase):
             ancilla_qubits = QuantumRegister(num_ancilla)
             target_qubit = QuantumRegister(1)
 
-            mcx_v_chain = QuantumCircuit(control_qubits, ancilla_qubits, target_qubit)
-
-            mcx_v_chain.mcx_v_chain_dirty(
-                control_qubits=control_qubits,
-                target_qubit=target_qubit,
-                ancilla_qubits=ancilla_qubits
-            )
+            mcx_v_chain = McxVchainDirty(num_controls).definition
 
             mcx_v_chain_qiskit = QuantumCircuit(control_qubits, ancilla_qubits, target_qubit)
 
@@ -90,21 +78,17 @@ class TestLinearMCX(TestCase):
 
             tr_mcx_v_chain = transpile(mcx_v_chain, basis_gates=['u', 'cx'])
             tr_mcx_v_chain_qiskit = transpile(mcx_v_chain_qiskit, basis_gates=['u', 'cx'])
-
+            
+            self.assertTrue(8 * num_controls - 6 == tr_mcx_v_chain.count_ops()['cx'])
             self.assertLess(tr_mcx_v_chain.depth(), tr_mcx_v_chain_qiskit.depth())
 
 
     def test_linear_mcx(self):
         """ Test if linear_mcx is correct """
 
-        for num_qubits in range(6, 8):
-            mcx_dirty_ancilla = QuantumCircuit(num_qubits)
+        for num_qubits in range(8, 9):
 
-            mcx_dirty_ancilla.linear_mcx(
-                control_qubits=list(range(num_qubits - 2)),
-                target_qubit=num_qubits - 2,
-                ancilla_qubits=num_qubits - 1
-            )
+            mcx_dirty_ancilla = LinearMcx(num_qubits-2).definition
 
             mcx_qiskit = QuantumCircuit(num_qubits)
 
@@ -125,13 +109,8 @@ class TestLinearMCX(TestCase):
         """ Test linear_mcx depth"""
 
         for num_qubits in range(30, 31):
-            mcx_dirty_ancilla = QuantumCircuit(num_qubits)
 
-            mcx_dirty_ancilla.linear_mcx(
-                control_qubits=list(range(num_qubits - 2)),
-                target_qubit=num_qubits - 2,
-                ancilla_qubits=num_qubits - 1
-            )
+            mcx_dirty_ancilla = LinearMcx(num_qubits-2).definition
 
             mcx_qiskit = QuantumCircuit(num_qubits)
 

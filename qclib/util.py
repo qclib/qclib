@@ -56,7 +56,7 @@ def get_state(circ):
     return np.array(state_vector)
 
 
-def get_cnot_count(circ):
+def get_cnot_count(circ, optimization_level=0):
     """
     Parameters
     ----------
@@ -66,8 +66,22 @@ def get_cnot_count(circ):
     -------
     cnot_count: number of cnot gates in the quantum circuit
     """
-    tcirc = transpile(circ, basis_gates=['u', 'cx'])
+    tcirc = transpile(circ, basis_gates=['u', 'cx'], optimization_level=0)
     return tcirc.count_ops().get('cx', 0)
+
+
+def get_depth(circ, optimization_level=0):
+    """
+    Parameters
+    ----------
+    circ: QuantumCircuit
+
+    Returns
+    -------
+    circuit depth: depth of the quantum circuit
+    """
+    tcirc = transpile(circ, basis_gates=['u', 'cx'], optimization_level=optimization_level)
+    return tcirc.depth()
 
 
 def replace_all_values_with(new_value, dataset):
