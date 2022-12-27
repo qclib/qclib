@@ -136,26 +136,62 @@ class TestMcxVchainDirty(TestCase):
 
     def test_mcx_v_chain_dirty(self):
         """ Test if mcx_v_chain_dirty is correct """
-        self._operator_cmp_loop(
-            control_qubit_range=range(4, 6),
-            McxMethod=McxVchainDirty,
-            mode="v-chain-dirty"
-        )
+        for num_controls in range(4, 6):
+            self._operator_cmp_vchain_dirty(
+                num_controls=num_controls,
+                McxMethod=McxVchainDirty,
+                mode="v-chain-dirty"
+            )
+
+    def test_mcx_v_chain_dirty_non_trivial_ctrl(self):
+        """ 
+        Test if mcx_v_chain_dirty is correct with non trivial control state
+        """
+        control_qubit_range = list(range(4, 7))
+        # creating binary digits
+        basis_states = [ f"{np.random.randint(2**n_ctrl):0{n_ctrl}b}" for n_ctrl in  control_qubit_range]
+
+        for num_controls , ctrl_state in zip(control_qubit_range, basis_states):
+            self._operator_cmp_vchain_dirty(
+                num_controls=num_controls,
+                McxMethod=McxVchainDirty,
+                mode="v-chain-dirty",
+                ctrl_state=ctrl_state
+            )
+    
+    def test_mcx_v_chain_dirty_non_trivial_ctrl(self):
+        """ 
+        Test if mcx_v_chain_dirty is correct with non trivial control state
+        """
+        control_qubit_range = list(range(4, 7))
+        # creating binary digits
+        basis_states = [ f"{np.random.randint(2**n_ctrl):0{n_ctrl}b}" for n_ctrl in  control_qubit_range]
+
+        for num_controls , ctrl_state in zip(control_qubit_range, basis_states):
+            self._operator_cmp_vchain_dirty(
+                num_controls=num_controls,
+                McxMethod=McxVchainDirty,
+                mode="v-chain-dirty",
+                ctrl_state=ctrl_state,
+                action_only=True
+            )
 
     def test_mcx_v_chain_dirty_action_only(self):
         """ Test if mcx_v_chain_dirty is correct with action only"""
-        self._operator_cmp_loop(
-            control_qubit_range=range(4, 6),
-            McxMethod=McxVchainDirty,
-            mode="v-chain-dirty",
-            action_only=True
-        )
+        for num_controls in range(4, 6):
+            self._operator_cmp_vchain_dirty(
+                num_controls=num_controls,
+                McxMethod=McxVchainDirty,
+                mode="v-chain-dirty",
+                action_only=True
+            )
 
-    def _operator_cmp_loop(
+    def _operator_cmp_vchain_dirty(
         self,
-        control_qubit_range,
+        num_controls,
         McxMethod: McxVchainDirty,
         mode: str,
+        ctrl_state: str = None,
         action_only=False
     ):
         """
@@ -164,31 +200,36 @@ class TestMcxVchainDirty(TestCase):
         Parameters
         ----------
         params: 
-            control_qubit_range: The number of control qubits with which our method must to be tested
-            McxMethod: The class definition of the method to be used. It must be `LinearMcx`
-
+            num_controls: The number of control qubits with which our method must to be tested
+            McxMethod: The class definition of the method to be used. It must be `McxVchainDirty`
+            ctrl_state: The basis state used for controlling the X operation on the target qubit
             action_only: Decide wether or not use only the action of the V-Chain of Toffoli
                         gates
         """
-        for num_controls in control_qubit_range:
-            mcx_method = McxMethod(num_controls, action_only=action_only).definition
+        
 
-            #defining quiskit's 
-            num_ancilla = num_controls - 2
-            control_qubits = QuantumRegister(num_controls)
-            ancilla_qubits = QuantumRegister(num_ancilla)
-            target_qubit = QuantumRegister(1)
+        mcx_method = McxMethod(
+                        num_controls,
+                        ctrl_state=ctrl_state,
+                        action_only=action_only
+                    ).definition
 
-            mcx_v_chain_qiskit = QuantumCircuit(control_qubits, ancilla_qubits, target_qubit)
+        #defining quiskit's 
+        num_ancilla = num_controls - 2
+        control_qubits = QuantumRegister(num_controls)
+        ancilla_qubits = QuantumRegister(num_ancilla)
+        target_qubit = QuantumRegister(1)
 
-            mcx_v_chain_qiskit.mcx(
-                control_qubits=control_qubits,
-                target_qubit=target_qubit,
-                ancilla_qubits=ancilla_qubits,
-                mode=mode
-            )
+        mcx_v_chain_qiskit = QuantumCircuit(control_qubits, ancilla_qubits, target_qubit)
 
-            mcx_method_op = Operator(mcx_method).data
-            mcx_v_chain_qiskit_op = Operator(mcx_v_chain_qiskit).data
+        mcx_v_chain_qiskit.mcx(
+            control_qubits=control_qubits,
+            target_qubit=target_qubit,
+            ancilla_qubits=ancilla_qubits,
+            mode=mode
+        )
 
-            self.assertTrue(np.allclose(mcx_method_op, mcx_v_chain_qiskit_op))
+        mcx_method_op = Operator(mcx_method).data
+        mcx_v_chain_qiskit_op = Operator(mcx_v_chain_qiskit).data
+
+        self.assertTrue(np.allclose(mcx_method_op, mcx_v_chain_qiskit_op))
