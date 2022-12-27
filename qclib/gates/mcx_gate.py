@@ -112,6 +112,9 @@ class McxVchainDirty(Gate):
 
                         break
 
+                if self.action_only and j == 1:
+                    break
+
                 for i, _ in enumerate(self.ancilla_qubits[1:]):  # reset part
                     theta = np.pi / 4.
 
@@ -119,9 +122,6 @@ class McxVchainDirty(Gate):
                     self.definition.u(theta=theta, phi=0., lam=0., qubit=self.ancilla_qubits[i + 1])
                     self.definition.cx(self.control_qubits[2 + i], self.ancilla_qubits[i + 1])
                     self.definition.u(theta=theta, phi=0., lam=0., qubit=self.ancilla_qubits[i + 1])
-
-                if self.action_only:
-                    break
 
         self._apply_ctrl_state()
 

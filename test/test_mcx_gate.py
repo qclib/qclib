@@ -23,7 +23,6 @@ from qiskit.quantum_info import Operator
 from qclib.gates.mcx_gate import mcx_v_chain_dirty
 from qclib.gates.mcx_gate import linear_mcx, McxVchainDirty, LinearMcx
 
-
 def _operator_cmp_loop(
     self,
     qubit_range,
@@ -150,3 +149,46 @@ class TestMcxVchainDirty(TestCase):
             McxVchainDirty,
             action_only=True
         )
+
+    def test_linear_mcx(self):
+        """ Test if linear_mcx is correct """
+
+        for num_qubits in range(8, 9):
+
+            mcx_dirty_ancilla = LinearMcx(num_qubits-2).definition
+
+            mcx_qiskit = QuantumCircuit(num_qubits)
+
+            mcx_qiskit.mcx(
+                control_qubits=list(range(num_qubits - 2)),
+                target_qubit=num_qubits - 2,
+                ancilla_qubits=num_qubits - 1,
+                mode="recursion"
+            )
+
+            mcx_dirty_ancilla_op = Operator(mcx_dirty_ancilla).data
+            mcx_qiskit_op = Operator(mcx_qiskit).data
+
+            self.assertTrue(np.allclose(mcx_dirty_ancilla_op, mcx_qiskit_op))
+
+
+    def test_linear_mcx_depth(self):
+        """ Test linear_mcx depth"""
+
+        for num_qubits in range(30, 31):
+
+            mcx_dirty_ancilla = LinearMcx(num_qubits-2).definition
+
+            mcx_qiskit = QuantumCircuit(num_qubits)
+
+            mcx_qiskit.mcx(
+                control_qubits=list(range(num_qubits - 2)),
+                target_qubit=num_qubits - 2,
+                ancilla_qubits=num_qubits - 1,
+                mode="recursion"
+            )
+
+            tr_mcx_dirty_ancilla = transpile(mcx_dirty_ancilla, basis_gates=['u', 'cx'])
+            tr_mcx_qiskit = transpile(mcx_qiskit, basis_gates=['u', 'cx'])
+
+            self.assertLess(tr_mcx_dirty_ancilla.depth(), tr_mcx_qiskit.depth())
