@@ -314,16 +314,32 @@ def mcg_u2(
     v_gate_dag = QuantumCircuit(1, name="V^dag")
     v_gate_dag.unitary(v_unitary.T.conj(), 0)
 
+    # variables containing subsets of the control state
+    (
+     ctrl_state_m_controls, 
+     ctrl_state_remainder, 
+     m_controls_reverse 
+    ) = ( 
+        None, 
+        None, 
+        None
+    )
+
+    if ctrl_state is not None:
+        ctrl_state_m_controls = ctrl_state[:-1]
+        m_controls_reverse = ctrl_state_m_controls[::-1]
+        ctrl_state_remainder = ctrl_state[::-1][-1]
+
     linear_mcx_gate = LinearMcx(
                         num_controls=len(multiple_controls),
-                        ctrl_state=ctrl_state[:-1]
+                        ctrl_state=ctrl_state_m_controls
                       ).definition
 
-    self.append(v_gate.control(1, ctrl_state=ctrl_state[::-1][-1]), [remainder_control, target])
+    self.append(v_gate.control(1, ctrl_state=ctrl_state_remainder), [remainder_control, target])
 
     self.append(linear_mcx_gate, [*multiple_controls, remainder_control, target])
 
-    self.append(v_gate_dag.control(1, ctrl_state=ctrl_state[::-1][-1]), [remainder_control, target])
+    self.append(v_gate_dag.control(1, ctrl_state=ctrl_state_remainder), [remainder_control, target])
 
     self.append(linear_mcx_gate, [*multiple_controls, remainder_control, target])
 
@@ -334,14 +350,14 @@ def mcg_u2(
         unitary=v_su_2, 
         controls=multiple_controls,
         target=target,
-        ctrl_state=ctrl_state[:-1]
+        ctrl_state=ctrl_state_m_controls
     )
 
     if not up_to_diagonal:
         diag = np.diag([np.exp(1.0j*v_phase), np.exp(1.0j*v_phase)])
         gate_d = QuantumCircuit(1, name="P")
         gate_d.unitary(diag, 0)
-        self.append(gate_d.control(len(multiple_controls), ctrl_state=ctrl_state[::-1][:-1]), [*multiple_controls, target])
+        self.append(gate_d.control(len(multiple_controls), ctrl_state=m_controls_reverse), [*multiple_controls, target])
 
 
 # def linear_depth_any_mcsu2(
