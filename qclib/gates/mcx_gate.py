@@ -77,7 +77,7 @@ class McxVchainDirty(Gate):
                 target_qubit=self.target_qubit,
                 mode="noancilla"
             )
-        elif num_ctrl == 3:
+        elif not self.relative_phase and num_ctrl == 3:
             self.definition.append(C3XGate(), [*self.control_qubits[:], self.target_qubit], [])
         else:
             for j in range(2):
@@ -117,9 +117,6 @@ class McxVchainDirty(Gate):
 
                         break
 
-                if self.action_only and j == 1:
-                    break
-
                 for i, _ in enumerate(self.ancilla_qubits[1:]):  # reset part
                     theta = np.pi / 4.
 
@@ -127,6 +124,9 @@ class McxVchainDirty(Gate):
                     self.definition.u(theta=theta, phi=0., lam=0., qubit=self.ancilla_qubits[i + 1])
                     self.definition.cx(self.control_qubits[2 + i], self.ancilla_qubits[i + 1])
                     self.definition.u(theta=theta, phi=0., lam=0., qubit=self.ancilla_qubits[i + 1])
+
+                if self.action_only:
+                    break
 
         self._apply_ctrl_state()
 
@@ -267,9 +267,10 @@ class LinearMcx(Gate):
             num_ctrl = len(self.control_qubits)
 
             # split controls to halve the number of qubits used for each mcx
-            k_1 = int(np.ceil((num_ctrl + 1.) / 2.))
-            k_2 = int(np.floor((num_ctrl + 1.) / 2.))
+            k_2 = int(np.ceil(self.num_qubits / 2.))
+            k_1 = num_ctrl - k_2 + 1
 
+            # when relative_phase=True only approximate Toffoli is applied because only aux qubits are targeted
             first_gate = McxVchainDirty(k_1, relative_phase=True).definition
             second_gate = McxVchainDirty(k_2).definition
             self.definition.append(first_gate,
@@ -281,9 +282,17 @@ class LinearMcx(Gate):
             self.definition.append(first_gate,
                                    self.control_qubits[:k_1] + self.control_qubits[k_1:k_1 + k_1 - 2] + [self.ancilla_qubit])
 
+            # when action_only=True only the action part of the circuit happens due to gate cancelling
             last_gate = McxVchainDirty(k_2, action_only=self.action_only).definition
             self.definition.append(last_gate,
                                    [*self.control_qubits[k_1:], self.ancilla_qubit] + self.control_qubits[k_1 - k_2 + 2:k_1] + [self.target_qubit])
+
+            if self.action_only:
+                self.definition.ccx(
+                    control_qubit1=self.control_qubits[k_1 - 1],
+                    control_qubit2=self.ancilla_qubit,
+                    target_qubit=self.target_qubit
+                )
 
         self._apply_ctrl_state()
 
