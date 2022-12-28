@@ -32,7 +32,7 @@ def _apply_ctrl_state(self):
 
 class McxVchainDirty(Gate):
     """
-    Implementation based on lemma 8 ofIten et al. (2016) arXiv:1501.06911.
+    Implementation based on lemma 8 of Iten et al. (2016) arXiv:1501.06911.
     Decomposition of a multicontrolled X gate with at least k <= ceil(n/2) ancilae
     for n as the total number of qubits in the system. It also includes optimizations
     using approximated Toffoli gates up to a diagonal.
