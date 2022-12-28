@@ -23,7 +23,7 @@ from qiskit.circuit import Qubit
 # from qiskit.extensions import UnitaryGate
 # from qiskit.quantum_info import OneQubitEulerDecomposer
 
-from .mcx_gate import McxVchainDirty
+from .mcx_gate import McxVchainDirty, LinearMcx
 #from .mcx_gate import linear_mcx, mcx_v_chain_dirty, LinearMcx, McxVchainDirty
 
 
@@ -55,14 +55,14 @@ def mcg(
         if _check_su2(unitary):
             linear_mcg_su2(self, unitary, controls, target, ctrl_state)
         else:
-            su_2, phase = _u2_to_su2(unitary)
-            self.mcg(su_2, controls, target, ctrl_state)
-
-            if not up_to_diagonal:
-                diag = np.diag([np.exp(1.0j*phase), np.exp(1.0j*phase)])
-                gate_d = QuantumCircuit(1)
-                gate_d.unitary(diag, 0)
-                self.append(gate_d.control(len(controls), ctrl_state=ctrl_state), [*controls, target])
+            mcg_u2(
+                self,
+                unitary=unitary,
+                controls=controls,
+                target=target,
+                ctrl_state=ctrl_state,
+                up_to_diagonal=up_to_diagonal
+            )
 
 
 def _u2_to_su2(u_2):
@@ -276,6 +276,72 @@ def half_linear_depth_mcv(
         self.append(s_gate.inverse(), [target])
 
         self.h(target)
+
+
+def mcg_u2(
+    self,
+    unitary,
+    controls: Union[QuantumRegister, List[Qubit]],
+    target: Qubit,
+    ctrl_state: str=None,
+    up_to_diagonal: bool=False
+):
+    """
+    Implements gate decomposition of a munticontrolled operator in U(2) according to
+    Theorem 4 of Iten et al. (2016) arXiv:1501.06911.
+
+    Parameters
+    ----------
+    unitary : numpy.ndarray 2 x 2 unitary matrix
+    controls    : Either qiskit.QuantumRegister or list of qiskit.Qubit containing the qubits to be used as control gates.
+    target  : qiskit.Qubit on wich the unitary operation is to be applied
+    ctrl_state  : String of binary digits describing the basis state used as control
+    """
+
+    eig_vals, eig_vecs = np.linalg.eig(unitary)
+
+    multiple_controls = controls[:-1]
+    remainder_control = controls[-1]
+
+    v_unitary = np.sum([
+                    np.sqrt(eig_val)*np.outer(eig_vecs[:, eig_idx], eig_vecs[:, eig_idx].conj())
+                    for eig_idx, eig_val in enumerate(eig_vals)
+                ], axis=0)
+
+    v_gate = QuantumCircuit(1, name="V")
+    v_gate.unitary(v_unitary, 0)
+    
+    v_gate_dag = QuantumCircuit(1, name="V^dag")
+    v_gate_dag.unitary(v_unitary.T.conj(), 0)
+
+    linear_mcx_gate = LinearMcx(
+                        num_controls=len(multiple_controls),
+                        ctrl_state=ctrl_state[:-1]
+                      ).definition
+
+    self.append(v_gate.control(1, ctrl_state=ctrl_state[::-1][-1]), [remainder_control, target])
+
+    self.append(linear_mcx_gate, [*multiple_controls, remainder_control, target])
+
+    self.append(v_gate_dag.control(1, ctrl_state=ctrl_state[::-1][-1]), [remainder_control, target])
+
+    self.append(linear_mcx_gate, [*multiple_controls, remainder_control, target])
+
+    v_su_2, v_phase = _u2_to_su2(v_unitary)
+
+    mcg(
+        self,
+        unitary=v_su_2, 
+        controls=multiple_controls,
+        target=target,
+        ctrl_state=ctrl_state[:-1]
+    )
+
+    if not up_to_diagonal:
+        diag = np.diag([np.exp(1.0j*v_phase), np.exp(1.0j*v_phase)])
+        gate_d = QuantumCircuit(1, name="P")
+        gate_d.unitary(diag, 0)
+        self.append(gate_d.control(len(multiple_controls), ctrl_state=ctrl_state[::-1][:-1]), [*multiple_controls, target])
 
 
 # def linear_depth_any_mcsu2(
