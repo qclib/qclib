@@ -20,8 +20,7 @@ import numpy as np
 from typing import Union
 from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.quantum_info import Operator
-from qclib.gates.mcx_gate import mcx_v_chain_dirty
-from qclib.gates.mcx_gate import linear_mcx, McxVchainDirty, LinearMcx
+from qclib.gates.mcx_gate import McxVchainDirty, LinearMcx
 
 def apply_control_state_on_quantum_circuit(
     quantum_circuit: QuantumCircuit,
@@ -48,8 +47,6 @@ def apply_control_state_on_quantum_circuit(
 
 class TestLinearMCX(TestCase):
     """ Testing qclib.gates.mcx_gate """
-
-    QuantumCircuit.linear_mcx = linear_mcx
 
     def test_linear_mcx(self):
         """ Test if linear_mcx is correct """
@@ -211,8 +208,6 @@ class TestLinearMCX(TestCase):
         return mcx_qiskit
 
 class TestMcxVchainDirty(TestCase):
-
-    QuantumCircuit.mcx_v_chain_dirty = mcx_v_chain_dirty
 
     def test_mcx_v_chain_dirty_depth(self):
         """ Test mcx_v_chain_dirty depth"""

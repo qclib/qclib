@@ -47,3 +47,10 @@ class Toffoli(Gate):
             self.definition.u(theta=theta, phi=0., lam=0., qubit=target_qubit)
             self.definition.cx(control_qubits[0], target_qubit)
             self.definition.u(theta=theta, phi=0., lam=0., qubit=target_qubit)
+    
+    @staticmethod
+    def ccx(circuit, controls=None, target=None, cancel=None):
+        if controls is None or target is None:
+            circuit.append(Toffoli(cancel), circuit.qubits[:3])
+        else:
+            circuit.append(Toffoli(cancel), [*controls, target])
