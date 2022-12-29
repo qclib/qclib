@@ -55,14 +55,27 @@ def mcg(
         if _check_su2(unitary):
             linear_mcg_su2(self, unitary, controls, target, ctrl_state)
         else:
-            mcg_u2(
-                self,
-                unitary=unitary,
-                controls=controls,
-                target=target,
-                ctrl_state=ctrl_state,
-                up_to_diagonal=up_to_diagonal
-            )
+            if up_to_diagonal:
+                # su_2, complex_arg = _u2_to_su2(unitary)
+                su_2, _ = _u2_to_su2(unitary)
+                self.mcg(su_2, controls, target, ctrl_state)
+
+                # if not up_to_diagonal:
+                #     diag = np.diag([np.exp(1.0j*complex_arg), np.exp(1.0j*complex_arg)])
+                #     gate_d = QuantumCircuit(1)
+                #     gate_d.unitary(diag, 0)
+                #     self.append(
+                #         gate_d.control(len(controls), ctrl_state=ctrl_state),
+                #         [*controls, target]
+                #     )
+            else:
+                quadratic_depth_mcg_u2(
+                    self,
+                    u_2=unitary,
+                    controls=controls,
+                    target=target,
+                    ctrl_state=ctrl_state
+                )
 
 
 def _u2_to_su2(u_2):
@@ -228,7 +241,7 @@ def half_linear_depth_mcv(
     alpha = alpha_r + 1.j * alpha_i
 
     beta = x / np.sqrt(2*(z.real + 1.))
-    
+
     s_op = np.array(
         [[alpha, -np.conj(beta)],
         [beta, np.conj(alpha)]]
@@ -241,7 +254,7 @@ def half_linear_depth_mcv(
     # Hadamard equivalent definition
     h_gate = QuantumCircuit(1)
     h_gate.unitary(np.array([[-1, 1], [1, 1]]) * 1/np.sqrt(2), 0)
-    
+
     num_ctrl = len(controls)
     k_1 = int(np.ceil(num_ctrl / 2.))
     k_2 = int(np.floor(num_ctrl / 2.))
@@ -263,7 +276,7 @@ def half_linear_depth_mcv(
         self.append(s_gate.inverse(), [target])
 
         self.append(h_gate, [target])
-        
+
     else:
         mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
         self.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
@@ -277,14 +290,13 @@ def half_linear_depth_mcv(
 
         self.h(target)
 
-
-def mcg_u2(
+from scipy.linalg import sqrtm
+def quadratic_depth_mcg_u2(
     self,
-    unitary,
+    u_2,
     controls: Union[QuantumRegister, List[Qubit]],
     target: Qubit,
-    ctrl_state: str=None,
-    up_to_diagonal: bool=False
+    ctrl_state: str=None
 ):
     """
     Implements gate decomposition of a munticontrolled operator in U(2) according to
@@ -298,66 +310,51 @@ def mcg_u2(
     ctrl_state  : String of binary digits describing the basis state used as control
     """
 
-    eig_vals, eig_vecs = np.linalg.eig(unitary)
+    num_ctrl = len(controls)
 
-    multiple_controls = controls[:-1]
-    remainder_control = controls[-1]
+    if num_ctrl == 2:
+        u_gate = QuantumCircuit(1)
+        u_gate.unitary(u_2, 0)
+        self.append(
+            u_gate.control(
+                num_ctrl_qubits=num_ctrl,
+                ctrl_state=ctrl_state
+            ),
+            [*controls, target]
+        )
+    else:
+        # eig_vals, eig_vecs = np.linalg.eig(u_2)
+        # v_op = np.sum([
+        #             np.sqrt(eig_val)*np.outer(eig_vecs[:, eig_idx], eig_vecs[:, eig_idx].conj())
+        #             for eig_idx, eig_val in enumerate(eig_vals)
+        #         ], axis=0)
 
-    v_unitary = np.sum([
-                    np.sqrt(eig_val)*np.outer(eig_vecs[:, eig_idx], eig_vecs[:, eig_idx].conj())
-                    for eig_idx, eig_val in enumerate(eig_vals)
-                ], axis=0)
+        v_op = sqrtm(u_2)
 
-    v_gate = QuantumCircuit(1, name="V")
-    v_gate.unitary(v_unitary, 0)
-    
-    v_gate_dag = QuantumCircuit(1, name="V^dag")
-    v_gate_dag.unitary(v_unitary.T.conj(), 0)
+        v_gate = QuantumCircuit(1, name="V")
+        v_gate.unitary(v_op, 0)
 
-    # variables containing subsets of the control state
-    (
-     ctrl_state_m_controls, 
-     ctrl_state_remainder, 
-     m_controls_reverse 
-    ) = ( 
-        None, 
-        None, 
-        None
-    )
+        v_gate_dag = QuantumCircuit(1, name="V^dag")
+        v_gate_dag.unitary(v_op.T.conj(), 0)
 
-    if ctrl_state is not None:
-        ctrl_state_m_controls = ctrl_state[:-1]
-        m_controls_reverse = ctrl_state_m_controls[::-1]
-        ctrl_state_remainder = ctrl_state[::-1][-1]
+        linear_mcx_gate = LinearMcx(
+                            num_controls=num_ctrl-1,
+                            ctrl_state=ctrl_state[:-1],
+                            action_only=True
+                        ).definition
 
-    linear_mcx_gate = LinearMcx(
-                        num_controls=len(multiple_controls),
-                        ctrl_state=ctrl_state_m_controls
-                      ).definition
+        self.append(v_gate.control(1, ctrl_state=ctrl_state[-1:]), [controls[-1], target])
+        self.append(linear_mcx_gate, [*controls[:-1], controls[-1], target])
+        self.append(v_gate_dag.control(1, ctrl_state=ctrl_state[-1:]), [controls[-1], target])
+        self.append(linear_mcx_gate.inverse(), [*controls[:-1], controls[-1], target])
 
-    self.append(v_gate.control(1, ctrl_state=ctrl_state_remainder), [remainder_control, target])
-
-    self.append(linear_mcx_gate, [*multiple_controls, remainder_control, target])
-
-    self.append(v_gate_dag.control(1, ctrl_state=ctrl_state_remainder), [remainder_control, target])
-
-    self.append(linear_mcx_gate, [*multiple_controls, remainder_control, target])
-
-    v_su_2, v_phase = _u2_to_su2(v_unitary)
-
-    mcg(
-        self,
-        unitary=v_su_2, 
-        controls=multiple_controls,
-        target=target,
-        ctrl_state=ctrl_state_m_controls
-    )
-
-    if not up_to_diagonal:
-        diag = np.diag([np.exp(1.0j*v_phase), np.exp(1.0j*v_phase)])
-        gate_d = QuantumCircuit(1, name="P")
-        gate_d.unitary(diag, 0)
-        self.append(gate_d.control(len(multiple_controls), ctrl_state=m_controls_reverse), [*multiple_controls, target])
+        quadratic_depth_mcg_u2(
+            self,
+            v_op,
+            controls[:-1],
+            target,
+            ctrl_state[:-1]
+        )
 
 
 # def linear_depth_any_mcsu2(
