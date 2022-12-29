@@ -27,6 +27,10 @@ from qiskit.circuit import Gate
 
 from .toffoli import Toffoli
 
+
+# pylint: disable=protected-access
+
+
 class McxVchainDirty(Gate):
     """
     Implementation based on lemma 8 of Iten et al. (2016) arXiv:1501.06911.
@@ -80,15 +84,19 @@ class McxVchainDirty(Gate):
             for j in range(2):
                 for i, _ in enumerate(self.control_qubits):  # action part
                     if i < num_ctrl - 2:
-                        if targets[i] != self.target_qubit or self.relative_phase:  # gate cancelling
-                            controls = [self.control_qubits[num_ctrl - i - 1], self.ancilla_qubits[num_ancilla - i - 1]]
-                            
+                        if targets[i] != self.target_qubit or self.relative_phase:
+                            # gate cancelling
+                            controls = [
+                                self.control_qubits[num_ctrl - i - 1],
+                                self.ancilla_qubits[num_ancilla - i - 1]
+                            ]
+
                             # cancel rightmost gates of action part with leftmost gates of reset part
                             if self.relative_phase and targets[i] == self.target_qubit and j == 1:
                                 self.definition.append(Toffoli(cancel='left'), [*controls, targets[i]])
                             else:
                                 self.definition.append(Toffoli(cancel='right'), [*controls, targets[i]])
-                                
+
                         else:
                             self.definition.ccx(
                                 control_qubit1=self.control_qubits[num_ctrl - i - 1],
@@ -96,9 +104,13 @@ class McxVchainDirty(Gate):
                                 target_qubit=targets[i]
                             )
                     else:
-                        controls = [self.control_qubits[num_ctrl - i - 2], self.control_qubits[num_ctrl - i - 1]]
+                        controls = [
+                            self.control_qubits[num_ctrl - i - 2],
+                            self.control_qubits[num_ctrl - i - 1]
+                        ]
+
                         self.definition.append(Toffoli(), [*controls, targets[i]])
-                        
+
                         break
 
                 for i, _ in enumerate(self.ancilla_qubits[1:]):  # reset part
@@ -115,10 +127,20 @@ class McxVchainDirty(Gate):
                     break
 
         self._apply_ctrl_state()
-    
+
     @staticmethod
-    def mcx_vchain_dirty(circuit, controls=None, target=None, ctrl_state=None, relative_phase=False, action_only=False):
-        circuit.append(McxVchainDirty(len(controls), ctrl_state, relative_phase, action_only), [*controls, target])
+    def mcx_vchain_dirty(
+        circuit,
+        controls=None,
+        target=None,
+        ctrl_state=None,
+        relative_phase=False,
+        action_only=False
+    ):
+        circuit.append(
+            McxVchainDirty(len(controls), ctrl_state, relative_phase, action_only),
+            [*controls, target]
+        )
 
 
 def _apply_ctrl_state(self):
@@ -134,21 +156,25 @@ McxVchainDirty._apply_ctrl_state = _apply_ctrl_state
 class LinearMcx(Gate):
     """
     Implementation based on lemma 9 of Iten et al. (2016) arXiv:1501.06911.
-    Decomposition of a multicontrolled X gate with a dirty ancilla by splitting 
-    it into two sequences of two alternating multicontrolled X gates on 
+    Decomposition of a multicontrolled X gate with a dirty ancilla by splitting
+    it into two sequences of two alternating multicontrolled X gates on
     k1 = ceil((n+1)/2) and k2 = floor((n+1)/2) qubits. For n the total
     number of qubits in the system. Where it also reuses some optimizations available
     """
     def __init__(self, num_controls, ctrl_state=None, action_only=False):
         self.action_only = action_only
         self.ctrl_state = ctrl_state
+
+        num_qubits = num_controls + 2
+
+        self.control_qubits = list(range(num_qubits - 2))
+        self.target_qubit = num_qubits - 2,
+        self.ancilla_qubit = num_qubits - 1
+
         super().__init__('linear_mcx', num_controls + 2, [], "mcx")
 
     def _define(self):
         self.definition = QuantumCircuit(self.num_qubits)
-        self.control_qubits = list(range(self.num_qubits - 2))
-        self.target_qubit = self.num_qubits - 2,
-        self.ancilla_qubit = self.num_qubits - 1
 
         self._apply_ctrl_state()
         if self.num_qubits < 5:
@@ -176,26 +202,27 @@ class LinearMcx(Gate):
             # when relative_phase=True only approximate Toffoli is applied because only aux qubits are targeted
             first_gate = McxVchainDirty(k_1, relative_phase=True).definition
             second_gate = McxVchainDirty(k_2).definition
-            self.definition.append(first_gate,
-                                   self.control_qubits[:k_1] + self.control_qubits[k_1:k_1 + k_1 - 2] + [self.ancilla_qubit])
+            self.definition.append(
+                first_gate,
+                self.control_qubits[:k_1] + self.control_qubits[k_1:k_1 + k_1 - 2] + [self.ancilla_qubit]
+            )
 
-            self.definition.append(second_gate, [*self.control_qubits[k_1:],
-                                      self.ancilla_qubit] + self.control_qubits[k_1 - k_2 + 2:k_1] + [self.target_qubit])
+            self.definition.append(
+                second_gate, [*self.control_qubits[k_1:],
+                self.ancilla_qubit] + self.control_qubits[k_1 - k_2 + 2:k_1] + [self.target_qubit]
+            )
 
-            self.definition.append(first_gate,
-                                   self.control_qubits[:k_1] + self.control_qubits[k_1:k_1 + k_1 - 2] + [self.ancilla_qubit])
+            self.definition.append(
+                first_gate,
+                self.control_qubits[:k_1] + self.control_qubits[k_1:k_1 + k_1 - 2] + [self.ancilla_qubit]
+            )
 
             # when action_only=True only the action part of the circuit happens due to gate cancelling
             last_gate = McxVchainDirty(k_2, action_only=self.action_only).definition
-            self.definition.append(last_gate,
-                                   [*self.control_qubits[k_1:], self.ancilla_qubit] + self.control_qubits[k_1 - k_2 + 2:k_1] + [self.target_qubit])
-
-            if self.action_only:
-                self.definition.ccx(
-                    control_qubit1=self.control_qubits[k_1 - 1],
-                    control_qubit2=self.ancilla_qubit,
-                    target_qubit=self.target_qubit
-                )
+            self.definition.append(
+                last_gate,
+                [*self.control_qubits[k_1:], self.ancilla_qubit] + self.control_qubits[k_1 - k_2 + 2:k_1] + [self.target_qubit]
+            )
 
         self._apply_ctrl_state()
 

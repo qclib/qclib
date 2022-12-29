@@ -25,7 +25,7 @@ from qiskit.circuit import Gate
 class Toffoli(Gate):
     def __init__(self, cancel=None):
         self.cancel = cancel
-        
+
         super().__init__('toffoli', 3, [], "Toffoli")
 
     def _define(self):
@@ -47,7 +47,7 @@ class Toffoli(Gate):
             self.definition.u(theta=theta, phi=0., lam=0., qubit=target_qubit)
             self.definition.cx(control_qubits[0], target_qubit)
             self.definition.u(theta=theta, phi=0., lam=0., qubit=target_qubit)
-    
+
     @staticmethod
     def ccx(circuit, controls=None, target=None, cancel=None):
         if controls is None or target is None:
