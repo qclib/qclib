@@ -60,15 +60,41 @@ class TestLinearMCX(TestCase):
                 mode="recursion"
             )
 
-    def test_linear_mcx_action_only(self):
+    def _compare_linear_mcx_action_only(self, num_qubits, ctrl_state=None):
         """ Test if linear_mcx is correct """
+    
+        linear_circuit = QuantumCircuit(num_qubits)
+        qiskit_circuit = QuantumCircuit(num_qubits)
+        theta = np.random.uniform(0., 2. * np.pi)
+
+        mcx_method = LinearMcx(
+            num_qubits-2,
+            ctrl_state=ctrl_state, 
+            action_only=True
+        ).definition
+        
+        linear_circuit.append(mcx_method, list(range(num_qubits)))
+        linear_circuit.rz(theta, num_qubits - 1)
+        linear_circuit.append(mcx_method.inverse(), list(range(num_qubits)))
+
+        mcx_qiskit = self._build_qiskit_method_mcx_recursive(
+            num_qubits=num_qubits,
+            ctrl_state=ctrl_state,
+            mode="recursion"
+        )
+
+        qiskit_circuit.append(mcx_qiskit, list(range(num_qubits)))
+        qiskit_circuit.rz(theta, num_qubits - 1)
+        qiskit_circuit.append(mcx_qiskit, list(range(num_qubits)))
+        
+        linear_op = Operator(linear_circuit).data
+        qiskit_op = Operator(qiskit_circuit).data
+
+        self.assertTrue(np.allclose(linear_op, qiskit_op))
+
+    def test_linear_mcx_action_only(self):
         for num_qubits in range(8, 9):
-            self._operator_cmp(
-                num_qubits=num_qubits,
-                McxMethod=LinearMcx,
-                mode="recursion",
-                action_only=True
-            )
+            self._compare_linear_mcx_action_only(num_qubits)
 
     def test_linear_mcx_action_only_random_ctrl_state(self):
         """ Test if linear_mcx is correct """
@@ -76,14 +102,7 @@ class TestLinearMCX(TestCase):
         basis_states = [f"{np.random.randint(2**(n_ctrl-2)):0{n_ctrl-2}b}" for n_ctrl in num_qubit_range]
 
         for (num_qubits, ctrl_state) in zip(num_qubit_range, basis_states):
-            #print(ctrl_state)
-            self._operator_cmp(
-                num_qubits=num_qubits,
-                McxMethod=LinearMcx,
-                mode="recursion",
-                ctrl_state=ctrl_state,
-                action_only=True
-            )
+            self._compare_linear_mcx_action_only(num_qubits, ctrl_state)
 
     def test_linear_mcx_depth(self):
         """ Test linear_mcx depth"""
