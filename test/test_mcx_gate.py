@@ -17,7 +17,6 @@
 from unittest import TestCase
 
 import numpy as np
-from typing import Union
 from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.quantum_info import Operator
 from qclib.gates.mcx_gate import McxVchainDirty, LinearMcx
@@ -28,7 +27,7 @@ def apply_control_state_on_quantum_circuit(
     ctrl_state: str
 ):
     """
-    Applies the X gate to the corresponding qubit in which the 
+    Applies the X gate to the corresponding qubit in which the
     bit string describes it to be in state 0 as a means to simulate
     open controlled operations on a specific set of qubits. This operations
     are applied using Qiskit's QuantumCircuit object instead of Gate object.
@@ -37,7 +36,7 @@ def apply_control_state_on_quantum_circuit(
     ----------
         quantum_circuit : QuantumCircuit object on which the X gates are to be applied
         control_bits    : QuantumRegister containing with the qubits to be used as control
-        ctrl_state  : String of binary digits describing wich state is used as control 
+        ctrl_state  : String of binary digits describing wich state is used as control
                     in the multicontrolled operation
     """
     if ctrl_state is not None:
@@ -59,17 +58,17 @@ class TestLinearMCX(TestCase):
 
     def _compare_linear_mcx_action_only(self, num_qubits, ctrl_state=None):
         """ Test if linear_mcx is correct """
-    
+
         linear_circuit = QuantumCircuit(num_qubits)
         qiskit_circuit = QuantumCircuit(num_qubits)
         theta = np.random.uniform(0., 2. * np.pi)
 
         mcx_method = LinearMcx(
             num_qubits-2,
-            ctrl_state=ctrl_state, 
+            ctrl_state=ctrl_state,
             action_only=True
         ).definition
-        
+
         linear_circuit.append(mcx_method, list(range(num_qubits)))
         linear_circuit.rz(theta, num_qubits - 1)
         linear_circuit.append(mcx_method.inverse(), list(range(num_qubits)))
@@ -83,7 +82,7 @@ class TestLinearMCX(TestCase):
         qiskit_circuit.append(mcx_qiskit, list(range(num_qubits)))
         qiskit_circuit.rz(theta, num_qubits - 1)
         qiskit_circuit.append(mcx_qiskit, list(range(num_qubits)))
-        
+
         linear_op = Operator(linear_circuit).data
         qiskit_op = Operator(qiskit_circuit).data
 
@@ -135,7 +134,7 @@ class TestLinearMCX(TestCase):
         as the one defined by Qiskit MCX method.
         Parameters
         ----------
-        params: 
+        params:
             qubit_range : The number of qubits with which our method needs to be tested
             McxMethod   : The class definition of the method to be used. It must be `LinearMcx`
 
@@ -145,7 +144,7 @@ class TestLinearMCX(TestCase):
         #for num_qubits in qubit_range:
         mcx_method = McxMethod(
                         num_qubits-2,
-                        ctrl_state=ctrl_state, 
+                        ctrl_state=ctrl_state,
                         action_only=action_only
                      ).definition
 
@@ -159,16 +158,16 @@ class TestLinearMCX(TestCase):
         mcx_qiskit_op = Operator(mcx_qiskit).data
 
         self.assertTrue(np.allclose(mcx_method_op, mcx_qiskit_op))
-    
+
     def _build_qiskit_method_mcx_recursive(
-        self, 
+        self,
         num_qubits,
         ctrl_state: str = None,
         mode="recursive",
     ):
         """
         Bulds qiskit quantum circuit with mcx-recursive method to be used as reference for comparison
-        
+
         Parameters
         ----------
             num_qubits : Total number of qubits on the system
@@ -187,7 +186,7 @@ class TestLinearMCX(TestCase):
                     )
 
         apply_control_state_on_quantum_circuit(
-            quantum_circuit=mcx_qiskit, 
+            quantum_circuit=mcx_qiskit,
             control_qubits=control_qubits,
             ctrl_state=ctrl_state,
         )
@@ -200,7 +199,7 @@ class TestLinearMCX(TestCase):
         )
 
         apply_control_state_on_quantum_circuit(
-            quantum_circuit=mcx_qiskit, 
+            quantum_circuit=mcx_qiskit,
             control_qubits=control_qubits,
             ctrl_state=ctrl_state,
         )
@@ -231,7 +230,7 @@ class TestMcxVchainDirty(TestCase):
 
             tr_mcx_v_chain = transpile(mcx_v_chain, basis_gates=['u', 'cx'])
             tr_mcx_v_chain_qiskit = transpile(mcx_v_chain_qiskit, basis_gates=['u', 'cx'])
-            
+
             self.assertTrue(8 * num_controls - 6 == tr_mcx_v_chain.count_ops()['cx'])
             self.assertLess(tr_mcx_v_chain.depth(), tr_mcx_v_chain_qiskit.depth())
 
@@ -245,10 +244,10 @@ class TestMcxVchainDirty(TestCase):
             )
 
     def test_mcx_v_chain_dirty_random_ctrl_state(self):
-        """ 
-        Test if mcx_v_chain_dirty is correct 
-        with non trivial randomly generated 
-        control states 
+        """
+        Test if mcx_v_chain_dirty is correct
+        with non trivial randomly generated
+        control states
         """
         control_qubit_range = list(range(4, 8))
         basis_states = [f"{np.random.randint(2**n_ctrl):0{n_ctrl}b}" for n_ctrl in control_qubit_range]
@@ -272,7 +271,7 @@ class TestMcxVchainDirty(TestCase):
         """
         Compares if the custom operator defined by the custom MCX method is the same
         as the one defined by Qiskit MCX method.
-        
+
         Parameters
         ----------
             control_qubit_range: The number of control qubits with which our method must to be tested
@@ -287,7 +286,7 @@ class TestMcxVchainDirty(TestCase):
                         action_only=action_only
                      ).definition
 
-        #defining quiskit's 
+        #defining quiskit's
         mcx_v_chain_qiskit = self._build_qiskit_method_mcx_vchain_dirty(
                                 num_controls=num_controls,
                                 mode=mode,
@@ -300,14 +299,14 @@ class TestMcxVchainDirty(TestCase):
         self.assertTrue(np.allclose(mcx_method_op, mcx_v_chain_qiskit_op))
 
     def _build_qiskit_method_mcx_vchain_dirty(
-        self, 
+        self,
         num_controls,
         mode: str,
         ctrl_state: str = None,
     ):
         """
         Bulds qiskit quantum circuit with mcx-vchain-dirty method to be used as reference for comparison
-       
+
         Parameters
         ----------
             num_controls    : Total number of control qubits on the system
@@ -326,7 +325,7 @@ class TestMcxVchainDirty(TestCase):
                     )
 
         apply_control_state_on_quantum_circuit(
-            quantum_circuit=mcx_qiskit, 
+            quantum_circuit=mcx_qiskit,
             control_qubits=control_qubits,
             ctrl_state=ctrl_state,
         )
@@ -339,7 +338,7 @@ class TestMcxVchainDirty(TestCase):
         )
 
         apply_control_state_on_quantum_circuit(
-            quantum_circuit=mcx_qiskit, 
+            quantum_circuit=mcx_qiskit,
             control_qubits=control_qubits,
             ctrl_state=ctrl_state,
         )

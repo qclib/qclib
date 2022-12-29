@@ -51,7 +51,8 @@ class TestMcg(TestCase):
         if n_qubits > 1:
             controls = list(range(n_qubits - 1))
             target = n_qubits - 1
-            ctrl_state = '0' * (n_qubits-1)
+
+            ctrl_state = f"{np.random.randint(2**(n_qubits - 1)):0{n_qubits - 1}b}"
 
             mcg_circuit.mcg(unitary, controls, target, ctrl_state=ctrl_state)
 
@@ -67,11 +68,11 @@ class TestMcg(TestCase):
 
     def _su2_count(self, alpha, beta, n_qubits):
         mcg_circuit, qiskit_circuit = self._build_su2_circuit(alpha, beta, n_qubits)
-        
+
         # Count cnots
         mcg_cx = get_cnot_count(mcg_circuit)
         qiskit_cx = get_cnot_count(qiskit_circuit)
-        
+
         self.assertTrue(mcg_cx <= qiskit_cx)
 
     def _su2_depth(self, alpha, beta, n_qubits):
@@ -80,7 +81,7 @@ class TestMcg(TestCase):
         # Count cnots
         mcg_dp = get_depth(mcg_circuit)
         qiskit_dp = get_depth(qiskit_circuit)
-        
+
         self.assertTrue(mcg_dp <= qiskit_dp)
 
     def _su2_compare(self, alpha, beta, n_qubits):
@@ -154,7 +155,7 @@ class TestMcg(TestCase):
         # Count cnots
         mcg_cx = get_cnot_count(mcg_circuit)
         qiskit_cx = get_cnot_count(qiskit_circuit)
-        
+
         self.assertTrue(mcg_cx <= qiskit_cx)
 
     def _u2_compare(self, unitary, n_qubits):
@@ -172,7 +173,7 @@ class TestMcg(TestCase):
 
         for n_qubits in range(1, 10):
             self._su2_iten_compare(alpha, beta, n_qubits)
-        
+
         for n_qubits in range(8, 15):
             self._su2_iten_count(alpha, beta, n_qubits)
 
@@ -212,6 +213,9 @@ class TestMcg(TestCase):
     def test_u2(self):
         unitary = unitary_group.rvs(2)
 
-        for n_qubits in range(1, 10):
+        for n_qubits in range(1, 8):
             self._u2_compare(unitary, n_qubits)
+
+        for n_qubits in range(1, 12):
             self._u2_count(unitary, n_qubits)
+
