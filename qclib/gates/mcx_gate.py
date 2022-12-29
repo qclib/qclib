@@ -126,6 +126,12 @@ class McxVchainDirty(Gate):
                     self.definition.u(theta=theta, phi=0., lam=0., qubit=self.ancilla_qubits[i + 1])
 
                 if self.action_only:
+                    self.definition.ccx(
+                        control_qubit1=self.control_qubits[-1],
+                        control_qubit2=self.ancilla_qubits[-1],
+                        target_qubit=self.target_qubit
+                    )
+
                     break
 
         self._apply_ctrl_state()
@@ -286,13 +292,6 @@ class LinearMcx(Gate):
             last_gate = McxVchainDirty(k_2, action_only=self.action_only).definition
             self.definition.append(last_gate,
                                    [*self.control_qubits[k_1:], self.ancilla_qubit] + self.control_qubits[k_1 - k_2 + 2:k_1] + [self.target_qubit])
-
-            if self.action_only:
-                self.definition.ccx(
-                    control_qubit1=self.control_qubits[k_1 - 1],
-                    control_qubit2=self.ancilla_qubit,
-                    target_qubit=self.target_qubit
-                )
 
         self._apply_ctrl_state()
 
