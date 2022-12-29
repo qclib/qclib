@@ -138,7 +138,9 @@ class TestMcg(TestCase):
         )
 
         su2_qiskit_circuit.unitary(su2, 0)
-        su2_qiskit_circuit = su2_qiskit_circuit.control(num_ctrl_qubits=n_qubits - 1)
+
+        if n_qubits > 1:
+            su2_qiskit_circuit = su2_qiskit_circuit.control(num_ctrl_qubits=n_qubits - 1)
 
         # Compare
         iten_op = Operator(su2_iten_circuit).data
@@ -163,6 +165,16 @@ class TestMcg(TestCase):
         qiskit_op = Operator(qiskit_circuit).data
 
         self.assertTrue(np.allclose(mcg_op, qiskit_op))
+
+    def test_su2_iten(self):
+        alpha = np.random.rand() + 1.j * np.random.rand()
+        beta = np.random.rand() + 1.j * np.random.rand()
+
+        for n_qubits in range(1, 10):
+            self._su2_iten_compare(alpha, beta, n_qubits)
+        
+        for n_qubits in range(8, 15):
+            self._su2_iten_count(alpha, beta, n_qubits)
 
     def test_su2_sec_diag_real(self):
         alpha = np.random.rand() + 1.j * np.random.rand()

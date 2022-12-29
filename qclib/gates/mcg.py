@@ -290,17 +290,20 @@ def linear_depth_any_mcsu2(
         presented in Lemma 7.9 in Barenco et al., 1995 (arXiv:quant-ph/9503016)
         with optimizations from Theorem 5 of Iten et al., 2016 (arXiv:1501.06911)
     """
-    theta, phi, lamb, _ = OneQubitEulerDecomposer._params_zyz(unitary)
+    if len(controls) > 0:
+        theta, phi, lamb, _ = OneQubitEulerDecomposer._params_zyz(unitary)
 
-    a_gate, b_gate, c_gate = get_abc_operators(phi, theta, lamb)
+        a_gate, b_gate, c_gate = get_abc_operators(phi, theta, lamb)
 
-    _apply_abc(
-        self,
-        controls=controls,
-        target=target,
-        su2_gates=(a_gate, b_gate, c_gate),
-        ctrl_state=ctrl_state
-    )
+        _apply_abc(
+            self,
+            controls=controls,
+            target=target,
+            su2_gates=(a_gate, b_gate, c_gate),
+            ctrl_state=ctrl_state
+        )
+    else:
+        self.unitary(unitary, target)
 
 
 def get_abc_operators(beta, gamma, delta):
