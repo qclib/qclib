@@ -303,6 +303,9 @@ def quadratic_depth_mcg_u2(
 
     num_ctrl = len(controls)
 
+    if ctrl_state is None: 
+        ctrl_state = '1' * num_ctrl
+
     if num_ctrl == 2:
         u_gate = QuantumCircuit(1)
         u_gate.unitary(u_2, 0)
