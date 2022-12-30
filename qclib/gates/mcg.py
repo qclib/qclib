@@ -24,8 +24,10 @@ from qiskit.circuit import Qubit
 from qiskit.circuit.library import RZGate, RYGate
 from qiskit.extensions import UnitaryGate
 from qiskit.quantum_info import OneQubitEulerDecomposer
+from qiskit.circuit import Gate
 
 from .mcx_gate import McxVchainDirty, LinearMcx
+from ._utils import _apply_ctrl_state
 
 
 # pylint: disable=maybe-no-member
@@ -345,129 +347,141 @@ def quadratic_depth_mcg_u2(
             ctrl_state[1:]
         )
 
-
-def linear_depth_any_mcsu2(
-    self,
-    unitary,
-    controls: Union[QuantumRegister, List[Qubit]],
-    target: Qubit,
-    ctrl_state: str=None
-):
+class LdMcSpecialUnitary(Gate):
     """
-        Implements the gate decompostion of any gate in SU(2)
+        Linear Depth Multicontrolled Special Unitary
+        --------------------------------------------
+
+        Implements the gate decompostion of any gate in SU(2) with linear depth (Ld)
         presented in Lemma 7.9 in Barenco et al., 1995 (arXiv:quant-ph/9503016)
         with optimizations from Theorem 5 of Iten et al., 2016 (arXiv:1501.06911)
     """
-    if len(controls) > 0:
-        theta, phi, lamb, _ = OneQubitEulerDecomposer._params_zyz(unitary)
+    def __init__(self, unitary, num_controls,  ctrl_state=None):
 
-        a_gate, b_gate, c_gate = get_abc_operators(phi, theta, lamb)
+        if not _check_su2(unitary):
+            raise Exception("Operator must be in SU(2)")
 
-        _apply_abc(
-            self,
-            controls=controls,
-            target=target,
-            su2_gates=(a_gate, b_gate, c_gate),
-            ctrl_state=ctrl_state
-        )
-    else:
-        self.unitary(unitary, target)
+        self.unitary = unitary
+        self.control_qubits = QuantumRegister(num_controls)
+        self.target_qubit = QuantumRegister(1)
+        self.num_qubits = num_controls + 1
+        self.ctrl_state = ctrl_state
 
+        if self.ctrl_state is None:
+            self.ctrl_state = '1' * num_controls
 
-def get_abc_operators(beta, gamma, delta):
-    """
-    Creates A,B and C matrices such that
-    ABC = I
-    """
-    # A
-    a_rz = RZGate(beta).to_matrix()
-    a_ry = RYGate(gamma / 2).to_matrix()
-    a_matrix = a_rz.dot(a_ry)
+        super().__init__("ldmc_su2", self.num_qubits, [], "LdMcSu2")
 
-    # B
-    b_ry = RYGate(-gamma / 2).to_matrix()
-    b_rz = RZGate(-(delta + beta) / 2).to_matrix()
-    b_matrix = b_ry.dot(b_rz)
+    @staticmethod
+    def get_abc_operators(beta, gamma, delta):
+        """
+        Creates A,B and C matrices such that
+        ABC = I
+        """
+        # A
+        a_rz = RZGate(beta).to_matrix()
+        a_ry = RYGate(gamma / 2).to_matrix()
+        a_matrix = a_rz.dot(a_ry)
 
-    # C
-    c_matrix = RZGate((delta - beta) / 2).to_matrix()
+        # B
+        b_ry = RYGate(-gamma / 2).to_matrix()
+        b_rz = RZGate(-(delta + beta) / 2).to_matrix()
+        b_matrix = b_ry.dot(b_rz)
 
-    a_gate = UnitaryGate(a_matrix, label='A')
-    b_gate = UnitaryGate(b_matrix, label='B')
-    c_gate = UnitaryGate(c_matrix, label='C')
+        # C
+        c_matrix = RZGate((delta - beta) / 2).to_matrix()
 
-    return a_gate, b_gate, c_gate
+        a_gate = UnitaryGate(a_matrix, label='A')
+        b_gate = UnitaryGate(b_matrix, label='B')
+        c_gate = UnitaryGate(c_matrix, label='C')
 
+        return a_gate, b_gate, c_gate
 
-def _apply_abc(
-    self,
-    controls: Union[QuantumRegister, List[Qubit]],
-    target: Qubit,
-    su2_gates: Tuple[UnitaryGate],
-    ctrl_state: str = None
-):
-    """
-        Applies ABC matrices to the quantum circuit according to theorem 5
-        of Iten et al. 2016 (arXiv:1501.06911).
-        Where su2_gates is a tuple of UnitaryGates in SU(2) eg.: (A,  B, C).
-    """
-    a_gate, b_gate, c_gate = su2_gates
+    def _define(self):
+        self.definition = QuantumCircuit(self.control_qubits, self.target_qubit)
 
-    if ctrl_state is not None:
-        for i, ctrl in enumerate(ctrl_state[::-1]):
-            if ctrl == '0':
-                self.x(controls[i])
+        if len(self.control_qubits) > 0:
+            self._apply_ctrl_state()
 
-    if len(controls) < 3:
-        self.append(c_gate, [target])
-        self.mcx(controls, [target])
-        self.append(b_gate, [target])
-        self.mcx(controls, [target])
-        self.append(a_gate, [target])
-    else:
-        ancilla = controls[-1]
-        action_only = True
+            theta, phi, lamb, _ = OneQubitEulerDecomposer._params_zyz(self.unitary)
 
-        if len(controls) < 6:
-            action_only = False
+            a_gate, b_gate, c_gate = LdMcSpecialUnitary.get_abc_operators(phi, theta, lamb)
 
-        # decompose A, B and C to use their optimized controlled versions
-        theta_a, phi_a, lam_a, _ = OneQubitEulerDecomposer._params_zyz(a_gate.to_matrix())
-        theta_b, phi_b, lam_b, _ = OneQubitEulerDecomposer._params_zyz(b_gate.to_matrix())
-        theta_c, phi_c, lam_c, _ = OneQubitEulerDecomposer._params_zyz(c_gate.to_matrix())
-        a_a, b_a, c_a = get_abc_operators(phi_a, theta_a, lam_a)
-        a_b, b_b, c_b = get_abc_operators(phi_b, theta_b, lam_b)
-        a_c, b_c, c_c = get_abc_operators(phi_c, theta_c, lam_c)
+            self._apply_abc(
+                a_gate, b_gate, c_gate
+            )
 
-        # definition of left mcx, which will also be inverted as the right mcx
-        mcx_gate = LinearMcx(len(controls[:-1]), action_only=action_only).definition
+            self._apply_ctrl_state()
+        else:
+            self.unitary(self.unitary, self.target)
 
-        # decomposed controlled C
-        self.unitary(c_c, target)
-        self.cx(ancilla, target)
-        self.unitary(b_c, target)
-        self.cx(ancilla, target)
-        self.unitary(a_c, target)
+    def _apply_abc(
+        self,
+        a_gate: UnitaryGate,
+        b_gate: UnitaryGate, 
+        c_gate: UnitaryGate
+    ):
+        """
+            Applies ABC matrices to the quantum circuit according to theorem 5
+            of Iten et al. 2016 (arXiv:1501.06911).
+            Parameters
+            ----------
+                a_gate, b_gate and c_gate expceted to be special unitary gates
+        """
 
-        self.append(mcx_gate, controls[:-1] + [target] + [ancilla])
+        if len(self.control_qubits) < 3:
+            self.definition.append(c_gate, [self.target_qubit])
+            self.definition.mcx(self.control_qubits, self.target_qubit)
+            self.definition.append(b_gate, [self.target_qubit])
+            self.definition.mcx(self.control_qubits, self.target_qubit)
+            self.definition.append(a_gate, [self.target_qubit])
+        else:
+            ancilla = self.control_qubits[-1]
+            action_only = True
 
-        # decomposed controlled B
-        self.unitary(c_b, target)
-        self.cx(ancilla, target)
-        self.unitary(b_b, target)
-        self.cx(ancilla, target)
-        self.unitary(a_b, target)
+            if len(self.control_qubits) < 6:
+                action_only = False
 
-        self.append(mcx_gate.inverse(), controls[:-1] + [target] + [ancilla])
+            # decompose A, B and C to use their optimized controlled versions
+            theta_a, phi_a, lam_a, _ = OneQubitEulerDecomposer._params_zyz(a_gate.to_matrix())
+            theta_b, phi_b, lam_b, _ = OneQubitEulerDecomposer._params_zyz(b_gate.to_matrix())
+            theta_c, phi_c, lam_c, _ = OneQubitEulerDecomposer._params_zyz(c_gate.to_matrix())
+            a_a, b_a, c_a = LdMcSpecialUnitary.get_abc_operators(phi_a, theta_a, lam_a)
+            a_b, b_b, c_b = LdMcSpecialUnitary.get_abc_operators(phi_b, theta_b, lam_b)
+            a_c, b_c, c_c = LdMcSpecialUnitary.get_abc_operators(phi_c, theta_c, lam_c)
 
-        # decomposed A
-        self.unitary(c_a, target)
-        self.cx(ancilla, target)
-        self.unitary(b_a, target)
-        self.cx(ancilla, target)
-        self.unitary(a_a, target)
+            # definition of left mcx, which will also be inverted as the right mcx
+            mcx_gate = LinearMcx(len(self.control_qubits[:-1]), action_only=action_only).definition
 
-    if ctrl_state is not None:
-        for i, ctrl in enumerate(ctrl_state[::-1]):
-            if ctrl == '0':
-                self.x(controls[i])
+            # decomposed controlled C
+            self.definition.unitary(c_c, self.target_qubit)
+            self.definition.cx(ancilla, self.target_qubit)
+            self.definition.unitary(b_c, self.target_qubit)
+            self.definition.cx(ancilla, self.target_qubit)
+            self.definition.unitary(a_c, self.target_qubit)
+
+            self.definition.append(
+                mcx_gate,
+                self.control_qubits[:-1] + [self.target_qubit] + [ancilla]
+            )
+
+            # decomposed controlled B
+            self.definition.unitary(c_b, self.target_qubit)
+            self.definition.cx(ancilla, self.target_qubit)
+            self.definition.unitary(b_b, self.target_qubit)
+            self.definition.cx(ancilla, self.target_qubit)
+            self.definition.unitary(a_b, self.target_qubit)
+
+            self.definition.append(
+                mcx_gate.inverse(),
+                self.control_qubits[:-1] + [self.target_qubit] + [ancilla]
+            )
+
+            # decomposed A
+            self.definition.unitary(c_a, self.target_qubit)
+            self.definition.cx(ancilla, self.target_qubit)
+            self.definition.unitary(b_a, self.target_qubit)
+            self.definition.cx(ancilla, self.target_qubit)
+            self.definition.unitary(a_a, self.target_qubit)
+
+LdMcSpecialUnitary._apply_ctrl_state = _apply_ctrl_state

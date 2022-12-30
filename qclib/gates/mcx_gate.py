@@ -26,6 +26,7 @@ from qiskit.circuit.library import C3XGate, C4XGate
 from qiskit.circuit import Gate
 
 from .toffoli import Toffoli
+from ._utils import _apply_ctrl_state
 
 
 # pylint: disable=protected-access
@@ -141,14 +142,6 @@ class McxVchainDirty(Gate):
             McxVchainDirty(len(controls), ctrl_state, relative_phase, action_only),
             [*controls, target]
         )
-
-
-def _apply_ctrl_state(self):
-    if self.ctrl_state is not None:
-        for i, ctrl in enumerate(self.ctrl_state[::-1]):
-            if ctrl == '0':
-                self.definition.x(self.control_qubits[i])
-
 
 McxVchainDirty._apply_ctrl_state = _apply_ctrl_state
 
