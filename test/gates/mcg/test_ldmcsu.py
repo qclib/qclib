@@ -19,7 +19,8 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator
 from scipy.stats import unitary_group
-from qclib.gates.mcg import LdMcSpecialUnitary, _u2_to_su2
+from qclib.gates.ldmcsu import LdMcSpecialUnitary
+from qclib.gates.mcg import _u2_to_su2
 from qclib.util import get_cnot_count
 
 # pylint: disable=missing-function-docstring
