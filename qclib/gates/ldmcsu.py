@@ -38,7 +38,7 @@ class LdMcSpecialUnitary(Gate):
         presented in Lemma 7.9 in Barenco et al., 1995 (arXiv:quant-ph/9503016)
         with optimizations from Theorem 5 of Iten et al., 2016 (arXiv:1501.06911)
     """
-    def __init__(self, unitary, num_controls,  ctrl_state=None):
+    def __init__(self, unitary, num_controls, ctrl_state=None):
 
         if not _check_su2(unitary):
             raise Exception("Operator must be in SU(2)")
@@ -165,5 +165,12 @@ class LdMcSpecialUnitary(Gate):
             self.definition.unitary(b_a, self.target_qubit)
             self.definition.cx(ancilla, self.target_qubit)
             self.definition.unitary(a_a, self.target_qubit)
+
+    @staticmethod
+    def ldmcsu(circuit, unitary, controls, target, ctrl_state=None):
+        circuit.append(
+            LdMcSpecialUnitary(unitary, len(controls), ctrl_state),
+            [*controls, target]
+        )
 
 LdMcSpecialUnitary._apply_ctrl_state = _apply_ctrl_state
