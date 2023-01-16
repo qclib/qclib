@@ -21,7 +21,7 @@ from scipy.stats import unitary_group
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator
 from qclib.util import get_cnot_count, get_depth
-from qclib.gates.mcg import mcg
+from qclib.gates.mcg import Mcg
 #from qclib.gates.mcg import linear_depth_any_mcsu2
 
 
@@ -30,7 +30,7 @@ from qclib.gates.mcg import mcg
 # pylint: disable=missing-class-docstring
 
 
-QuantumCircuit.mcg = mcg
+# QuantumCircuit.mcg = mcg
 
 
 class TestMcg(TestCase):
@@ -53,15 +53,14 @@ class TestMcg(TestCase):
             target = n_qubits - 1
 
             ctrl_state = f"{np.random.randint(2**(n_qubits - 1)):0{n_qubits - 1}b}"
-
-            mcg_circuit.mcg(unitary, controls, target, ctrl_state=ctrl_state)
+            mcg_circuit = Mcg(unitary, len(controls), ctrl_state=ctrl_state).definition
 
             qiskit_circuit.unitary(unitary, 0)
             qiskit_circuit = qiskit_circuit.control(
                 num_ctrl_qubits=n_qubits - 1, ctrl_state=ctrl_state
             )
         else:
-            mcg_circuit.mcg(unitary, [], 0)
+            mcg_circuit = Mcg(unitary, 0).definition
             qiskit_circuit.unitary(unitary, 0)
 
         return mcg_circuit, qiskit_circuit
@@ -93,62 +92,6 @@ class TestMcg(TestCase):
 
         self.assertTrue(np.allclose(mcg_op, qiskit_op))
 
-#    def _su2_iten_count(self, alpha, beta, n_qubits):
-#        length = np.linalg.norm([alpha, beta])
-#        su2 = np.array([
-#            [alpha, -np.conj(beta)],
-#            [beta, np.conj(alpha)]
-#        ]) / length
-#
-#        su2_iten_circuit = QuantumCircuit(n_qubits)
-#
-#        linear_depth_any_mcsu2(
-#            su2_iten_circuit,
-#            unitary=su2,
-#            controls=list(range(n_qubits - 1)),
-#            target=n_qubits - 1
-#        )
-#
-#        su2_iten_cx = get_cnot_count(su2_iten_circuit)
-#
-#        if n_qubits >= 8:
-#            constant = 0
-#
-#            if n_qubits % 2 == 0:
-#                constant = 88
-#            else:
-#                constant = 92
-#
-#            self.assertLessEqual(su2_iten_cx, 28*n_qubits - constant)
-#
-#    def _su2_iten_compare(self, alpha, beta, n_qubits):
-#        length = np.linalg.norm([alpha, beta])
-#        su2 = np.array([
-#            [alpha, -np.conj(beta)],
-#            [beta, np.conj(alpha)]
-#        ]) / length
-#
-#        su2_iten_circuit = QuantumCircuit(n_qubits)
-#        su2_qiskit_circuit = QuantumCircuit(1)
-#
-#        linear_depth_any_mcsu2(
-#            su2_iten_circuit,
-#            unitary=su2,
-#            controls=list(range(n_qubits - 1)),
-#            target=n_qubits - 1
-#        )
-#
-#        su2_qiskit_circuit.unitary(su2, 0)
-#
-#        if n_qubits > 1:
-#            su2_qiskit_circuit = su2_qiskit_circuit.control(num_ctrl_qubits=n_qubits - 1)
-#
-#        # Compare
-#        iten_op = Operator(su2_iten_circuit).data
-#        qiskit_op = Operator(su2_qiskit_circuit).data
-#
-#        self.assertTrue(np.allclose(iten_op, qiskit_op))
-
     def _u2_count(self, unitary, n_qubits):
         mcg_circuit, qiskit_circuit = self._build_circuit(unitary, n_qubits)
 
@@ -166,16 +109,6 @@ class TestMcg(TestCase):
         qiskit_op = Operator(qiskit_circuit).data
 
         self.assertTrue(np.allclose(mcg_op, qiskit_op))
-
-#    def test_su2_iten(self):
-#        alpha = np.random.rand() + 1.j * np.random.rand()
-#        beta = np.random.rand() + 1.j * np.random.rand()
-#
-#        for n_qubits in range(1, 10):
-#            self._su2_iten_compare(alpha, beta, n_qubits)
-#
-#        for n_qubits in range(8, 15):
-#            self._su2_iten_count(alpha, beta, n_qubits)
 
     def test_su2_sec_diag_real(self):
         alpha = np.random.rand() + 1.j * np.random.rand()

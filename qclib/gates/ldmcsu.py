@@ -24,8 +24,7 @@ from qiskit.quantum_info import OneQubitEulerDecomposer
 from qiskit.circuit import Gate
 
 from .mcx_gate import LinearMcx
-from .mcg import _check_su2
-from ._utils import _apply_ctrl_state
+from ._utils import _check_su2, _apply_ctrl_state
 
 # pylint: disable=protected-access
 
@@ -44,7 +43,12 @@ class LdMcSpecialUnitary(Gate):
             raise Exception("Operator must be in SU(2)")
 
         self.unitary = unitary
-        self.control_qubits = QuantumRegister(num_controls)
+
+        if num_controls > 0:
+            self.control_qubits = QuantumRegister(num_controls)
+        else:
+            self.control_qubits = []
+
         self.target_qubit = QuantumRegister(1)
         self.num_qubits = num_controls + 1
         self.ctrl_state = ctrl_state
