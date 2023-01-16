@@ -336,6 +336,28 @@ class LMCGSU(Gate):
             [*controls, target]
         )
 
+
+def quadratic_depth_mcg_u2(
+    self,
+    u_2,
+    controls: Union[QuantumRegister, List[Qubit]],
+    target: Qubit,
+    ctrl_state: str=None
+):
+    """
+    Implements gate decomposition of a munticontrolled operator in U(2) according to
+    Theorem 4 of Iten et al. (2016) arXiv:1501.06911.
+    Parameters
+    ----------
+    unitary    : numpy.ndarray 2 x 2 unitary matrix
+    controls   : Either qiskit.QuantumRegister or list of qiskit.Qubit containing the
+                 qubits to be used as control gates.
+    target     : qiskit.Qubit on wich the unitary operation is to be applied
+    ctrl_state : String of binary digits describing the basis state used as control
+    """
+
+    num_ctrl = len(controls)
+
 class QDMCU(Gate):
     """
     Quandratic Depth Multi-Controlled Unitary
@@ -373,7 +395,7 @@ class QDMCU(Gate):
         self.definition = QuantumCircuit(self.controls, self.target)
         num_ctrl = len(self.controls)
 
-        if num_ctrl == 2:
+        if num_ctrl == 1:
             u_gate = QuantumCircuit(1)
             u_gate.unitary(self.unitary, 0)
             self.definition.append(
