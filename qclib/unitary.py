@@ -27,8 +27,8 @@ from qiskit.extensions import UnitaryGate, UCRYGate, UCRZGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
 from qiskit.quantum_info.synthesis import two_qubit_decompose
 from qiskit.quantum_info import Operator
+from qiskit.extensions.quantum_initializer.uc import UCGate
 from qclib.gates.ucr import ucr
-from qclib.gates.uc_gate import UCGate
 from qclib.decompose2q import TwoQubitDecomposeUpToDiagonal
 
 
