@@ -24,13 +24,14 @@ from scipy.linalg import sqrtm
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Qubit
 from qiskit.circuit import Gate
-
 from .mcx_gate import McxVchainDirty, LinearMcx
-#from .ldmcsu import LdMcSpecialUnitary
+from .mc_gate import mc_gate
 from ._utils import _check_u2, _check_su2, _u2_to_su2
+
 
 # pylint: disable=maybe-no-member
 # pylint: disable=protected-access
+
 
 class Mcg(Gate):
     """
@@ -79,17 +80,11 @@ class Mcg(Gate):
                     ctrl_state=self.ctrl_state
                 )
             else:
-                if self.up_to_diagonal:
-                    su_2, _ = _u2_to_su2(self.unitary)
-                    self.mcg(su_2, self.controls, self.target, self.ctrl_state)
+                if up_to_diagonal:
+                    su_2, _ = _u2_to_su2(unitary)
+                    self.mcg(su_2, controls, target, ctrl_state)
                 else:
-                    QDMCU.qdmcu(
-                        self.definition,
-                        unitary=self.unitary,
-                        controls=self.controls,
-                        target=self.target,
-                        ctrl_state=self.ctrl_state
-                    )
+                    mc_gate(unitary, self, controls, target, ctrl_state)
     
     @staticmethod
     def mcg(

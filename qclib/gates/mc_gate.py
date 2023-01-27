@@ -21,7 +21,11 @@ import numpy as np
 
 
 def mc_gate(
-    gate: np.ndarray, circuit: qiskit.QuantumCircuit, controls: list, targ: int
+    gate: np.ndarray,
+    circuit: qiskit.QuantumCircuit,
+    controls: list,
+    targ: int,
+    ctrl_state: str=None
 ):
     """
 
@@ -37,6 +41,8 @@ def mc_gate(
 
     """
 
+    _ctrl_state(circuit, controls, ctrl_state)
+
     n_qubits = len(controls) + 1
     gate_circuit = qiskit.QuantumCircuit(n_qubits, name="T" + str(targ))
     gate_circuit.permutation = list(range(len(controls) + 1))
@@ -48,6 +54,15 @@ def mc_gate(
 
     circuit.compose(gate_circuit, controls + [targ], inplace=True)
     circuit.permutation = gate_circuit.permutation
+
+    _ctrl_state(circuit, controls, ctrl_state)
+
+
+def _ctrl_state(circuit, controls, ctrl_state):
+    if ctrl_state is not None:
+        for i, ctrl in enumerate(ctrl_state[::-1]):
+            if ctrl == '0':
+                circuit.x(controls[i])
 
 
 def _c1c2(gate, n_qubits, qcirc, first=True, step=1):
