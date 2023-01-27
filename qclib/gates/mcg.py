@@ -21,11 +21,12 @@ from scipy.linalg import sqrtm
 
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Qubit
-from qiskit.circuit.library import RZGate, RYGate
+from qiskit.circuit.library import RZGate, RYGate, PhaseGate, Diagonal
 from qiskit.extensions import UnitaryGate
 from qiskit.quantum_info import OneQubitEulerDecomposer
 
 from .mcx_gate import McxVchainDirty, LinearMcx
+from .mc_gate import mc_gate
 
 
 # pylint: disable=maybe-no-member
@@ -57,16 +58,10 @@ def mcg(
             linear_mcg_su2(self, unitary, controls, target, ctrl_state)
         else:
             if up_to_diagonal:
-                su_2, _ = _u2_to_su2(unitary)
-                self.mcg(su_2, controls, target, ctrl_state)
+               su_2, _ = _u2_to_su2(unitary)
+               self.mcg(su_2, controls, target, ctrl_state)
             else:
-                quadratic_depth_mcg_u2(
-                    self,
-                    u_2=unitary,
-                    controls=controls,
-                    target=target,
-                    ctrl_state=ctrl_state
-                )
+               mc_gate(unitary, self, controls, target, ctrl_state)
 
 
 def _u2_to_su2(u_2):
@@ -280,194 +275,3 @@ def half_linear_depth_mcv(
         self.append(s_gate.inverse(), [target])
 
         self.h(target)
-
-
-def quadratic_depth_mcg_u2(
-    self,
-    u_2,
-    controls: Union[QuantumRegister, List[Qubit]],
-    target: Qubit,
-    ctrl_state: str=None
-):
-    """
-    Implements gate decomposition of a munticontrolled operator in U(2) according to
-    Theorem 4 of Iten et al. (2016) arXiv:1501.06911.
-    Parameters
-    ----------
-    unitary    : numpy.ndarray 2 x 2 unitary matrix
-    controls   : Either qiskit.QuantumRegister or list of qiskit.Qubit containing the
-                 qubits to be used as control gates.
-    target     : qiskit.Qubit on wich the unitary operation is to be applied
-    ctrl_state : String of binary digits describing the basis state used as control
-    """
-
-    num_ctrl = len(controls)
-
-    if num_ctrl == 1:
-        u_gate = QuantumCircuit(1)
-        u_gate.unitary(u_2, 0)
-        self.append(
-            u_gate.control(
-                num_ctrl_qubits=num_ctrl,
-                ctrl_state=ctrl_state
-            ),
-            [*controls, target]
-        )
-    else:
-        if ctrl_state is None:
-            ctrl_state = '1' * num_ctrl
-
-        # Notice that `ctrl_state`` is reversed with respect to `controls``.
-        v_op = sqrtm(u_2)
-
-        v_gate = QuantumCircuit(1, name="V")
-        v_gate.unitary(v_op, 0)
-
-        v_gate_dag = QuantumCircuit(1, name="V^dag")
-        v_gate_dag.unitary(v_op.T.conj(), 0)
-
-        linear_mcx_gate = LinearMcx(
-                            num_controls=num_ctrl-1,
-                            ctrl_state=ctrl_state[1:],
-                            action_only=True
-                        ).definition
-
-        self.append(v_gate.control(1, ctrl_state=ctrl_state[:1]), [controls[-1], target])
-        self.append(linear_mcx_gate, [*controls[:-1], controls[-1], target])
-        self.append(v_gate_dag.control(1, ctrl_state=ctrl_state[:1]), [controls[-1], target])
-        self.append(linear_mcx_gate.inverse(), [*controls[:-1], controls[-1], target])
-
-        quadratic_depth_mcg_u2(
-            self,
-            v_op,
-            controls[:-1],
-            target,
-            ctrl_state[1:]
-        )
-
-
-def linear_depth_any_mcsu2(
-    self,
-    unitary,
-    controls: Union[QuantumRegister, List[Qubit]],
-    target: Qubit,
-    ctrl_state: str=None
-):
-    """
-        Implements the gate decompostion of any gate in SU(2)
-        presented in Lemma 7.9 in Barenco et al., 1995 (arXiv:quant-ph/9503016)
-        with optimizations from Theorem 5 of Iten et al., 2016 (arXiv:1501.06911)
-    """
-    if len(controls) > 0:
-        theta, phi, lamb, _ = OneQubitEulerDecomposer._params_zyz(unitary)
-
-        a_gate, b_gate, c_gate = get_abc_operators(phi, theta, lamb)
-
-        _apply_abc(
-            self,
-            controls=controls,
-            target=target,
-            su2_gates=(a_gate, b_gate, c_gate),
-            ctrl_state=ctrl_state
-        )
-    else:
-        self.unitary(unitary, target)
-
-
-def get_abc_operators(beta, gamma, delta):
-    """
-    Creates A,B and C matrices such that
-    ABC = I
-    """
-    # A
-    a_rz = RZGate(beta).to_matrix()
-    a_ry = RYGate(gamma / 2).to_matrix()
-    a_matrix = a_rz.dot(a_ry)
-
-    # B
-    b_ry = RYGate(-gamma / 2).to_matrix()
-    b_rz = RZGate(-(delta + beta) / 2).to_matrix()
-    b_matrix = b_ry.dot(b_rz)
-
-    # C
-    c_matrix = RZGate((delta - beta) / 2).to_matrix()
-
-    a_gate = UnitaryGate(a_matrix, label='A')
-    b_gate = UnitaryGate(b_matrix, label='B')
-    c_gate = UnitaryGate(c_matrix, label='C')
-
-    return a_gate, b_gate, c_gate
-
-
-def _apply_abc(
-    self,
-    controls: Union[QuantumRegister, List[Qubit]],
-    target: Qubit,
-    su2_gates: Tuple[UnitaryGate],
-    ctrl_state: str = None
-):
-    """
-        Applies ABC matrices to the quantum circuit according to theorem 5
-        of Iten et al. 2016 (arXiv:1501.06911).
-        Where su2_gates is a tuple of UnitaryGates in SU(2) eg.: (A,  B, C).
-    """
-    a_gate, b_gate, c_gate = su2_gates
-
-    if ctrl_state is not None:
-        for i, ctrl in enumerate(ctrl_state[::-1]):
-            if ctrl == '0':
-                self.x(controls[i])
-
-    if len(controls) < 3:
-        self.append(c_gate, [target])
-        self.mcx(controls, [target])
-        self.append(b_gate, [target])
-        self.mcx(controls, [target])
-        self.append(a_gate, [target])
-    else:
-        ancilla = controls[-1]
-        action_only = True
-
-        if len(controls) < 6:
-            action_only = False
-
-        # decompose A, B and C to use their optimized controlled versions
-        theta_a, phi_a, lam_a, _ = OneQubitEulerDecomposer._params_zyz(a_gate.to_matrix())
-        theta_b, phi_b, lam_b, _ = OneQubitEulerDecomposer._params_zyz(b_gate.to_matrix())
-        theta_c, phi_c, lam_c, _ = OneQubitEulerDecomposer._params_zyz(c_gate.to_matrix())
-        a_a, b_a, c_a = get_abc_operators(phi_a, theta_a, lam_a)
-        a_b, b_b, c_b = get_abc_operators(phi_b, theta_b, lam_b)
-        a_c, b_c, c_c = get_abc_operators(phi_c, theta_c, lam_c)
-
-        # definition of left mcx, which will also be inverted as the right mcx
-        mcx_gate = LinearMcx(len(controls[:-1]), action_only=action_only).definition
-
-        # decomposed controlled C
-        self.unitary(c_c, target)
-        self.cx(ancilla, target)
-        self.unitary(b_c, target)
-        self.cx(ancilla, target)
-        self.unitary(a_c, target)
-
-        self.append(mcx_gate, controls[:-1] + [target] + [ancilla])
-
-        # decomposed controlled B
-        self.unitary(c_b, target)
-        self.cx(ancilla, target)
-        self.unitary(b_b, target)
-        self.cx(ancilla, target)
-        self.unitary(a_b, target)
-
-        self.append(mcx_gate.inverse(), controls[:-1] + [target] + [ancilla])
-
-        # decomposed A
-        self.unitary(c_a, target)
-        self.cx(ancilla, target)
-        self.unitary(b_a, target)
-        self.cx(ancilla, target)
-        self.unitary(a_a, target)
-
-    if ctrl_state is not None:
-        for i, ctrl in enumerate(ctrl_state[::-1]):
-            if ctrl == '0':
-                self.x(controls[i])
