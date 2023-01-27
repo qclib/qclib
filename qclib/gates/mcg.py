@@ -19,12 +19,10 @@ from typing import Union, List
 from cmath import isclose
 import numpy as np
 
-from scipy.linalg import sqrtm
-
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Qubit
 from qiskit.circuit import Gate
-from .mcx_gate import McxVchainDirty, LinearMcx
+from .mcx_gate import McxVchainDirty
 from .mc_gate import mc_gate
 from ._utils import _check_u2, _check_su2, _u2_to_su2
 
@@ -80,11 +78,11 @@ class Mcg(Gate):
                     ctrl_state=self.ctrl_state
                 )
             else:
-                if up_to_diagonal:
+                if self.up_to_diagonal:
                     su_2, _ = _u2_to_su2(self.unitary)
                     self.mcg(su_2, self.controls, self.target, self.ctrl_state)
                 else:
-                    mc_gate(self.unitary, self, self.controls, self.target, self.ctrl_state)
+                    mc_gate(self.unitary, self.definition, self.controls[:], self.target[0], self.ctrl_state)
     
     @staticmethod
     def mcg(
@@ -141,14 +139,13 @@ class LMCGSU(Gate):
             # of V is real-valued.
             eig_vals, eig_vecs = np.linalg.eig(self.unitary)
 
-            x_vecs, z_vecs = LMCGSU._get_x_z(eig_vecs)
-            x_vals, z_vals = LMCGSU._get_x_z(np.diag(eig_vals))
+            x_vecs, z_vecs = self._get_x_z(eig_vecs)
+            x_vals, z_vals = self._get_x_z(np.diag(eig_vals))
 
-            LMCGSU.half_linear_depth_mcv(
-                self.definition, x_vecs, z_vecs, self.controls, self.target, self.ctrl_state, inverse=True
+            self.half_linear_depth_mcv(
+                x_vecs, z_vecs, self.controls, self.target, self.ctrl_state, inverse=True
             )
-            LMCGSU.linear_depth_mcv(
-                self.definition,
+            self.linear_depth_mcv(
                 x_vals,
                 z_vals,
                 self.controls,
@@ -156,18 +153,17 @@ class LMCGSU(Gate):
                 self.ctrl_state,
                 general_su2_optimization=True
             )
-            LMCGSU.half_linear_depth_mcv(
-                self.definition, x_vecs, z_vecs, self.controls, self.target, self.ctrl_state
+            self.half_linear_depth_mcv(
+                x_vecs, z_vecs, self.controls, self.target, self.ctrl_state
             )
 
         else:
-            x, z = LMCGSU._get_x_z(self.unitary)
+            x, z = self._get_x_z(self.unitary)
 
             if not is_secondary_diag_real:
                 self.definition.h(self.target)
 
-            LMCGSU.linear_depth_mcv(
-                self.definition,
+            self.linear_depth_mcv(
                 x,
                 z,
                 self.controls,
@@ -191,9 +187,8 @@ class LMCGSU(Gate):
 
         return x, z
 
-    @staticmethod
     def linear_depth_mcv(
-        circuit,
+        self,
         x,
         z,
         controls: Union[QuantumRegister, List[Qubit]],
@@ -236,26 +231,25 @@ class LMCGSU(Gate):
 
         if not general_su2_optimization:
             mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
-            circuit.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
-        circuit.append(s_gate, [target])
+            self.definition.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+        self.definition.append(s_gate, [target])
 
         mcx_2 = McxVchainDirty(
             k_2, ctrl_state=ctrl_state_k_2, action_only=general_su2_optimization
         ).definition
-        circuit.append(mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
-        circuit.append(s_gate.inverse(), [target])
+        self.definition.append(mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
+        self.definition.append(s_gate.inverse(), [target])
 
         mcx_3 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
-        circuit.append(mcx_3, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
-        circuit.append(s_gate, [target])
+        self.definition.append(mcx_3, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+        self.definition.append(s_gate, [target])
 
         mcx_4 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
-        circuit.append(mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
-        circuit.append(s_gate.inverse(), [target])
+        self.definition.append(mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
+        self.definition.append(s_gate.inverse(), [target])
 
-    @staticmethod
     def half_linear_depth_mcv(
-        circuit,
+        self,
         x,
         z,
         controls: Union[QuantumRegister, List[Qubit]],
@@ -295,28 +289,28 @@ class LMCGSU(Gate):
             ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
         if inverse:
-            circuit.h(target)
+            self.definition.h(target)
 
-            circuit.append(s_gate, [target])
+            self.definition.append(s_gate, [target])
             mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2, action_only=True).definition
-            circuit.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
+            self.definition.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
 
-            circuit.append(s_gate.inverse(), [target])
+            self.definition.append(s_gate.inverse(), [target])
 
-            circuit.append(h_gate, [target])
+            self.definition.append(h_gate, [target])
 
         else:
             mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
-            circuit.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
-            circuit.append(h_gate, [target])
+            self.definition.append(mcx_1, controls[:k_1] + controls[k_1:2*k_1 - 2] + [target])
+            self.definition.append(h_gate, [target])
 
-            circuit.append(s_gate, [target])
+            self.definition.append(s_gate, [target])
 
             mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
-            circuit.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
-            circuit.append(s_gate.inverse(), [target])
+            self.definition.append(mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2:k_1] + [target])
+            self.definition.append(s_gate.inverse(), [target])
 
-            circuit.h(target)
+            self.definition.h(target)
 
     @staticmethod
     def lmcgsu(
