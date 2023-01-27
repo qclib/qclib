@@ -20,13 +20,13 @@ from qiskit.circuit.library.standard_gates import UGate
 from qiskit.quantum_info import Operator
 from qclib.util import _compute_matrix_angles
 from qclib.gates.initialize_sparse import InitializeSparse
-from qclib.gates.mcg import mcg
+from qclib.gates.mcg import Mcg
 
 
 # pylint: disable=maybe-no-member
 
 
-QuantumCircuit.mcg = mcg
+QuantumCircuit.mcg = Mcg.mcg
 
 
 class CvoqramInitialize(InitializeSparse):
