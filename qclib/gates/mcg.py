@@ -81,10 +81,10 @@ class Mcg(Gate):
                 )
             else:
                 if up_to_diagonal:
-                    su_2, _ = _u2_to_su2(unitary)
-                    self.mcg(su_2, controls, target, ctrl_state)
+                    su_2, _ = _u2_to_su2(self.unitary)
+                    self.mcg(su_2, self.controls, self.target, self.ctrl_state)
                 else:
-                    mc_gate(unitary, self, controls, target, ctrl_state)
+                    mc_gate(self.unitary, self, self.controls, self.target, self.ctrl_state)
     
     @staticmethod
     def mcg(
@@ -328,131 +328,5 @@ class LMCGSU(Gate):
     ):
         circuit.append(
             LMCGSU(unitary, len(controls), ctrl_state=ctrl_state),
-            [*controls, target]
-        )
-
-
-def quadratic_depth_mcg_u2(
-    self,
-    u_2,
-    controls: Union[QuantumRegister, List[Qubit]],
-    target: Qubit,
-    ctrl_state: str=None
-):
-    """
-    Implements gate decomposition of a munticontrolled operator in U(2) according to
-    Theorem 4 of Iten et al. (2016) arXiv:1501.06911.
-    Parameters
-    ----------
-    unitary    : numpy.ndarray 2 x 2 unitary matrix
-    controls   : Either qiskit.QuantumRegister or list of qiskit.Qubit containing the
-                 qubits to be used as control gates.
-    target     : qiskit.Qubit on wich the unitary operation is to be applied
-    ctrl_state : String of binary digits describing the basis state used as control
-    """
-
-    num_ctrl = len(controls)
-
-class QDMCU(Gate):
-    """
-    Quandratic Depth Multi-Controlled Unitary
-    -----------------------------------------
-
-    Implements gate decomposition of a munticontrolled operator in U(2) according to
-    Theorem 4 of Iten et al. (2016) arXiv:1501.06911.
-    """
-
-    def __init__(
-        self,
-        unitary,
-        num_controls,
-        ctrl_state: str=None
-    ):
-        """
-        Parameters
-        ----------
-        unitary    : numpy.ndarray 2 x 2 unitary matrix
-        controls   : Either qiskit.QuantumRegister or list of qiskit.Qubit containing the
-                    qubits to be used as control gates.
-        target     : qiskit.Qubit on wich the unitary operation is to be applied
-        ctrl_state : String of binary digits describing the basis state used as control
-        """
-        _check_u2(unitary)
-
-        self.unitary = unitary
-        self.controls = QuantumRegister(num_controls)
-        self.target = QuantumRegister(1)
-        self.num_qubits = num_controls + 1
-        self.ctrl_state = ctrl_state
-        super().__init__("qdmcsu", self.num_qubits, [], "qdmcsu")
-
-    def _define(self):
-        self.definition = QuantumCircuit(self.controls, self.target)
-        num_ctrl = len(self.controls)
-
-        if num_ctrl == 1:
-            u_gate = QuantumCircuit(1)
-            u_gate.unitary(self.unitary, 0)
-            self.definition.append(
-                u_gate.control(
-                    num_ctrl_qubits=num_ctrl,
-                    ctrl_state=self.ctrl_state
-                ),
-                [*self.controls, self.target]
-            )
-        else:
-            if self.ctrl_state is None:
-                self.ctrl_state = '1' * num_ctrl
-
-            # Notice that `ctrl_state`` is reversed with respect to `controls``.
-            v_op = sqrtm(self.unitary)
-
-            v_gate = QuantumCircuit(1, name="V")
-            v_gate.unitary(v_op, 0)
-
-            v_gate_dag = QuantumCircuit(1, name="V^dag")
-            v_gate_dag.unitary(v_op.T.conj(), 0)
-
-            linear_mcx_gate = LinearMcx(
-                                num_controls=num_ctrl-1,
-                                ctrl_state=self.ctrl_state[1:],
-                                action_only=True
-                            ).definition
-
-            self.definition.append(
-                v_gate.control(1, ctrl_state=self.ctrl_state[:1]),
-                [self.controls[-1], self.target]
-            )
-            self.definition.append(
-                linear_mcx_gate,
-                [*self.controls[:-1], self.controls[-1], self.target]
-            )
-            self.definition.append(
-                v_gate_dag.control(1, ctrl_state=self.ctrl_state[:1]),
-                [self.controls[-1], self.target]
-            )
-            self.definition.append(
-                linear_mcx_gate.inverse(),
-                [*self.controls[:-1], self.controls[-1], self.target]
-            )
-
-            QDMCU.qdmcu(
-                self.definition,
-                v_op,
-                self.controls[:-1],
-                self.target,
-                self.ctrl_state[1:]
-            )
-
-    @staticmethod
-    def qdmcu(
-        circuit,
-        unitary,
-        controls: Union[QuantumRegister, List[Qubit]],
-        target: Qubit,
-        ctrl_state: str=None
-    ):
-        circuit.append(
-            QDMCU(unitary, len(controls), ctrl_state=ctrl_state),
             [*controls, target]
         )
