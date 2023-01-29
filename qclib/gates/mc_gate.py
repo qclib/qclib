@@ -16,102 +16,118 @@
 n-qubit controlled gate
 """
 from collections import namedtuple
-import qiskit
 import numpy as np
+import qiskit
+from qiskit.circuit import Gate
+from qiskit import QuantumCircuit, QuantumRegister
+from ._utils import _check_u2, _apply_ctrl_state
 
+class McGate(Gate):
 
-def mc_gate(
-    gate: np.ndarray,
-    circuit: qiskit.QuantumCircuit,
-    controls: list,
-    targ: int,
-    ctrl_state: str=None
-):
-    """
+    def __init__(self, unitary, num_controls, ctrl_state: str = None):
 
-    Parameters
-    ----------
-    gate: 2 X 2 unitary gate
-    circuit: qiskit.QuantumCircuit
-    controls: list of control qubits
-    targ: target qubit
+        _check_u2(unitary)
 
-    Returns
-    -------
+        self.unitary = unitary
 
-    """
-
-    _ctrl_state(circuit, controls, ctrl_state)
-
-    n_qubits = len(controls) + 1
-    gate_circuit = qiskit.QuantumCircuit(n_qubits, name="T" + str(targ))
-    gate_circuit.permutation = list(range(len(controls) + 1))
-    _c1c2(gate, n_qubits, gate_circuit)
-    _c1c2(gate, n_qubits, gate_circuit, step=-1)
-
-    _c1c2(gate, n_qubits - 1, gate_circuit, False)
-    _c1c2(gate, n_qubits - 1, gate_circuit, False, step=-1)
-
-    circuit.compose(gate_circuit, controls + [targ], inplace=True)
-    circuit.permutation = gate_circuit.permutation
-
-    _ctrl_state(circuit, controls, ctrl_state)
-
-
-def _ctrl_state(circuit, controls, ctrl_state):
-    if ctrl_state is not None:
-        for i, ctrl in enumerate(ctrl_state[::-1]):
-            if ctrl == '0':
-                circuit.x(controls[i])
-
-
-def _c1c2(gate, n_qubits, qcirc, first=True, step=1):
-    pairs = namedtuple("pairs", ["control", "target"])
-
-    if step == 1:
-        start = 0
-        reverse = True
-    else:
-        start = 1
-        reverse = False
-
-    qubit_pairs = [
-        pairs(control, target)
-        for target in range(n_qubits)
-        for control in range(start, target)
-    ]
-
-    qubit_pairs.sort(key=lambda e: e.control + e.target, reverse=reverse)
-
-    for pair in qubit_pairs:
-        exponent = pair.target - pair.control
-        if pair.control == 0:
-            exponent = exponent - 1
-        param = 2**exponent
-        signal = -1 if (pair.control == 0 and not first) else 1
-        signal = step * signal
-        if pair.target == n_qubits - 1 and first:
-            csqgate = _gate_u(gate, param, signal)
-            qcirc.compose(csqgate, qubits=[pair.control, pair.target], inplace=True)
+        if num_controls > 0:
+            self.control_qubits = QuantumRegister(num_controls)
         else:
-            qcirc.crx(signal * np.pi / param, pair.control, pair.target)
+            self.control_qubits = []
 
+        self.target_qubit = QuantumRegister(1)
 
-def _gate_u(agate, coef, signal):
-    param = 1 / np.abs(coef)
+        self.num_qubits = num_controls + 1
 
-    values, vectors = np.linalg.eig(agate)
-    gate = np.power(values[0] + 0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T
-    gate = (
-        gate
-        + np.power(values[1] + 0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
-    )
+        self.ctrl_state = ctrl_state
 
-    if signal < 0:
-        gate = np.linalg.inv(gate)
+        super().__init__("mc_gate", self.num_qubits, [], "mc_gate")
 
-    sqgate = qiskit.QuantumCircuit(1, name="U^1/" + str(coef))
-    sqgate.unitary(gate, 0)  # pylint: disable=maybe-no-member
-    csqgate = sqgate.control(1)
+    def _define(self):
 
-    return csqgate
+        if len(self.control_qubits) > 0:
+            self.definition = QuantumCircuit(self.control_qubits, self.target_qubit)
+
+            self._apply_ctrl_state()
+
+            qubits_indexes = list(range(self.num_qubits))
+
+            gate_circuit = qiskit.QuantumCircuit(self.num_qubits, name="T" + str(0))
+            gate_circuit.permutation = list(range(self.num_qubits))
+            self._c1c2(self.unitary, self.num_qubits, gate_circuit)
+            self._c1c2(self.unitary, self.num_qubits, gate_circuit, step=-1)
+
+            self._c1c2(self.unitary, self.num_qubits - 1, gate_circuit, False)
+            self._c1c2(self.unitary, self.num_qubits - 1, gate_circuit, False, step=-1)
+
+            #TODO remove the need to invert the order of the control qubits
+            self.definition.append(gate_circuit, [self.target_qubit, *self.control_qubits[::-1]])
+            self.definition.permutation = gate_circuit.permutation
+
+            self._apply_ctrl_state()
+
+        else:
+            self.definition = QuantumCircuit(self.target_qubit)
+            self.definition.unitary(self.unitary, 0)
+
+    def _c1c2(self, unitary, n_qubits, gate_circ, first=True, step=1):
+        pairs = namedtuple("pairs", ["control", "target"])
+
+        if step == 1:
+            start = 0
+            reverse = True
+        else:
+            start = 1
+            reverse = False
+
+        qubit_pairs = [
+            pairs(control, target)
+            for target in range(n_qubits)
+            for control in range(start, target)
+        ]
+
+        qubit_pairs.sort(key=lambda e: e.control + e.target, reverse=reverse)
+
+        for pair in qubit_pairs:
+            exponent = pair.target - pair.control
+            if pair.control == 0:
+                exponent = exponent - 1
+            param = 2**exponent
+            signal = -1 if (pair.control == 0 and not first) else 1
+            signal = step * signal
+            if pair.target == n_qubits - 1 and first:
+                csqgate = McGate._gate_u(unitary, param, signal)
+                gate_circ.compose(csqgate,
+                                  qubits=[pair.control, pair.target],
+                                  inplace=True)
+            else:
+                gate_circ.crx(signal * np.pi / param, pair.control, pair.target)
+
+    @staticmethod
+    def _gate_u(agate, coef, signal):
+        param = 1 / np.abs(coef)
+
+        values, vectors = np.linalg.eig(agate)
+        gate = np.power(values[0] + 0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T
+        gate = (
+            gate
+            + np.power(values[1] + 0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
+        )
+
+        if signal < 0:
+            gate = np.linalg.inv(gate)
+
+        sqgate = QuantumCircuit(1, name="U^1/" + str(coef))
+        sqgate.unitary(gate, 0)  # pylint: disable=maybe-no-member
+        csqgate = sqgate.control(1)
+
+        return csqgate
+
+    @staticmethod
+    def mc_gate(circuit, unitary, controls, target, ctrl_state=None):
+        circuit.append(
+            McGate(unitary, len(controls), ctrl_state=ctrl_state),
+            [*controls, target]
+        )
+
+McGate._apply_ctrl_state = _apply_ctrl_state
