@@ -69,10 +69,9 @@ class TestLinearToffoli(TestCase):
         target = QuantumRegister(1)
         circuit = QuantumCircuit(controls, target)
 
-        #circuit.x(1)
-        #circuit.x(2)
-        #circuit.x(3)
-        #circuit.x(0)
+        circuit.x(0)
+        circuit.x(1)
+        circuit.x(2)
 
         McGate.mc_gate(circuit, gate_x, controls, target)
 
