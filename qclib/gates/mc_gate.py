@@ -22,6 +22,8 @@ from qiskit.circuit import Gate
 from qiskit import QuantumCircuit, QuantumRegister
 from ._utils import _check_u2, _apply_ctrl_state
 
+# pylint: disable=maybe-no-member
+# pylint: disable=protected-access
 class McGate(Gate):
 
     def __init__(self, unitary, num_controls, ctrl_state: str = None):
@@ -53,16 +55,14 @@ class McGate(Gate):
             qubits_indexes = list(range(self.num_qubits))
 
             gate_circuit = qiskit.QuantumCircuit(self.num_qubits, name="T" + str(0))
-            gate_circuit.permutation = list(range(self.num_qubits))
+
             self._c1c2(self.unitary, self.num_qubits, gate_circuit)
             self._c1c2(self.unitary, self.num_qubits, gate_circuit, step=-1)
 
             self._c1c2(self.unitary, self.num_qubits - 1, gate_circuit, False)
             self._c1c2(self.unitary, self.num_qubits - 1, gate_circuit, False, step=-1)
 
-            #TODO remove the need to invert the order of the control qubits
-            self.definition.append(gate_circuit, [self.target_qubit, *self.control_qubits[::-1]])
-            self.definition.permutation = gate_circuit.permutation
+            self.definition.append(gate_circuit, [*self.control_qubits, self.target_qubit])
 
             self._apply_ctrl_state()
 

@@ -23,7 +23,7 @@ from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Qubit
 from qiskit.circuit import Gate
 from .mcx_gate import McxVchainDirty
-from .mc_gate import mc_gate
+from .mc_gate import McGate
 from ._utils import _check_u2, _check_su2, _u2_to_su2
 
 
@@ -82,7 +82,7 @@ class Mcg(Gate):
                     su_2, _ = _u2_to_su2(self.unitary)
                     self.mcg(su_2, self.controls, self.target, self.ctrl_state)
                 else:
-                    mc_gate(self.unitary, self.definition, self.controls[:], self.target[0], self.ctrl_state)
+                    McGate.mc_gate(self.definition, self.unitary, self.controls[:], self.target[0], self.ctrl_state)
     
     @staticmethod
     def mcg(

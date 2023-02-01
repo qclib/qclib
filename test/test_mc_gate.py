@@ -20,7 +20,7 @@ import numpy as np
 from scipy.stats import unitary_group
 import qiskit
 from qiskit import QuantumRegister, QuantumCircuit
-from qiskit.quantum_info import Operator
+from qiskit.circuit.library import MCXGate
 import qclib.util
 from qclib.gates.mc_gate import McGate
 
@@ -35,15 +35,15 @@ class TestLinearToffoli(TestCase):
         controls = QuantumRegister(4)
         target = QuantumRegister(1)
         circuit = qiskit.QuantumCircuit(controls, target)
+        circuit.x(0)
         circuit.x(1)
         circuit.x(2)
         circuit.x(3)
-        circuit.x(4)
 
         McGate.mc_gate(circuit, gate_u, controls, target)
 
         state = qclib.util.get_state(circuit)
-        self.assertTrue(np.isclose(state[30], gate_u[0, 0]))
+        self.assertTrue(np.isclose(state[15], gate_u[0, 0]))
         self.assertTrue(np.isclose(state[31], gate_u[1, 0]))
 
         controls2 = QuantumRegister(4)
@@ -58,7 +58,7 @@ class TestLinearToffoli(TestCase):
         McGate.mc_gate(circuit2, gate_u, controls2, target2)
 
         state = qclib.util.get_state(circuit2)
-        self.assertTrue(np.isclose(state[30], gate_u[0, 1]))
+        self.assertTrue(np.isclose(state[15], gate_u[0, 1]))
         self.assertTrue(np.isclose(state[31], gate_u[1, 1]))
 
     def test_linear_toffoli3(self):
@@ -69,9 +69,10 @@ class TestLinearToffoli(TestCase):
         target = QuantumRegister(1)
         circuit = QuantumCircuit(controls, target)
 
-        circuit.x(0)
         circuit.x(1)
         circuit.x(2)
+        circuit.x(3)
+        circuit.x(0)
 
         McGate.mc_gate(circuit, gate_x, controls, target)
 
@@ -130,21 +131,23 @@ class TestLinearToffoli(TestCase):
         """ Testing Toffoli control 000"""
         gate_x = np.array([[0, 1], [1, 0]])
 
-        circuit2 = qiskit.QuantumCircuit(4)
-
-        state1 = qclib.util.get_state(circuit2)
-
         controls = QuantumRegister(3)
         target = QuantumRegister(1)
-        circuit = qiskit.QuantumCircuit(controls, target)
+        mcgate_circuit = qiskit.QuantumCircuit(controls, target)
 
-        McGate.mc_gate(circuit, gate_x, controls, target, ctrl_state="000")
+        McGate.mc_gate(mcgate_circuit, gate_x, controls, target, ctrl_state="000")
 
-        circuit.compose(circuit2, circuit.qubits)
+        controls_2 = QuantumRegister(3)
+        target_2 = QuantumRegister(1)
+        qiskit_circuit = QuantumCircuit(controls_2, target_2)
 
-        state2 = qclib.util.get_state(circuit)
+        qiskit_circuit.append(MCXGate(len(controls_2), ctrl_state='000'),
+                              [*controls_2, target_2])
 
-        self.assertTrue(np.allclose(state1, state2))
+        state_qiskit = qclib.util.get_state(qiskit_circuit)
+        state_mcgate = qclib.util.get_state(mcgate_circuit)
+
+        self.assertTrue(np.allclose(state_qiskit, state_mcgate))
 
     def test_mct_toffoli(self):
         """ compare qiskit.mct and toffoli depth with 7 qubits """
