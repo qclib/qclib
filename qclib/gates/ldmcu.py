@@ -20,15 +20,23 @@ import numpy as np
 import qiskit
 from qiskit.circuit import Gate
 from qiskit import QuantumCircuit, QuantumRegister
-from ._utils import _check_u2, _apply_ctrl_state
+from .util import check_u2, apply_ctrl_state
 
 # pylint: disable=maybe-no-member
 # pylint: disable=protected-access
-class McGate(Gate):
+class Ldmcu(Gate):
+    """
+    Linear Depth Multi-Controlled Unitary
+    -----------------------------------------
+
+    Implements gate decomposition of a munticontrolled operator in U(2) according to
+    https://arxiv.org/abs/2203.11882
+    https://journals.aps.org/pra/abstract/10.1103/PhysRevA.106.042602.
+    """
 
     def __init__(self, unitary, num_controls, ctrl_state: str = None):
 
-        _check_u2(unitary)
+        check_u2(unitary)
 
         self.unitary = unitary
 
@@ -43,7 +51,7 @@ class McGate(Gate):
 
         self.ctrl_state = ctrl_state
 
-        super().__init__("mc_gate", self.num_qubits, [], "mc_gate")
+        super().__init__("ldmcu", self.num_qubits, [], "ldmcu")
 
     def _define(self):
 
@@ -96,7 +104,7 @@ class McGate(Gate):
             signal = -1 if (pair.control == 0 and not first) else 1
             signal = step * signal
             if pair.target == n_qubits - 1 and first:
-                csqgate = McGate._gate_u(unitary, param, signal)
+                csqgate = Ldmcu._gate_u(unitary, param, signal)
                 gate_circ.compose(csqgate,
                                   qubits=[pair.control, pair.target],
                                   inplace=True)
@@ -124,10 +132,10 @@ class McGate(Gate):
         return csqgate
 
     @staticmethod
-    def mc_gate(circuit, unitary, controls, target, ctrl_state=None):
+    def ldmcu(circuit, unitary, controls, target, ctrl_state=None):
         circuit.append(
-            McGate(unitary, len(controls), ctrl_state=ctrl_state),
+            Ldmcu(unitary, len(controls), ctrl_state=ctrl_state),
             [*controls, target]
         )
 
-McGate._apply_ctrl_state = _apply_ctrl_state
+Ldmcu._apply_ctrl_state = apply_ctrl_state

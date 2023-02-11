@@ -23,14 +23,14 @@ from qiskit.circuit import Gate
 
 from scipy.linalg import sqrtm
 
-from .mcx_gate import LinearMcx
-from ._utils import _check_u2
+from .mcx import LinearMcx
+from .util import check_u2
 
 
 # pylint: disable=protected-access
 
 
-class QDMCU(Gate):
+class Qdmcu(Gate):
     """
     Quandratic Depth Multi-Controlled Unitary
     -----------------------------------------
@@ -54,14 +54,14 @@ class QDMCU(Gate):
         target     : qiskit.Qubit on wich the unitary operation is to be applied
         ctrl_state : String of binary digits describing the basis state used as control
         """
-        _check_u2(unitary)
+        check_u2(unitary)
 
         self.unitary = unitary
         self.controls = QuantumRegister(num_controls)
         self.target = QuantumRegister(1)
         self.num_qubits = num_controls + 1
         self.ctrl_state = ctrl_state
-        super().__init__("qdmcsu", self.num_qubits, [], "qdmcsu")
+        super().__init__("qdmcu", self.num_qubits, [], "qdmcu")
 
     def _define(self):
         self.definition = QuantumCircuit(self.controls, self.target)
@@ -130,6 +130,6 @@ class QDMCU(Gate):
         ctrl_state: str=None
     ):
         circuit.append(
-            QDMCU(unitary, len(controls), ctrl_state=ctrl_state),
+            Qdmcu(unitary, len(controls), ctrl_state=ctrl_state),
             [*controls, target]
         )

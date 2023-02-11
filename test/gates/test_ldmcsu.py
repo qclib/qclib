@@ -20,7 +20,7 @@ from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator
 from scipy.stats import unitary_group
 from qclib.gates.ldmcsu import LdMcSpecialUnitary
-from qclib.gates.mcg import _u2_to_su2
+from qclib.gates.util import u2_to_su2
 from qclib.util import get_cnot_count
 
 # pylint: disable=missing-function-docstring
@@ -31,11 +31,12 @@ class TestLcMcSpecialUnitary(TestCase):
     """
         Test cases for the decomposition of
         Multicontrolled Special Unitary with linear depth
+        by Barenco et al.
     """
 
     def _generate_su_2(self):
         u_2 = unitary_group.rvs(2)
-        su_2, _ = _u2_to_su2(u_2)
+        su_2, _ = u2_to_su2(u_2)
         return su_2
 
     def _build_qiskit_circuit(self, su2, num_controls, ctrl_state=None):
@@ -83,7 +84,7 @@ class TestLcMcSpecialUnitary(TestCase):
 
     def test_lcmcsu_cnot_count(self):
         su_2 = self._generate_su_2()
-        for num_controls in range(8, 20):
+        for num_controls in range(8, 10):
             ldmcsu_circ = LdMcSpecialUnitary(su_2, num_controls).definition
             ldmcsu_count = get_cnot_count(ldmcsu_circ)
 

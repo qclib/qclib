@@ -15,19 +15,19 @@
 import numpy as np
 from cmath import isclose, phase
 
-def _apply_ctrl_state(self):
+def apply_ctrl_state(self):
     if self.ctrl_state is not None:
         for i, ctrl in enumerate(self.ctrl_state[::-1]):
             if ctrl == '0':
                 self.definition.x(self.control_qubits[i])
 
-def _u2_to_su2(u_2):
+def u2_to_su2(u_2):
     phase_factor = np.conj(np.linalg.det(u_2) ** (-1 / u_2.shape[0]))
     su_2 = u_2 / phase_factor
     return su_2, phase(phase_factor)
 
 
-def _check_u2(matrix):
+def check_u2(matrix):
     if matrix.shape != (2, 2):
         raise ValueError(
             "The shape of a U(2) matrix must be (2, 2)."
@@ -37,5 +37,5 @@ def _check_u2(matrix):
             "The columns of a U(2) matrix must be orthonormal."
         )
 
-def _check_su2(matrix):
+def check_su2(matrix):
     return isclose(np.linalg.det(matrix), 1.0)

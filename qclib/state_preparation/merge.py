@@ -19,7 +19,7 @@
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UGate
-from qclib.gates.mc_gate import McGate
+from qclib.gates.ldmcu import Ldmcu
 from qclib.gates.initialize_sparse import InitializeSparse
 
 
@@ -444,7 +444,7 @@ class MergeInitialize(InitializeSparse):
             quantum_circuit.append(merge_gate, dif_qubits + [dif], [])
         else:
             gate_definition = UGate(theta, phi, lamb, label="U").to_matrix()
-            McGate.mc_gate(quantum_circuit, gate_definition, dif_qubits, dif)
+            Ldmcu.ldmcu(quantum_circuit, gate_definition, dif_qubits, dif)
 
         state_dict = self._update_state_dict_according_to_operation(
             state_dict, "merge", None, merge_strings=[bitstr1, bitstr2]

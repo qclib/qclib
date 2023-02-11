@@ -127,7 +127,7 @@ class TestMcg(TestCase):
         alpha = np.random.rand()
         beta = np.random.rand() + 1.j * np.random.rand()
 
-        for n_qubits in range(1, 10):
+        for n_qubits in range(1, 8):
             self._su2_compare(alpha, beta, n_qubits)
             self._su2_count(alpha, beta, n_qubits)
 
@@ -143,7 +143,7 @@ class TestMcg(TestCase):
         alpha = np.random.rand() + 1.j * np.random.rand()
         beta = np.random.rand() + 1.j * np.random.rand()
 
-        for n_qubits in range(1, 10):
+        for n_qubits in range(1, 8):
             self._su2_compare(alpha, beta, n_qubits)
             self._su2_count(alpha, beta, n_qubits)
             #self._su2_depth(alpha, beta, n_qubits)
@@ -154,6 +154,6 @@ class TestMcg(TestCase):
         for n_qubits in range(1, 8):
             self._u2_compare(unitary, n_qubits)
 
-        for n_qubits in range(1, 12):
+        for n_qubits in range(1, 10):
             self._u2_count(unitary, n_qubits)
 

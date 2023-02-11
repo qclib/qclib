@@ -22,7 +22,7 @@ import qiskit
 from qiskit import QuantumRegister, QuantumCircuit
 from qiskit.circuit.library import MCXGate
 import qclib.util
-from qclib.gates.mc_gate import McGate
+from qclib.gates.ldmcu import Ldmcu
 
 class TestLinearToffoli(TestCase):
     """ Testing qclib.gate.toffoli """
@@ -40,7 +40,7 @@ class TestLinearToffoli(TestCase):
         circuit.x(2)
         circuit.x(3)
 
-        McGate.mc_gate(circuit, gate_u, controls, target)
+        Ldmcu.ldmcu(circuit, gate_u, controls, target)
 
         state = qclib.util.get_state(circuit)
         self.assertTrue(np.isclose(state[15], gate_u[0, 0]))
@@ -55,7 +55,7 @@ class TestLinearToffoli(TestCase):
         circuit2.x(3)
         circuit2.x(4)
 
-        McGate.mc_gate(circuit2, gate_u, controls2, target2)
+        Ldmcu.ldmcu(circuit2, gate_u, controls2, target2)
 
         state = qclib.util.get_state(circuit2)
         self.assertTrue(np.isclose(state[15], gate_u[0, 1]))
@@ -74,7 +74,7 @@ class TestLinearToffoli(TestCase):
         circuit.x(3)
         circuit.x(0)
 
-        McGate.mc_gate(circuit, gate_x, controls, target)
+        Ldmcu.ldmcu(circuit, gate_x, controls, target)
 
         state = qclib.util.get_state(circuit)
         exp_state = np.zeros(16, dtype=complex)
@@ -100,7 +100,7 @@ class TestLinearToffoli(TestCase):
         target1 = QuantumRegister(1)
         circuit1 = qiskit.QuantumCircuit(controls1, target1)
 
-        McGate.mc_gate(circuit1, gate_x, controls1, target1, ctrl_state='110')
+        Ldmcu.ldmcu(circuit1, gate_x, controls1, target1, ctrl_state='110')
 
         circuit2.compose(circuit1, circuit2.qubits)
         state2 = qclib.util.get_state(circuit2)
@@ -120,7 +120,7 @@ class TestLinearToffoli(TestCase):
         target = QuantumRegister(1)
         circuit = qiskit.QuantumCircuit(controls, target)
 
-        McGate.mc_gate(circuit, gate_x, controls, target, ctrl_state='100')
+        Ldmcu.ldmcu(circuit, gate_x, controls, target, ctrl_state='100')
         circuit2.compose(circuit, circuit2.qubits)
 
         state2 = qclib.util.get_state(circuit2)
@@ -135,7 +135,7 @@ class TestLinearToffoli(TestCase):
         target = QuantumRegister(1)
         mcgate_circuit = qiskit.QuantumCircuit(controls, target)
 
-        McGate.mc_gate(mcgate_circuit, gate_x, controls, target, ctrl_state="000")
+        Ldmcu.ldmcu(mcgate_circuit, gate_x, controls, target, ctrl_state="000")
 
         controls_2 = QuantumRegister(3)
         target_2 = QuantumRegister(1)
@@ -159,7 +159,7 @@ class TestLinearToffoli(TestCase):
         controls = QuantumRegister(5)
         target = QuantumRegister(1)
         qcirc2 = qiskit.QuantumCircuit(controls, target)
-        McGate.mc_gate(qcirc2, gate_x, controls, target)
+        Ldmcu.ldmcu(qcirc2, gate_x, controls, target)
 
         t_qcirc2 = qiskit.transpile(qcirc2, basis_gates=['u', 'cx'])
 

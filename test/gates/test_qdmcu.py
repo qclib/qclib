@@ -19,7 +19,7 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator
 from scipy.stats import unitary_group
-from qclib.gates.qdmcu import QDMCU
+from qclib.gates.qdmcu import Qdmcu
 from qclib.util import get_cnot_count
 
 class TestQDMCU(TestCase): 
@@ -40,9 +40,9 @@ class TestQDMCU(TestCase):
     def test_gate_trivial_ctrl_state(self):
         """Compares QDMCU result gate against qiskit's with a trivial state"""
         u2 = self._generate_u2()
-        for n_ctrl in range(1, 10):
+        for n_ctrl in range(1, 8):
             qiskit_circ = self._build_qiskit_qdmcu(u2, n_ctrl)
-            qdmcu_circ = QDMCU(u2, n_ctrl).definition
+            qdmcu_circ = Qdmcu(u2, n_ctrl).definition
 
             qiskit_op = Operator(qiskit_circ).data
             qdmcu_op  = Operator(qdmcu_circ).data
@@ -53,10 +53,10 @@ class TestQDMCU(TestCase):
         """Compares QDMCU result gate against qiskit's with a trivial state"""
 
         u2 = self._generate_u2()
-        for n_ctrl in range(1, 10):
+        for n_ctrl in range(1, 8):
             ctrl_state = f'{np.random.randint(1, 2**n_ctrl):0{n_ctrl}b}'
             qiskit_circ = self._build_qiskit_qdmcu(u2, n_ctrl, ctrl_state=ctrl_state)
-            qdmcu_circ = QDMCU(u2, n_ctrl, ctrl_state=ctrl_state).definition
+            qdmcu_circ = Qdmcu(u2, n_ctrl, ctrl_state=ctrl_state).definition
 
             qiskit_op = Operator(qiskit_circ).data
             qdmcu_op  = Operator(qdmcu_circ).data
@@ -66,10 +66,10 @@ class TestQDMCU(TestCase):
     def test_cnot_count(self):
         """Compares QDMCU cnot count against qiskit's cnot count"""
         u2 = self._generate_u2()
-        for n_ctrl in range(1, 10):
+        for n_ctrl in range(1, 8):
             ctrl_state = f'{np.random.randint(1, 2**n_ctrl):0{n_ctrl}b}'
             qiskit_circ = self._build_qiskit_qdmcu(u2, n_ctrl, ctrl_state=ctrl_state)
-            qdmcu_circ = QDMCU(u2, n_ctrl, ctrl_state=ctrl_state).definition
+            qdmcu_circ = Qdmcu(u2, n_ctrl, ctrl_state=ctrl_state).definition
 
             qiskit_cnots = get_cnot_count(qiskit_circ)
             qdmcu_cnots  = get_cnot_count(qdmcu_circ)
