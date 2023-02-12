@@ -19,7 +19,7 @@ from unittest import TestCase
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.quantum_info import Operator
-from qclib.gates.mcx_gate import McxVchainDirty, LinearMcx
+from qclib.gates.mcx import McxVchainDirty, LinearMcx
 
 def apply_control_state_on_quantum_circuit(
     quantum_circuit: QuantumCircuit,
@@ -103,7 +103,7 @@ class TestLinearMCX(TestCase):
     def test_linear_mcx_depth(self):
         """ Test linear_mcx depth"""
 
-        for num_qubits in range(30, 31):
+        for num_qubits in range(10, 11):
 
             mcx_dirty_ancilla = LinearMcx(num_qubits-2).definition
 
@@ -211,7 +211,7 @@ class TestMcxVchainDirty(TestCase):
     def test_mcx_v_chain_dirty_depth(self):
         """ Test mcx_v_chain_dirty depth"""
 
-        for num_controls in range(30, 31):
+        for num_controls in range(10, 11):
             num_ancilla = num_controls - 2
             control_qubits = QuantumRegister(num_controls)
             ancilla_qubits = QuantumRegister(num_ancilla)

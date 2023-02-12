@@ -26,6 +26,7 @@ from qiskit.circuit.library import C3XGate, C4XGate
 from qiskit.circuit import Gate
 
 from .toffoli import Toffoli
+from .util import apply_ctrl_state
 
 
 # pylint: disable=protected-access
@@ -59,7 +60,7 @@ class McxVchainDirty(Gate):
             num_ancilla = num_controls - 2
             self.ancilla_qubits = QuantumRegister(num_ancilla)
 
-        super().__init__('mcx_vc_dirty', num_controls + num_ancilla + 1, [], "McxDirty")
+        super().__init__('mcx_vc_dirty', num_controls + num_ancilla + 1, [], "mcx_vc_dirty")
 
     def _define(self):
         self.definition = QuantumCircuit(self.control_qubits,
@@ -142,15 +143,7 @@ class McxVchainDirty(Gate):
             [*controls, target]
         )
 
-
-def _apply_ctrl_state(self):
-    if self.ctrl_state is not None:
-        for i, ctrl in enumerate(self.ctrl_state[::-1]):
-            if ctrl == '0':
-                self.definition.x(self.control_qubits[i])
-
-
-McxVchainDirty._apply_ctrl_state = _apply_ctrl_state
+McxVchainDirty._apply_ctrl_state = apply_ctrl_state
 
 
 class LinearMcx(Gate):
@@ -231,4 +224,4 @@ class LinearMcx(Gate):
         circuit.append(LinearMcx(len(controls), ctrl_state, action_only), [*controls, target])
 
 
-LinearMcx._apply_ctrl_state = _apply_ctrl_state
+LinearMcx._apply_ctrl_state = apply_ctrl_state

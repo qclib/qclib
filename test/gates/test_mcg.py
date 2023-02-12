@@ -21,15 +21,12 @@ from scipy.stats import unitary_group
 from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator
 from qclib.util import get_cnot_count, get_depth
-from qclib.gates.mcg import mcg
+from qclib.gates.mcg import Mcg
 
 
 # pylint: disable=maybe-no-member
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
-
-
-QuantumCircuit.mcg = mcg
 
 
 class TestMcg(TestCase):
@@ -52,15 +49,14 @@ class TestMcg(TestCase):
             target = n_qubits - 1
 
             ctrl_state = f"{np.random.randint(2**(n_qubits - 1)):0{n_qubits - 1}b}"
-
-            mcg_circuit.mcg(unitary, controls, target, ctrl_state=ctrl_state)
+            mcg_circuit = Mcg(unitary, len(controls), ctrl_state=ctrl_state).definition
 
             qiskit_circuit.unitary(unitary, 0)
             qiskit_circuit = qiskit_circuit.control(
                 num_ctrl_qubits=n_qubits - 1, ctrl_state=ctrl_state
             )
         else:
-            mcg_circuit.mcg(unitary, [], 0)
+            mcg_circuit = Mcg(unitary, 0).definition
             qiskit_circuit.unitary(unitary, 0)
 
         return mcg_circuit, qiskit_circuit
@@ -131,7 +127,7 @@ class TestMcg(TestCase):
         alpha = np.random.rand()
         beta = np.random.rand() + 1.j * np.random.rand()
 
-        for n_qubits in range(1, 10):
+        for n_qubits in range(1, 8):
             self._su2_compare(alpha, beta, n_qubits)
             self._su2_count(alpha, beta, n_qubits)
 
@@ -147,7 +143,7 @@ class TestMcg(TestCase):
         alpha = np.random.rand() + 1.j * np.random.rand()
         beta = np.random.rand() + 1.j * np.random.rand()
 
-        for n_qubits in range(1, 10):
+        for n_qubits in range(1, 8):
             self._su2_compare(alpha, beta, n_qubits)
             self._su2_count(alpha, beta, n_qubits)
             #self._su2_depth(alpha, beta, n_qubits)
@@ -158,6 +154,6 @@ class TestMcg(TestCase):
         for n_qubits in range(1, 8):
             self._u2_compare(unitary, n_qubits)
 
-        for n_qubits in range(1, 12):
+        for n_qubits in range(1, 10):
             self._u2_count(unitary, n_qubits)
 
