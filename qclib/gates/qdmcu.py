@@ -20,8 +20,8 @@ from typing import Union, List
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Qubit
 from qiskit.circuit import Gate
-
-from scipy.linalg import sqrtm
+from numpy import sqrt, outer
+from numpy.linalg import eig
 
 from .mcx import LinearMcx
 from .util import check_u2
@@ -82,7 +82,7 @@ class Qdmcu(Gate):
                 self.ctrl_state = '1' * num_ctrl
 
             # Notice that `ctrl_state`` is reversed with respect to `controls``.
-            v_op = sqrtm(self.unitary)
+            v_op = Qdmcu.custom_sqrtm(self.unitary)
 
             v_gate = QuantumCircuit(1, name="V")
             v_gate.unitary(v_op, 0)
@@ -120,6 +120,13 @@ class Qdmcu(Gate):
                 self.target,
                 self.ctrl_state[1:]
             )
+    
+    @staticmethod
+    def custom_sqrtm(unitary): 
+        eig_vals, eig_vecs = eig(unitary)
+        first_eig = sqrt(eig_vals[0]) * outer(eig_vecs[:, 0], eig_vecs[:, 0].conj())
+        second_eig = sqrt(eig_vals[1]) * outer(eig_vecs[:, 1], eig_vecs[:, 1].conj())
+        return first_eig + second_eig
 
     @staticmethod
     def qdmcu(
