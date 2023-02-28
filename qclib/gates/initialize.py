@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from math import log2
+from math import log2, isclose
 from qiskit.circuit.gate import Gate
 import numpy as np
 
@@ -21,7 +21,7 @@ class Initialize(Gate):
     @staticmethod
     def initialize(q_circuit, state, qubits=None):
         pass
-
+    
     def inverse(self):
         inverse_gate = self.copy()
 
@@ -32,8 +32,15 @@ class Initialize(Gate):
 
     def _get_num_qubits(self, params):
         self.num_qubits = log2(len(params))
-        if not self.num_qubits.is_integer():
-            Exception("The number of amplitudes is not a power of 2")
+
+        # Check if param is a power of 2
+        if self.num_qubits == 0 or not self.num_qubits.is_integer():
+            Exception("The length of the state vector is not a positive power of 2.")
+
+        # Check if probabilities (amplitudes squared) sum to 1
+        if not isclose(sum(np.absolute(params) ** 2), 1.0, abs_tol=1e-10):
+            Exception("Sum of amplitudes-squared does not equal one.")
+
         self.num_qubits = int(self.num_qubits)
 
     def validate_parameter(self, parameter):
@@ -43,5 +50,5 @@ class Initialize(Gate):
             return complex(parameter.item())
         else:
             raise Exception(
-                f"invalid param type {type(parameter)} for instruction {self.name}"
+                f"invalid param type {type(parameter)} for instruction {self.name}."
             )
