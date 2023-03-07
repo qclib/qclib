@@ -102,7 +102,7 @@ class TestLinearToffoli(TestCase):
 
         Ldmcu.ldmcu(circuit1, gate_x, controls1, target1, ctrl_state='110')
 
-        circuit2.compose(circuit1, circuit2.qubits)
+        circuit2.compose(circuit1, circuit2.qubits, inplace=True)
         state2 = qclib.util.get_state(circuit2)
 
         self.assertTrue(np.allclose(state1, state2))
@@ -121,7 +121,7 @@ class TestLinearToffoli(TestCase):
         circuit = qiskit.QuantumCircuit(controls, target)
 
         Ldmcu.ldmcu(circuit, gate_x, controls, target, ctrl_state='100')
-        circuit2.compose(circuit, circuit2.qubits)
+        circuit2.compose(circuit, circuit2.qubits, inplace=True)
 
         state2 = qclib.util.get_state(circuit2)
 
