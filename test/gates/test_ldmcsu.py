@@ -89,3 +89,15 @@ class TestLcMcSpecialUnitary(TestCase):
             ldmcsu_count = get_cnot_count(ldmcsu_circ)
 
             self.assertLessEqual(ldmcsu_count, self._compute_bound(num_controls+1))
+
+    def test_lcmcsu_op_for_exception_unitary(self):
+        su2 = np.array([[-1, 0], [0, -1]])
+
+        for num_controls in range(1, 9):
+            ldmcsu_circ = LdMcSpecialUnitary(su2, num_controls).definition
+            qiskit_circ = self._build_qiskit_circuit(su2, num_controls)
+
+            ldmcsu_op = Operator(ldmcsu_circ).data
+            qiskit_op = Operator(qiskit_circ).data
+
+            self.assertTrue(np.allclose(ldmcsu_op, qiskit_op))

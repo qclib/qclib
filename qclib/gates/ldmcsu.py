@@ -129,18 +129,23 @@ class Ldmcsu(Gate):
         ctrl_state: str=None,
         general_su2_optimization=False
     ):
-
-        alpha_r = np.sqrt(
-        (np.sqrt((z.real + 1.) / 2.) + 1.) / 2.
-        )
-        alpha_i = z.imag / (2. * np.sqrt(
-            (z.real + 1.) * (np.sqrt((z.real + 1.) / 2.) + 1.)
-        ))
-        alpha = alpha_r + 1.j * alpha_i
-        beta = x / (2. * np.sqrt(
-                (z.real + 1.) * (np.sqrt((z.real + 1.) / 2.) + 1.)
+        if z.real == -1:
+            alpha_r = np.cos(np.pi/4)
+            alpha_i = np.sin(np.pi/4)
+            alpha = alpha_r + 1.j * alpha_i
+            beta = 0
+        else:
+            alpha_r = np.sqrt(
+            (np.sqrt((z.real + 1.) / 2.) + 1.) / 2.
             )
-        )
+            alpha_i = z.imag / (2. * np.sqrt(
+                (z.real + 1.) * (np.sqrt((z.real + 1.) / 2.) + 1.)
+            ))
+            alpha = alpha_r + 1.j * alpha_i
+            beta = x / (2. * np.sqrt(
+                    (z.real + 1.) * (np.sqrt((z.real + 1.) / 2.) + 1.)
+                )
+            )
 
         s_op = np.array(
             [[alpha, -np.conj(beta)],
