@@ -129,6 +129,7 @@ class Ldmcsu(Gate):
         ctrl_state: str=None,
         general_su2_optimization=False
     ):
+        #For Re(z)=-1 the general formula doesn't work, as this will lead to divisions by zero
         if z.real == -1:
             alpha_r = np.cos(np.pi/4)
             alpha_i = np.sin(np.pi/4)
