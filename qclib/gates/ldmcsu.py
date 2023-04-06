@@ -129,22 +129,7 @@ class Ldmcsu(Gate):
         ctrl_state: str=None,
         general_su2_optimization=False
     ):
-        # When x=0, the calculation of alpha and beta can be simplified.
-        # This simplification not only results in a simpler computation
-        # but also avoids the issue of dividing by zero that arises in
-        # the general case when z=-1.
         if x == 0:
-            # In the details of Theorem 1, it is important to note that
-            # between equations (22) and (24), the assumption was made
-            # that x is non-zero. If x happens to be zero, then according
-            # to equation (18), either Re(w_1) or w_2 is also zero.
-            # Assuming w_2=0 would imply that Re(alpha) or beta is zero
-            # since w_2 = 2 Re(alpha∗beta), where beta is defined as real.
-            # In this case, we can choose beta=0, which results in w_1 being
-            # real.
-            # Using equation (17) and the condition described, we have that:
-            #   alpha = z^(1/4)
-            #   beta = 0
             alpha = z**(1/4)
             beta = 0.0
         else:
