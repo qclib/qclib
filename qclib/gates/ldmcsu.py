@@ -129,12 +129,24 @@ class Ldmcsu(Gate):
         ctrl_state: str=None,
         general_su2_optimization=False
     ):
-        #For Re(z)=-1 the general formula doesn't work, as this will lead to divisions by zero
-        if z.real == -1:
-            alpha_r = np.cos(np.pi/4)
-            alpha_i = np.sin(np.pi/4)
-            alpha = alpha_r + 1.j * alpha_i
-            beta = 0
+        # When x=0, the calculation of alpha and beta can be simplified.
+        # This simplification not only results in a simpler computation
+        # but also avoids the issue of dividing by zero that arises in
+        # the general case when z=-1.
+        if x == 0:
+            # In the details of Theorem 1, it is important to note that
+            # between equations (22) and (24), the assumption was made
+            # that x is non-zero. If x happens to be zero, then according
+            # to equation (18), either Re(w_1) or w_2 is also zero.
+            # Assuming w_2=0 would imply that Re(alpha) or beta is zero
+            # since w_2 = 2 Re(alpha∗beta), where beta is defined as real.
+            # In this case, we can choose beta=0, which results in w_1 being
+            # real.
+            # Using equation (17) and the condition described, we have that:
+            #   alpha = z^(1/4)
+            #   beta = 0
+            alpha = z**(1/4)
+            beta = 0.0
         else:
             alpha_r = np.sqrt(
             (np.sqrt((z.real + 1.) / 2.) + 1.) / 2.
@@ -279,7 +291,7 @@ class LdMcSpecialUnitary(Gate):
         if not check_su2(unitary):
             raise Exception("Operator must be in SU(2)")
 
-        self.unitary = unitary
+        self.unitary = np.array(unitary, dtype=complex)
 
         if num_controls > 0:
             self.control_qubits = QuantumRegister(num_controls)
