@@ -129,18 +129,21 @@ class Ldmcsu(Gate):
         ctrl_state: str=None,
         general_su2_optimization=False
     ):
-
-        alpha_r = np.sqrt(
-        (np.sqrt((z.real + 1.) / 2.) + 1.) / 2.
-        )
-        alpha_i = z.imag / (2. * np.sqrt(
-            (z.real + 1.) * (np.sqrt((z.real + 1.) / 2.) + 1.)
-        ))
-        alpha = alpha_r + 1.j * alpha_i
-        beta = x / (2. * np.sqrt(
-                (z.real + 1.) * (np.sqrt((z.real + 1.) / 2.) + 1.)
+        if x == 0:
+            alpha = z**(1/4)
+            beta = 0.0
+        else:
+            alpha_r = np.sqrt(
+            (np.sqrt((z.real + 1.) / 2.) + 1.) / 2.
             )
-        )
+            alpha_i = z.imag / (2. * np.sqrt(
+                (z.real + 1.) * (np.sqrt((z.real + 1.) / 2.) + 1.)
+            ))
+            alpha = alpha_r + 1.j * alpha_i
+            beta = x / (2. * np.sqrt(
+                    (z.real + 1.) * (np.sqrt((z.real + 1.) / 2.) + 1.)
+                )
+            )
 
         s_op = np.array(
             [[alpha, -np.conj(beta)],
@@ -273,7 +276,7 @@ class LdMcSpecialUnitary(Gate):
         if not check_su2(unitary):
             raise Exception("Operator must be in SU(2)")
 
-        self.unitary = unitary
+        self.unitary = np.array(unitary, dtype=complex)
 
         if num_controls > 0:
             self.control_qubits = QuantumRegister(num_controls)
