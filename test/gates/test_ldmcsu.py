@@ -17,6 +17,7 @@
 from unittest import TestCase
 import numpy as np
 from qiskit import QuantumCircuit
+from qiskit.circuit.library import RXGate
 from qiskit.quantum_info import Operator
 from qiskit.extensions import UnitaryGate
 from scipy.stats import unitary_group
@@ -102,41 +103,11 @@ class TestLcMcSpecialUnitary(TestCase):
 
             self.assertLessEqual(ldmcsu_count, self._compute_bound(num_controls+1))
 
-    def test_lcmcsu_op_for_exception_unitary(self):
-        """
-            Test Ldmcsu with Z gate
-        """
-        su2 = np.array([[-1, 0], [0, -1]])
-
-        num_controls = NUM_CTRL
-        ldmcsu_circ = LdMcSpecialUnitary(su2, num_controls).definition
-        qiskit_circ = self._build_qiskit_circuit(su2, num_controls)
-
-        ldmcsu_op = Operator(ldmcsu_circ).data
-        qiskit_op = Operator(qiskit_circ).data
-
-        self.assertTrue(np.allclose(ldmcsu_op, qiskit_op))
-
-    def test_lcmcsu_op_for_exception_unitary_2(self):
-        """
-        Test Ldmcsu diagonal gate
-        """
-        su2 = np.array([[np.e**(-1j*0.3), 0], [0, np.e**(1j*0.3)]])
-
-        num_controls = NUM_CTRL
-        ldmcsu_circ = LdMcSpecialUnitary(su2, num_controls).definition
-        qiskit_circ = self._build_qiskit_circuit(su2, num_controls)
-
-        ldmcsu_op = Operator(ldmcsu_circ).data
-        qiskit_op = Operator(qiskit_circ).data
-
-        self.assertTrue(np.allclose(ldmcsu_op, qiskit_op))
-
 class TestMcSpecialUnitary(TestCase):
     """
         Test cases for the decomposition of
         Multicontrolled Special Unitary with linear depth
-        by Barenco et al.
+        https://arxiv.org/pdf/2302.06377.pdf
     """
 
 
@@ -198,7 +169,18 @@ class TestMcSpecialUnitary(TestCase):
             ldmcsu_circ = Ldmcsu(su_2, num_controls).definition
             ldmcsu_count = get_cnot_count(ldmcsu_circ)
 
-            self.assertLessEqual(ldmcsu_count, self._compute_bound(num_controls+1))
+            self.assertTrue(ldmcsu_count <= 20 * (num_controls + 1)-38)
+
+    def test_lcmcsu_cnot_count_real_diagonal(self):
+        """
+        Test LdMcSpecialUnitary cx count
+        """
+        su_2 = RXGate(0.3).to_matrix()
+        for num_controls in range(8, 10):
+            ldmcsu_circ = Ldmcsu(su_2, num_controls).definition
+            ldmcsu_count = get_cnot_count(ldmcsu_circ)
+
+            self.assertTrue(ldmcsu_count <= 16 * (num_controls + 1)-40)
 
     def test_lcmcsu_op_for_exception_unitary(self):
         """
