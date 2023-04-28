@@ -119,6 +119,25 @@ class Ldmcsu(Gate):
 
         return x_value, z_value
 
+    @staticmethod
+    def _compute_gate_a(x_value, z_value):
+        if x_value == 0:
+            alpha = (z_value + 0j) ** (1 / 4)
+            beta = 0.0
+        else:
+            alpha_r = np.sqrt((np.sqrt((z_value.real + 1.0) / 2.0) + 1.0) / 2.0)
+            alpha_i = z_value.imag / (
+                    2.0 * np.sqrt((z_value.real + 1.0) *
+                                  (np.sqrt((z_value.real + 1.0) / 2.0) + 1.0))
+            )
+            alpha = alpha_r + 1.0j * alpha_i
+            beta = x_value / (
+                    2.0 * np.sqrt((z_value.real + 1.0) *
+                                  (np.sqrt((z_value.real + 1.0) / 2.0) + 1.0))
+            )
+        s_op = np.array([[alpha, -np.conj(beta)], [beta, np.conj(alpha)]])
+        return s_op
+
     def linear_depth_mcv(
         self,
         x_value,
@@ -131,23 +150,9 @@ class Ldmcsu(Gate):
         """
         Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
         """
-        if x_value == 0:
-            alpha = (z_value + 0j) ** (1 / 4)
-            beta = 0.0
-        else:
-            alpha_r = np.sqrt((np.sqrt((z_value.real + 1.0) / 2.0) + 1.0) / 2.0)
-            alpha_i = z_value.imag / (
-                2.0 * np.sqrt((z_value.real + 1.0) * (np.sqrt((z_value.real + 1.0) / 2.0) + 1.0))
-            )
-            alpha = alpha_r + 1.0j * alpha_i
-            beta = x_value / (
-                2.0 * np.sqrt((z_value.real + 1.0) * (np.sqrt((z_value.real + 1.0) / 2.0) + 1.0))
-            )
-
-        s_op = np.array([[alpha, -np.conj(beta)], [beta, np.conj(alpha)]])
-
         # S gate definition
-        s_gate = UnitaryGate(s_op)
+        op_a = Ldmcsu._compute_gate_a(x_value, z_value)
+        gate_a = UnitaryGate(op_a)
 
         num_ctrl = len(controls)
         k_1 = int(np.ceil(num_ctrl / 2.0))
@@ -165,7 +170,7 @@ class Ldmcsu(Gate):
             self.definition.append(
                 mcx_1, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
             )
-        self.definition.append(s_gate, [target])
+        self.definition.append(gate_a, [target])
 
         mcx_2 = McxVchainDirty(
             k_2, ctrl_state=ctrl_state_k_2, action_only=general_su2_optimization
@@ -173,19 +178,19 @@ class Ldmcsu(Gate):
         self.definition.append(
             mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
         )
-        self.definition.append(s_gate.inverse(), [target])
+        self.definition.append(gate_a.inverse(), [target])
 
         mcx_3 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
         self.definition.append(
             mcx_3, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
         )
-        self.definition.append(s_gate, [target])
+        self.definition.append(gate_a, [target])
 
         mcx_4 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
         self.definition.append(
             mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
         )
-        self.definition.append(s_gate.inverse(), [target])
+        self.definition.append(gate_a.inverse(), [target])
 
     def half_linear_depth_mcv(
         self,
