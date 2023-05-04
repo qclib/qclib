@@ -277,7 +277,10 @@ class Qcnn(BlueprintCircuit):
             block_num_qubits = int(numpy.ceil(total_num_qubits / 2))
 
             # Convolutional Layer
-            num += total_num_qubits * 3
+            if total_num_qubits > 2:
+                num += total_num_qubits * 3
+            else:
+                num += 3
 
             # Pooling Layer
             num += total_num_qubits // 2 * 3
@@ -300,7 +303,7 @@ class Qcnn(BlueprintCircuit):
         return target
 
     def _conv_layer(self, num_qubits, params):
-        qc = QuantumCircuit(num_qubits, name="Convolutional Layer")
+        qc = QuantumCircuit(num_qubits, name="Convolutional")
         qubits = list(range(num_qubits))
         param_index = 0
         for q1, q2 in zip(qubits[0::2], qubits[1::2]):
@@ -309,11 +312,12 @@ class Qcnn(BlueprintCircuit):
                 qc.barrier()
             param_index += 3
 
-        for q1, q2 in zip(qubits[1::2], qubits[2::2] + [0]):
-            qc = qc.compose(self._conv_circuit(params[param_index : (param_index + 3)]), [q1, q2])
-            if self._insert_barriers:
-                qc.barrier()
-            param_index += 3
+        if num_qubits > 2:
+            for q1, q2 in zip(qubits[1::2], qubits[2::2] + [0]):
+                qc = qc.compose(self._conv_circuit(params[param_index : (param_index + 3)]), [q1, q2])
+                if self._insert_barriers:
+                    qc.barrier()
+                param_index += 3
 
         qc_inst = qc.to_instruction()
 
@@ -334,7 +338,7 @@ class Qcnn(BlueprintCircuit):
 
     def _pool_layer(self, sources, sinks, params):
         num_qubits = len(sources) + len(sinks)
-        qc = QuantumCircuit(num_qubits, name="Pooling Layer")
+        qc = QuantumCircuit(num_qubits, name="Pooling")
         param_index = 0
         for source, sink in zip(sources, sinks):
             qc = qc.compose(self._pool_circuit(params[param_index : (param_index + 3)]), [source, sink])
@@ -381,13 +385,16 @@ class Qcnn(BlueprintCircuit):
                 list(range(self.num_qubits - total_num_qubits, self.num_qubits)),
                 inplace=True
             )
-            param_index += total_num_qubits * 3
+            if total_num_qubits > 2:
+                param_index += total_num_qubits * 3
+            else:
+                param_index += 3
 
             # Pooling Layer
             circuit.compose(
                 self._pool_layer(
-                    list(range(block_num_qubits)),
-                    list(range(block_num_qubits, total_num_qubits)),
+                    list(range(total_num_qubits))[0::2],
+                    list(range(total_num_qubits))[1::2],
                     params[param_index :]
                 ),
                 list(range(self.num_qubits - total_num_qubits, self.num_qubits)),
