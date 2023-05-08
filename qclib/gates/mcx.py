@@ -39,7 +39,7 @@ class McxVchainDirty(Gate):
     for n as the total number of qubits in the system. It also includes optimizations
     using approximated Toffoli gates up to a diagonal.
     """
-    def __init__(self, num_controls: int, ctrl_state=None, relative_phase=False, action_only=False):
+    def __init__(self, num_controls: int, num_target_qubit=1, ctrl_state=None, relative_phase=False, action_only=False):
         """
         Parameters
         ----------
@@ -49,7 +49,7 @@ class McxVchainDirty(Gate):
         action_only
         """
         self.control_qubits = QuantumRegister(num_controls)
-        self.target_qubit = QuantumRegister(1)
+        self.target_qubit = QuantumRegister(num_target_qubit)
         self.ctrl_state = ctrl_state
         self.relative_phase = relative_phase
         self.action_only = action_only
@@ -69,7 +69,7 @@ class McxVchainDirty(Gate):
 
         num_ctrl = len(self.control_qubits)
         num_ancilla = num_ctrl - 2
-        targets = [self.target_qubit] + self.ancilla_qubits[:num_ancilla][::-1]
+        targets = [*self.target_qubit] + self.ancilla_qubits[:num_ancilla][::-1]
 
         self._apply_ctrl_state()
 
@@ -80,12 +80,13 @@ class McxVchainDirty(Gate):
                 mode="noancilla"
             )
         elif not self.relative_phase and num_ctrl == 3:
-            self.definition.append(C3XGate(), [*self.control_qubits[:], self.target_qubit], [])
+            for k, _ in enumerate(self.target_qubit):
+                self.definition.append(C3XGate(), [*self.control_qubits[:], self.target_qubit[k]], [])
         else:
             for j in range(2):
                 for i, _ in enumerate(self.control_qubits):  # action part
                     if i < num_ctrl - 2:
-                        if targets[i] != self.target_qubit or self.relative_phase:
+                        if targets[i] in self.target_qubit or self.relative_phase:
                             # gate cancelling
                             controls = [
                                 self.control_qubits[num_ctrl - i - 1],
@@ -93,7 +94,8 @@ class McxVchainDirty(Gate):
                             ]
 
                             # cancel rightmost gates of action part with leftmost gates of reset part
-                            if self.relative_phase and targets[i] == self.target_qubit and j == 1:
+
+                            if self.relative_phase and targets[i] in self.target_qubit and j == 1:
                                 self.definition.append(Toffoli(cancel='left'), [*controls, targets[i]])
                             else:
                                 self.definition.append(Toffoli(cancel='right'), [*controls, targets[i]])
