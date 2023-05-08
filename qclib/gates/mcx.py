@@ -43,6 +43,7 @@ class McxVchainDirty(Gate):
         """
         Parameters
         ----------
+        num_target_qubit
         num_controls
         ctrl_state
         relative_phase
@@ -71,14 +72,16 @@ class McxVchainDirty(Gate):
         num_ancilla = num_ctrl - 2
         targets = [*self.target_qubit] + self.ancilla_qubits[:num_ancilla][::-1]
 
+
         self._apply_ctrl_state()
 
         if num_ctrl < 3:
-            self.definition.mcx(
-                control_qubits=self.control_qubits,
-                target_qubit=self.target_qubit,
-                mode="noancilla"
-            )
+            for k, _ in enumerate(self.target_qubit):
+                self.definition.mcx(
+                    control_qubits=self.control_qubits,
+                    target_qubit=self.target_qubit[k],
+                    mode="noancilla"
+                )
         elif not self.relative_phase and num_ctrl == 3:
             for k, _ in enumerate(self.target_qubit):
                 self.definition.append(C3XGate(), [*self.control_qubits[:], self.target_qubit[k]], [])
@@ -104,7 +107,7 @@ class McxVchainDirty(Gate):
                             self.definition.ccx(
                                 control_qubit1=self.control_qubits[num_ctrl - i - 1],
                                 control_qubit2=self.ancilla_qubits[num_ancilla - i - 1],
-                                target_qubit=targets[i]
+                                target_qubit=targets[i + len(self.target_qubit) - 1]
                             )
                     else:
                         controls = [
