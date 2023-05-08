@@ -393,8 +393,8 @@ class Qcnn(BlueprintCircuit):
             # Pooling Layer
             circuit.compose(
                 self._pool_layer(
-                    list(range(total_num_qubits))[0::2],
-                    list(range(total_num_qubits))[1::2],
+                    list(range(block_num_qubits)),
+                    list(range(block_num_qubits, total_num_qubits)),
                     params[param_index :]
                 ),
                 list(range(self.num_qubits - total_num_qubits, self.num_qubits)),
