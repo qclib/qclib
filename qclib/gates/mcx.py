@@ -89,7 +89,7 @@ class McxVchainDirty(Gate):
             for j in range(2):
                 for i, _ in enumerate(self.control_qubits):  # action part
                     if i < num_ctrl - 2:
-                        if targets[i] in self.target_qubit or self.relative_phase:
+                        if targets[i] not in self.target_qubit or self.relative_phase:
                             # gate cancelling
                             controls = [
                                 self.control_qubits[num_ctrl - i - 1],
