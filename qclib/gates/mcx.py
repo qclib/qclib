@@ -24,9 +24,9 @@ from qiskit import QuantumRegister, QuantumCircuit
 
 from qiskit.circuit.library import C3XGate, C4XGate
 from qiskit.circuit import Gate
-
-from .toffoli import Toffoli
-from .util import apply_ctrl_state
+#Alterei aqui
+from qclib.gates.toffoli import Toffoli
+from qclib.gates.util import apply_ctrl_state
 
 
 # pylint: disable=protected-access
@@ -159,14 +159,17 @@ class LinearMcx(Gate):
     k1 = ceil((n+1)/2) and k2 = floor((n+1)/2) qubits. For n the total
     number of qubits in the system. Where it also reuses some optimizations available
     """
-    def __init__(self, num_controls, ctrl_state=None, action_only=False):
+    def __init__(self, num_controls,  ctrl_state=None, action_only=False, num_targets=1,):
         self.action_only = action_only
         self.ctrl_state = ctrl_state
 
-        num_qubits = num_controls + 2
+        num_qubits = num_controls + num_targets+1
 
-        self.control_qubits = list(range(num_qubits - 2))
-        self.target_qubit = num_qubits - 2,
+        self.control_qubits = list(range(num_controls-1))
+        if num_targets==1:
+            self.target_qubit = num_qubits-2
+        else:
+            self.target_qubit = list(range(num_controls, num_qubits-1))
         self.ancilla_qubit = num_qubits - 1
 
         super().__init__('linear_mcx', num_controls + 2, [], "mcx")
@@ -178,7 +181,7 @@ class LinearMcx(Gate):
         if self.num_qubits < 5:
             self.definition.mcx(
                 control_qubits=self.control_qubits,
-                target_qubit=self.target_qubit,
+                target_qubit= self.target_qubit,
                 mode="noancilla"
             )
         elif self.num_qubits == 5:
@@ -225,8 +228,8 @@ class LinearMcx(Gate):
         self._apply_ctrl_state()
 
     @staticmethod
-    def mcx(circuit, controls=None, target=None, ctrl_state=None, action_only=False):
-        circuit.append(LinearMcx(len(controls), ctrl_state, action_only), [*controls, target])
+    def mcx(circuit, controls=None, targets=None, ctrl_state=None, action_only=False):
+        circuit.append(LinearMcx(len(controls), ctrl_state, action_only, len(targets)), [*controls, *targets])
 
 
 LinearMcx._apply_ctrl_state = apply_ctrl_state
