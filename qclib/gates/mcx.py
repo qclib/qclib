@@ -72,7 +72,7 @@ class McxVchainDirty(Gate):
         num_target = len(self.target_qubits)
         num_ancilla = num_ctrl - 2
         #targets = [*self.target_qubits] + self.ancilla_qubits[:num_ancilla][::-1]
-        targets_aux = self.target_qubits[0:1]+ self.ancilla_qubits[:num_ancilla][::-1]
+        targets_aux = self.target_qubits[0:1] + self.ancilla_qubits[:num_ancilla][::-1]
 
         self._apply_ctrl_state()
         #Generalização: checar os vários targets
