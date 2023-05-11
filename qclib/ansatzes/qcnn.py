@@ -37,6 +37,8 @@ class Qcnn(BlueprintCircuit):
         parameter_prefix: str = "θ",
         initial_state: QuantumCircuit | None = None,
         name: str | None = "qcnn",
+        conv_layer: str | None = "default",
+        pool_layer: str | None = "default"
     ) -> None:
         """Create a new QCNN circuit.
 
@@ -49,6 +51,8 @@ class Qcnn(BlueprintCircuit):
             initial_state: A :class:`.QuantumCircuit` object which can be used to describe an initial
                 state prepended to the circuit.
             name: The name of the circuit.
+            conv_layer: Circuit model for the convolutional layer.
+            pool_layer: Circuit model for the pooling layer.
 
         Examples:
             TODO
@@ -78,6 +82,21 @@ class Qcnn(BlueprintCircuit):
 
         if initial_state is not None:
             self.initial_state = initial_state
+
+        if conv_layer == "simple":
+            self._conv_template = self._conv_simple
+            self._conv_template_num_parameters = self._conv_simple_num_parameters
+        else:
+            self._conv_template = self._conv_default
+            self._conv_template_num_parameters = self._conv_default_num_parameters
+
+        if pool_layer == "simple":
+            self._pool_template = self._pool_simple
+            self._pool_template_num_parameters = self._pool_simple_num_parameters
+        else:
+            self._pool_template = self._pool_default
+            self._pool_template_num_parameters = self._pool_default_num_parameters
+
 
     @property
     def num_qubits(self) -> int:
@@ -278,46 +297,43 @@ class Qcnn(BlueprintCircuit):
 
             # Convolutional Layer
             if total_num_qubits > 2:
-                num += total_num_qubits * 3
+                num += total_num_qubits * self._conv_template_num_parameters()
             else:
-                num += 3
+                num += self._conv_template_num_parameters()
 
             # Pooling Layer
-            num += total_num_qubits // 2 * 3
+            num += total_num_qubits // 2 * self._pool_template_num_parameters()
 
             total_num_qubits = block_num_qubits
 
         return num
-
-    def _conv_circuit(self, params):
-        target = QuantumCircuit(2)
-        target.rz(-numpy.pi / 2, 1)
-        target.cx(1, 0)
-        target.rz(params[0], 0)
-        target.ry(params[1], 1)
-        target.cx(0, 1)
-        target.ry(params[2], 1)
-        target.cx(1, 0)
-        target.rz(numpy.pi / 2, 0)
-
-        return target
 
     def _conv_layer(self, num_qubits, params):
         qc = QuantumCircuit(num_qubits, name="Convolutional")
         qubits = list(range(num_qubits))
         param_index = 0
         for q1, q2 in zip(qubits[0::2], qubits[1::2]):
-            qc = qc.compose(self._conv_circuit(params[param_index : (param_index + 3)]), [q1, q2])
+            qc = qc.compose(
+                self._conv_template(
+                    params[param_index : (param_index + 3)]
+                ),
+                [q1, q2]
+            )
             if self._insert_barriers:
                 qc.barrier()
-            param_index += 3
+            param_index += self._conv_template_num_parameters()
 
         if num_qubits > 2:
             for q1, q2 in zip(qubits[1::2], qubits[2::2] + [0]):
-                qc = qc.compose(self._conv_circuit(params[param_index : (param_index + 3)]), [q1, q2])
+                qc = qc.compose(
+                    self._conv_template(
+                        params[param_index : (param_index + 3)]
+                    ),
+                    [q1, q2]
+                )
                 if self._insert_barriers:
                     qc.barrier()
-                param_index += 3
+                param_index += self._conv_template_num_parameters()
 
         qc_inst = qc.to_instruction()
 
@@ -325,26 +341,20 @@ class Qcnn(BlueprintCircuit):
         qc.append(qc_inst, qubits)
         return qc
 
-    def _pool_circuit(self, params):
-        target = QuantumCircuit(2)
-        target.rz(-numpy.pi / 2, 1)
-        target.cx(1, 0)
-        target.rz(params[0], 0)
-        target.ry(params[1], 1)
-        target.cx(0, 1)
-        target.ry(params[2], 1)
-
-        return target
-
     def _pool_layer(self, sources, sinks, params):
         num_qubits = len(sources) + len(sinks)
         qc = QuantumCircuit(num_qubits, name="Pooling")
         param_index = 0
         for source, sink in zip(sources, sinks):
-            qc = qc.compose(self._pool_circuit(params[param_index : (param_index + 3)]), [source, sink])
+            qc = qc.compose(
+                self._pool_template(
+                    params[param_index : (param_index + 3)]
+                ),
+                [source, sink]
+            )
             if self._insert_barriers:
                 qc.barrier()
-            param_index += 3
+            param_index += self._pool_template_num_parameters()
 
         qc_inst = qc.to_instruction()
 
@@ -364,14 +374,14 @@ class Qcnn(BlueprintCircuit):
 
         circuit = QuantumCircuit(*self.qregs, name=self.name)
         params = ParameterVector(self._parameter_prefix, length=self.num_parameters_settable)
-        param_index = 0
-
+        
         # use the initial state as starting circuit, if it is set
         if self.initial_state:
             circuit.compose(self.initial_state.copy(), inplace=True)
             if self._insert_barriers:
                 circuit.barrier()
 
+        param_index = 0
         total_num_qubits = self.num_qubits
         while total_num_qubits > 1:
             block_num_qubits = int(numpy.ceil(total_num_qubits / 2))
@@ -386,9 +396,9 @@ class Qcnn(BlueprintCircuit):
                 inplace=True
             )
             if total_num_qubits > 2:
-                param_index += total_num_qubits * 3
+                param_index += total_num_qubits * self._conv_template_num_parameters()
             else:
-                param_index += 3
+                param_index += self._conv_template_num_parameters()
 
             # Pooling Layer
             circuit.compose(
@@ -400,8 +410,77 @@ class Qcnn(BlueprintCircuit):
                 list(range(self.num_qubits - total_num_qubits, self.num_qubits)),
                 inplace=True
             )
-            param_index += total_num_qubits // 2 * 3
+            param_index += total_num_qubits // 2 * self._pool_template_num_parameters()
 
             total_num_qubits = block_num_qubits
 
-        self.append(circuit, self.qubits)
+        for _ in range(self._reps):
+            self.append(circuit, self.qubits)
+
+
+    """List of convolutional and pooling circuit templates.
+    
+        Different type of templates can be mixed.
+        For example, _conv_default with _pool_simple.
+    """
+
+    """Default template"""
+    @staticmethod
+    def _conv_default(params):
+        target = QuantumCircuit(2)
+        target.rz(-numpy.pi / 2, 1)
+        target.cx(1, 0)
+        target.rz(params[0], 0)
+        target.ry(params[1], 1)
+        target.cx(0, 1)
+        target.ry(params[2], 1)
+        target.cx(1, 0)
+        target.rz(numpy.pi / 2, 0)
+
+        return target
+
+    @staticmethod
+    def _pool_default(params):
+        target = QuantumCircuit(2)
+        target.rz(-numpy.pi / 2, 1)
+        target.cx(1, 0)
+        target.rz(params[0], 0)
+        target.ry(params[1], 1)
+        target.cx(0, 1)
+        target.ry(params[2], 1)
+
+        return target
+
+    @staticmethod
+    def _conv_default_num_parameters():
+        return 3
+    
+    @staticmethod
+    def _pool_default_num_parameters():
+        return 3
+
+    """Simple template"""
+    @staticmethod
+    def _conv_simple(params):
+        target = QuantumCircuit(2)
+        target.ry(params[0], 0)
+        target.ry(params[1], 1)
+        target.cx(0, 1)
+
+        return target
+
+    @staticmethod
+    def _pool_simple(params):
+        target = QuantumCircuit(2)
+        target.crz(params[0], 0, 1, ctrl_state='1')
+        target.crx(params[1], 0, 1, ctrl_state='0')
+
+        return target
+
+    @staticmethod
+    def _conv_simple_num_parameters():
+        return 2
+
+    @staticmethod
+    def _pool_simple_num_parameters():
+        return 2
