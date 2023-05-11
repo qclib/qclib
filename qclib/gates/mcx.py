@@ -71,8 +71,8 @@ class McxVchainDirty(Gate):
         num_ctrl = len(self.control_qubits)
         num_target = len(self.target_qubits)
         num_ancilla = num_ctrl - 2
-        targets = [*self.target_qubits] + self.ancilla_qubits[:num_ancilla][::-1]
-
+        #targets = [*self.target_qubits] + self.ancilla_qubits[:num_ancilla][::-1]
+        targets_aux = self.target_qubits[0:1]+ self.ancilla_qubits[:num_ancilla][::-1]
 
         self._apply_ctrl_state()
         #Generalização: checar os vários targets
@@ -91,7 +91,7 @@ class McxVchainDirty(Gate):
                 for i, _ in enumerate(self.control_qubits):  # action part
                     if i < num_ctrl - 2:
                         #Trocamos != por not in
-                        if targets[i] not in self.target_qubits or self.relative_phase:
+                        if targets_aux[i] not in self.target_qubits or self.relative_phase:
                             # gate cancelling
                             controls = [
                                 self.control_qubits[num_ctrl - i - 1],
@@ -100,24 +100,25 @@ class McxVchainDirty(Gate):
 
                             # cancel rightmost gates of action part with leftmost gates of reset part
                             # trocamos o = por in
-                            if self.relative_phase and targets[i] in self.target_qubits and j == 1:
-                                self.definition.append(Toffoli(cancel='left'), [*controls, targets[i]])
+                            if self.relative_phase and targets_aux[i] in self.target_qubits and j == 1:
+                                self.definition.append(Toffoli(cancel='left'), [*controls, targets_aux[i]])
                             else:
-                                self.definition.append(Toffoli(cancel='right'), [*controls, targets[i]])
+                                self.definition.append(Toffoli(cancel='right'), [*controls, targets_aux[i]])
 
                         else:
-                            self.definition.ccx(
-                                control_qubit1=self.control_qubits[num_ctrl - i - 1],
-                                control_qubit2=self.ancilla_qubits[num_ancilla - i - 1],
-                                target_qubit=targets[i]
-                            )
+                            for k, _ in enumerate(self.target_qubits):
+                                self.definition.ccx(
+                                    control_qubit1=self.control_qubits[num_ctrl - i - 1],
+                                    control_qubit2=self.ancilla_qubits[num_ancilla - i - 1],
+                                    target_qubit=self.target_qubits[k]
+                                )
                     else:
                         controls = [
                             self.control_qubits[num_ctrl - i - 2],
                             self.control_qubits[num_ctrl - i - 1]
                         ]
 
-                        self.definition.append(Toffoli(), [*controls, targets[i]])
+                        self.definition.append(Toffoli(), [*controls, targets_aux[i]])
 
                         break
 
