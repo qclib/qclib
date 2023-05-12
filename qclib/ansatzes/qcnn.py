@@ -23,6 +23,92 @@ from qiskit.circuit import Parameter, ParameterVector, ParameterExpression
 
 from qiskit.circuit.library import BlueprintCircuit
 
+"""List of convolutional and pooling circuit block templates.
+
+    Different types of block templates can be mixed.
+    For example, ConvDefault with PoolSimple.
+"""
+
+class BlockTemplate():
+    """Base class for circuit block templates."""
+
+    @property
+    def num_parameters(self) -> int:
+        raise ValueError("Property num_parameters not implemented.")
+
+    @staticmethod
+    def circuit(params):
+        raise ValueError("Method circuit not implemented.")
+
+"""Convolution templates"""
+
+class ConvDefault(BlockTemplate):
+    @property
+    def num_parameters(self) -> int:
+        return 3
+
+    @staticmethod
+    def circuit(params):
+        target = QuantumCircuit(2)
+        target.rz(-numpy.pi / 2, 1)
+        target.cx(1, 0)
+        target.rz(params[0], 0)
+        target.ry(params[1], 1)
+        target.cx(0, 1)
+        target.ry(params[2], 1)
+        target.cx(1, 0)
+        target.rz(numpy.pi / 2, 0)
+
+        return target
+
+class ConvSimple(BlockTemplate):
+    @property
+    def num_parameters(self) -> int:
+        return 2
+
+    @staticmethod
+    def circuit(params):
+        target = QuantumCircuit(2)
+        target.ry(params[0], 0)
+        target.ry(params[1], 1)
+        target.cx(0, 1)
+
+        return target
+
+"""Pooling templates"""
+
+class PoolDefault(BlockTemplate):
+    @property
+    def num_parameters(self) -> int:
+        return 3
+
+    @staticmethod
+    def circuit(params):
+        target = QuantumCircuit(2)
+        target.rz(-numpy.pi / 2, 1)
+        target.cx(1, 0)
+        target.rz(params[0], 0)
+        target.ry(params[1], 1)
+        target.cx(0, 1)
+        target.ry(params[2], 1)
+
+        return target
+
+class PoolSimple(BlockTemplate):
+    @property
+    def num_parameters(self) -> int:
+        return 2
+
+    @staticmethod
+    def circuit(params):
+        target = QuantumCircuit(2)
+        target.crz(params[0], 0, 1, ctrl_state='1')
+        target.crx(params[1], 0, 1, ctrl_state='0')
+
+        return target
+
+
+
 class Qcnn(BlueprintCircuit):
     """The QCNN circuit class.
 
@@ -37,8 +123,8 @@ class Qcnn(BlueprintCircuit):
         parameter_prefix: str = "θ",
         initial_state: QuantumCircuit | None = None,
         name: str | None = "qcnn",
-        conv_layer: str | None = "default",
-        pool_layer: str | None = "default"
+        conv_block: BlockTemplate = ConvDefault(),
+        pool_block: BlockTemplate = PoolDefault()
     ) -> None:
         """Create a new QCNN circuit.
 
@@ -51,15 +137,62 @@ class Qcnn(BlueprintCircuit):
             initial_state: A :class:`.QuantumCircuit` object which can be used to describe an initial
                 state prepended to the circuit.
             name: The name of the circuit.
-            conv_layer: Circuit model for the convolutional layer.
-            pool_layer: Circuit model for the pooling layer.
+            conv_layer: Circuit block for the convolutional layer.
+            pool_layer: Circuit block for the pooling layer.
 
         Examples:
-            TODO
+            from qclib.ansatzes.qcnn import (
+                Qcnn,
+                ConvDefault,
+                ConvSimple,
+                PoolDefault,
+                PoolSimple
+            )
+
+            num_qubits = 4
+
+            ansatz = Qcnn(
+                num_qubits,
+                conv_block=ConvSimple(),
+                pool_block=PoolSimple(),
+                insert_barriers=True
+            )
+            ansatz.decompose(reps=1).draw()
+
+            # Output:
+                 ┌─────────────────────────────────────────────────────────┐»
+            q_0: ┤0                                                        ├»
+                 │                                                         │»
+            q_1: ┤1                                                        ├»
+                 │  Convolutional(θ[0],θ[1],θ[2],θ[3],θ[4],θ[5],θ[6],θ[7]) │»
+            q_2: ┤2                                                        ├»
+                 │                                                         │»
+            q_3: ┤3                                                        ├»
+                 └─────────────────────────────────────────────────────────┘»
+            «     ┌─────────────────────────────────┐                               »
+            «q_0: ┤0                                ├───────────────────────────────»
+            «     │                                 │                               »
+            «q_1: ┤1                                ├───────────────────────────────»
+            «     │  Pooling(θ[8],θ[9],θ[10],θ[11]) │┌─────────────────────────────┐»
+            «q_2: ┤2                                ├┤0                            ├»
+            «     │                                 ││  Convolutional(θ[12],θ[13]) │»
+            «q_3: ┤3                                ├┤1                            ├»
+            «     └─────────────────────────────────┘└─────────────────────────────┘»
+            «
+            «q_0: ─────────────────────────
+            «
+            «q_1: ─────────────────────────
+            «     ┌───────────────────────┐
+            «q_2: ┤0                      ├
+            «     │  Pooling(θ[14],θ[15]) │
+            «q_3: ┤1                      ├
+            «     └───────────────────────┘
 
         Raises:
             ValueError: If ``reps`` parameter is less than or equal to 0.
             TypeError: If ``reps`` parameter is not an int value.
+            TypeError: If ``conv_block`` parameter is not an BlockTemplate value.
+            TypeError: If ``pool_block`` parameter is not an BlockTemplate value.
         """
         super().__init__(name=name)
 
@@ -72,10 +205,17 @@ class Qcnn(BlueprintCircuit):
         self._bounds: list[tuple[float | None, float | None]] | None = None
 
         if int(reps) != reps:
-            raise TypeError("The value of reps should be int")
+            raise TypeError("The value of reps should be int.")
 
-        if reps < 0:
-            raise ValueError("The value of reps should be larger than or equal to 0")
+        if reps < 1:
+            raise ValueError("The value of reps should be larger than or equal to 1.")
+
+        if not issubclass(type(conv_block), BlockTemplate):
+            raise TypeError("The value of conv_block should be BlockTemplate.")
+
+        if not issubclass(type(pool_block), BlockTemplate):
+            raise TypeError("The value of pool_block should be BlockTemplate.")
+
 
         if num_qubits is not None:
             self.num_qubits = num_qubits
@@ -83,19 +223,11 @@ class Qcnn(BlueprintCircuit):
         if initial_state is not None:
             self.initial_state = initial_state
 
-        if conv_layer == "simple":
-            self._conv_template = self._conv_simple
-            self._conv_template_num_parameters = self._conv_simple_num_parameters
-        else:
-            self._conv_template = self._conv_default
-            self._conv_template_num_parameters = self._conv_default_num_parameters
+        self._conv_template = conv_block.circuit
+        self._conv_template_num_parameters = conv_block.num_parameters
 
-        if pool_layer == "simple":
-            self._pool_template = self._pool_simple
-            self._pool_template_num_parameters = self._pool_simple_num_parameters
-        else:
-            self._pool_template = self._pool_default
-            self._pool_template_num_parameters = self._pool_default_num_parameters
+        self._pool_template = pool_block.circuit
+        self._pool_template_num_parameters = pool_block.num_parameters
 
 
     @property
@@ -130,7 +262,7 @@ class Qcnn(BlueprintCircuit):
 
         # A pool and a convolutional layer per iteration.
         # Multiply all by the number of repetitions.
-        return self._reps * (2 * numpy.ceil(numpy.log2(self.num_qubits)))
+        return self.reps * (2 * numpy.ceil(numpy.log2(self.num_qubits)))
 
     @property
     def insert_barriers(self) -> bool:
@@ -156,7 +288,7 @@ class Qcnn(BlueprintCircuit):
 
     @property
     def reps(self) -> int:
-        """The number of times rotation and entanglement block are repeated.
+        """The number of times the circuit is repeated.
 
         Returns:
             The number of repetitions.
@@ -167,17 +299,14 @@ class Qcnn(BlueprintCircuit):
     def reps(self, repetitions: int) -> None:
         """Set the repetitions.
 
-        If the repetitions are `0`, only one rotation layer with no entanglement
-        layers is applied (unless ``self.skip_final_rotation_layer`` is set to ``True``).
-
         Args:
             repetitions: The new repetitions.
 
         Raises:
-            ValueError: If reps setter has parameter repetitions < 0.
+            ValueError: If reps setter has parameter repetitions < 1.
         """
-        if repetitions < 0:
-            raise ValueError("The repetitions should be larger than or equal to 0")
+        if repetitions < 1:
+            raise ValueError("The repetitions should be larger than or equal to 1")
         if repetitions != self._reps:
             self._invalidate()
             self._reps = repetitions
@@ -197,7 +326,7 @@ class Qcnn(BlueprintCircuit):
         return ret
 
     def _check_configuration(self, raise_on_failure: bool = True) -> bool:
-        """Check if the configuration of the NLocal class is valid.
+        """Check if the configuration of the class is valid.
 
         Args:
             raise_on_failure: Whether to raise on failure.
@@ -207,21 +336,19 @@ class Qcnn(BlueprintCircuit):
             an ValueError is raised.
 
         Raises:
-            ValueError: If the blocks are not set.
             ValueError: If the number of repetitions is not set.
-            ValueError: If the qubit indices are not set.
-            ValueError: If the number of qubit indices does not match the number of blocks.
-            ValueError: If an index in the repetitions list exceeds the number of blocks.
-            ValueError: If the number of repetitions does not match the number of block-wise
-                parameters.
-            ValueError: If a specified qubit index is larger than the (manually set) number of
-                qubits.
+            ValueError: If the number of qubits is not set.
         """
         valid = True
         if self.num_qubits is None:
             valid = False
             if raise_on_failure:
                 raise ValueError("No number of qubits specified.")
+
+        if self.reps is None:
+            valid = False
+            if raise_on_failure:
+                raise ValueError("No number of repetitions specified.")
 
         return valid
 
@@ -297,12 +424,12 @@ class Qcnn(BlueprintCircuit):
 
             # Convolutional Layer
             if total_num_qubits > 2:
-                num += total_num_qubits * self._conv_template_num_parameters()
+                num += total_num_qubits * self._conv_template_num_parameters
             else:
-                num += self._conv_template_num_parameters()
+                num += self._conv_template_num_parameters
 
             # Pooling Layer
-            num += total_num_qubits // 2 * self._pool_template_num_parameters()
+            num += total_num_qubits // 2 * self._pool_template_num_parameters
 
             total_num_qubits = block_num_qubits
 
@@ -321,7 +448,7 @@ class Qcnn(BlueprintCircuit):
             )
             if self._insert_barriers:
                 qc.barrier()
-            param_index += self._conv_template_num_parameters()
+            param_index += self._conv_template_num_parameters
 
         if num_qubits > 2:
             for q1, q2 in zip(qubits[1::2], qubits[2::2] + [0]):
@@ -333,13 +460,9 @@ class Qcnn(BlueprintCircuit):
                 )
                 if self._insert_barriers:
                     qc.barrier()
-                param_index += self._conv_template_num_parameters()
+                param_index += self._conv_template_num_parameters
 
-        qc_inst = qc.to_instruction()
-
-        qc = QuantumCircuit(num_qubits)
-        qc.append(qc_inst, qubits)
-        return qc
+        return qc.to_instruction()
 
     def _pool_layer(self, sources, sinks, params):
         num_qubits = len(sources) + len(sinks)
@@ -354,13 +477,9 @@ class Qcnn(BlueprintCircuit):
             )
             if self._insert_barriers:
                 qc.barrier()
-            param_index += self._pool_template_num_parameters()
+            param_index += self._pool_template_num_parameters
 
-        qc_inst = qc.to_instruction()
-
-        qc = QuantumCircuit(num_qubits)
-        qc.append(qc_inst, range(num_qubits))
-        return qc
+        return qc.to_instruction()
 
     def _build(self) -> None:
         """If not already built, build the circuit."""
@@ -374,7 +493,7 @@ class Qcnn(BlueprintCircuit):
 
         circuit = QuantumCircuit(*self.qregs, name=self.name)
         params = ParameterVector(self._parameter_prefix, length=self.num_parameters_settable)
-        
+
         # use the initial state as starting circuit, if it is set
         if self.initial_state:
             circuit.compose(self.initial_state.copy(), inplace=True)
@@ -396,9 +515,9 @@ class Qcnn(BlueprintCircuit):
                 inplace=True
             )
             if total_num_qubits > 2:
-                param_index += total_num_qubits * self._conv_template_num_parameters()
+                param_index += total_num_qubits * self._conv_template_num_parameters
             else:
-                param_index += self._conv_template_num_parameters()
+                param_index += self._conv_template_num_parameters
 
             # Pooling Layer
             circuit.compose(
@@ -410,77 +529,9 @@ class Qcnn(BlueprintCircuit):
                 list(range(self.num_qubits - total_num_qubits, self.num_qubits)),
                 inplace=True
             )
-            param_index += total_num_qubits // 2 * self._pool_template_num_parameters()
+            param_index += total_num_qubits // 2 * self._pool_template_num_parameters
 
             total_num_qubits = block_num_qubits
 
         for _ in range(self._reps):
             self.append(circuit, self.qubits)
-
-
-    """List of convolutional and pooling circuit templates.
-    
-        Different type of templates can be mixed.
-        For example, _conv_default with _pool_simple.
-    """
-
-    """Default template"""
-    @staticmethod
-    def _conv_default(params):
-        target = QuantumCircuit(2)
-        target.rz(-numpy.pi / 2, 1)
-        target.cx(1, 0)
-        target.rz(params[0], 0)
-        target.ry(params[1], 1)
-        target.cx(0, 1)
-        target.ry(params[2], 1)
-        target.cx(1, 0)
-        target.rz(numpy.pi / 2, 0)
-
-        return target
-
-    @staticmethod
-    def _pool_default(params):
-        target = QuantumCircuit(2)
-        target.rz(-numpy.pi / 2, 1)
-        target.cx(1, 0)
-        target.rz(params[0], 0)
-        target.ry(params[1], 1)
-        target.cx(0, 1)
-        target.ry(params[2], 1)
-
-        return target
-
-    @staticmethod
-    def _conv_default_num_parameters():
-        return 3
-    
-    @staticmethod
-    def _pool_default_num_parameters():
-        return 3
-
-    """Simple template"""
-    @staticmethod
-    def _conv_simple(params):
-        target = QuantumCircuit(2)
-        target.ry(params[0], 0)
-        target.ry(params[1], 1)
-        target.cx(0, 1)
-
-        return target
-
-    @staticmethod
-    def _pool_simple(params):
-        target = QuantumCircuit(2)
-        target.crz(params[0], 0, 1, ctrl_state='1')
-        target.crx(params[1], 0, 1, ctrl_state='0')
-
-        return target
-
-    @staticmethod
-    def _conv_simple_num_parameters():
-        return 2
-
-    @staticmethod
-    def _pool_simple_num_parameters():
-        return 2
