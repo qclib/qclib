@@ -32,7 +32,7 @@ from qclib.gates.util import apply_ctrl_state
 # pylint: disable=protected-access
 
 
-class McxVchainOG(Gate):
+class McxVchainDirty(Gate):
     """
     Implementation based on lemma 8 of Iten et al. (2016) arXiv:1501.06911.
     Decomposition of a multicontrolled X gate with at least k <= ceil(n/2) ancilae
@@ -139,11 +139,11 @@ class McxVchainOG(Gate):
         action_only=False
     ):
         circuit.append(
-            McxVchainOG(len(controls), ctrl_state, relative_phase, action_only),
+            McxVchainDirty(len(controls), ctrl_state, relative_phase, action_only),
             [*controls, target]
         )
 
-McxVchainOG._apply_ctrl_state = apply_ctrl_state
+McxVchainDirty._apply_ctrl_state = apply_ctrl_state
 
 
 class LinearMcx(Gate):
@@ -193,8 +193,8 @@ class LinearMcx(Gate):
             k_1 = num_ctrl - k_2 + 1
 
             # when relative_phase=True only approximate Toffoli is applied because only aux qubits are targeted
-            first_gate = McxVchainOG(k_1, relative_phase=True).definition
-            second_gate = McxVchainOG(k_2).definition
+            first_gate = McxVchainDirty(k_1, relative_phase=True).definition
+            second_gate = McxVchainDirty(k_2).definition
             self.definition.append(
                 first_gate,
                 self.control_qubits[:k_1] + self.control_qubits[k_1:k_1 + k_1 - 2] + [self.ancilla_qubit]
@@ -211,7 +211,7 @@ class LinearMcx(Gate):
             )
 
             # when action_only=True only the action part of the circuit happens due to gate cancelling
-            last_gate = McxVchainOG(k_2, action_only=self.action_only).definition
+            last_gate = McxVchainDirty(k_2, action_only=self.action_only).definition
             self.definition.append(
                 last_gate,
                 [*self.control_qubits[k_1:], self.ancilla_qubit] + self.control_qubits[k_1 - k_2 + 2:k_1] + [self.target_qubit]
