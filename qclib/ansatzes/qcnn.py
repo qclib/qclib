@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""The Quantum Convolutional Neural Network (QCNN) circuit class."""
+"""The Quantum Convolutional Neural Network (QCNN) circuit class.
+
+    https://www.nature.com/articles/s41567-019-0648-8
+    https://link.springer.com/article/10.1007/s42484-021-00061-x
+"""
 
 from typing import Sequence, Mapping
 
