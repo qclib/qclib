@@ -18,6 +18,8 @@
     https://link.springer.com/article/10.1007/s42484-021-00061-x
 """
 
+from __future__ import annotations
+
 from typing import Sequence, Mapping
 
 import numpy
