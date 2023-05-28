@@ -79,6 +79,46 @@ class ConvSimple(BlockTemplate):
 
         return target
 
+class ConvU4(BlockTemplate):
+    @property
+    def num_parameters(self) -> int:
+        return 15
+
+    @staticmethod
+    def circuit(params):
+        target = QuantumCircuit(2)
+        target.u(params[0], params[1], params[2], 0)
+        target.u(params[3], params[4], params[5], 1)
+        target.cx(1, 0)
+        target.rz(params[6], 0)
+        target.ry(params[7], 1)
+        target.cx(0, 1)
+        target.ry(params[8], 1)
+        target.cx(1, 0)
+        target.u(params[9], params[10], params[11], 0)
+        target.u(params[12], params[13], params[14], 1)
+
+        return target
+
+class ConvU4UpToDiagonal(BlockTemplate):
+    @property
+    def num_parameters(self) -> int:
+        return 14
+
+    @staticmethod
+    def circuit(params):
+        target = QuantumCircuit(2)
+        target.u(params[0], params[1], params[2], 0)
+        target.u(params[3], params[4], params[5], 1)
+        target.cx(0, 1)
+        target.ry(params[6], 0)
+        target.ry(params[7], 1)
+        target.cx(0, 1)
+        target.u(params[8], params[9], params[10], 0)
+        target.u(params[11], params[12], params[13], 1)
+
+        return target
+
 """Pooling templates"""
 
 class PoolDefault(BlockTemplate):
