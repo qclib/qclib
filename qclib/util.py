@@ -266,7 +266,7 @@ def build_state_dict(state):
     Args:
       state: The classical description of the state vector
     """
-    n_qubits = np.ceil(np.log(len(state))).astype(int)
+    n_qubits = np.ceil(np.log2(len(state))).astype(int)
     state_dict = {}
     for (value_idx, value) in enumerate(state):
         if value != 0:
