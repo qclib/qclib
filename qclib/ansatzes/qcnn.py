@@ -488,7 +488,7 @@ class Qcnn(BlueprintCircuit):
         for q1, q2 in zip(qubits[0::2], qubits[1::2]):
             qc = qc.compose(
                 self._conv_template(
-                    params[param_index : (param_index + 3)]
+                    params[param_index : (param_index + self._conv_template_num_parameters)]
                 ),
                 [q1, q2]
             )
@@ -500,7 +500,7 @@ class Qcnn(BlueprintCircuit):
             for q1, q2 in zip(qubits[1::2], qubits[2::2] + [0]):
                 qc = qc.compose(
                     self._conv_template(
-                        params[param_index : (param_index + 3)]
+                        params[param_index : (param_index + self._conv_template_num_parameters)]
                     ),
                     [q1, q2]
                 )
@@ -517,7 +517,7 @@ class Qcnn(BlueprintCircuit):
         for source, sink in zip(sources, sinks):
             qc = qc.compose(
                 self._pool_template(
-                    params[param_index : (param_index + 3)]
+                    params[param_index : (param_index + self._pool_template_num_parameters)]
                 ),
                 [source, sink]
             )
