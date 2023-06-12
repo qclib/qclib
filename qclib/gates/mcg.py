@@ -77,7 +77,7 @@ class Mcg(Gate):
                     self.mcg(su_2, self.controls, self.target, self.ctrl_state)
                 else:
                     Ldmcu.ldmcu(self.definition, self.unitary, self.controls[:], self.target[0], self.ctrl_state)
-    
+
     @staticmethod
     def mcg(
         circuit,

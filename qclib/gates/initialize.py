@@ -21,7 +21,7 @@ class Initialize(Gate):
     @staticmethod
     def initialize(q_circuit, state, qubits=None):
         pass
-    
+
     def inverse(self):
         inverse_gate = self.copy()
 
