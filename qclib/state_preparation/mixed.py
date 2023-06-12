@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-TODO
+Initializes a mixed quantum state.
 """
 
 from math import log2, ceil
@@ -29,7 +29,7 @@ from qclib.state_preparation import LowRankInitialize
 
 class MixedInitialize(InitializeMixed):
     """
-    TODO
+    This class implements a mixed state preparation gate.
     """
 
     def __init__(
@@ -48,7 +48,20 @@ class MixedInitialize(InitializeMixed):
             A list of unit vectors, each representing a quantum state.
             Values are amplitudes.
 
-        opt_params: TODO
+        initializer: Initialize or InitializeSparse
+            Type of the class that will be applied to prepare pure states.
+            Default is ``LowRankInitialize``.
+
+        opt_params: dictionary
+            Optional parameters of the class of type ``initializer``.
+
+        reset: bool
+            Indicates whether the auxiliary qubits should be reset or not.
+            Default is ``True``.
+
+        classical: bool
+            Indicates whether the purification is done classically or
+            in-circuit (quantically). Default is ``True``.
         """
 
         if (
