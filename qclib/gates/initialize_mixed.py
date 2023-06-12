@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from math import log2, isclose
-from qiskit.circuit.gate import Gate
+from math import log2, ceil
 import numpy as np
+from qiskit.circuit.gate import Gate
 
-
-class Initialize(Gate):
+class InitializeMixed(Gate):
     @staticmethod
-    def initialize(q_circuit, state, qubits=None):
+    def initialize(q_circuit, states, qubits=None):
         pass
 
     def inverse(self):
@@ -31,17 +30,7 @@ class Initialize(Gate):
         return inverse_gate
 
     def _get_num_qubits(self, params):
-        self.num_qubits = log2(len(params))
-
-        # Check if param is a power of 2
-        if self.num_qubits == 0 or not self.num_qubits.is_integer():
-            Exception("The length of the state vector is not a positive power of 2.")
-
-        # Check if probabilities (amplitudes squared) sum to 1
-        if not isclose(sum(np.absolute(params) ** 2), 1.0, abs_tol=1e-10):
-            Exception("Sum of amplitudes-squared does not equal one.")
-
-        self.num_qubits = int(self.num_qubits)
+        self.num_qubits = int(ceil(log2(len(params[0]))) + ceil(log2(len(params))))
 
     def validate_parameter(self, parameter):
         if isinstance(parameter, (int, float, complex)):
