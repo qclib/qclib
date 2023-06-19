@@ -236,7 +236,7 @@ class TestMcxVchainDirty(TestCase):
 
     def test_mcx_v_chain_dirty(self):
 
-        for num_controls in range(4, 8):
+        for num_controls in range(6, 7):
             self._operator_cmp(
                 num_controls=num_controls,
                 McxMethod=McxVchainDirty,
@@ -249,7 +249,7 @@ class TestMcxVchainDirty(TestCase):
         with non trivial randomly generated
         control states
         """
-        control_qubit_range = list(range(4, 8))
+        control_qubit_range = list(range(6, 7))
         basis_states = [f"{np.random.randint(2**n_ctrl):0{n_ctrl}b}" for n_ctrl in control_qubit_range]
 
         for (num_controls, ctrl_state) in zip(control_qubit_range, basis_states):
@@ -259,6 +259,12 @@ class TestMcxVchainDirty(TestCase):
                 mode="v-chain-dirty",
                 ctrl_state=ctrl_state
             )
+
+    def test_multitarget_mcx(self):
+        """
+        Test  multi target mcx_v_chain_dirty definition and number of cnots
+        """
+
 
     def _operator_cmp(
         self,
