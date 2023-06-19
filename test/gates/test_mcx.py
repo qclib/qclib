@@ -208,6 +208,27 @@ class TestLinearMCX(TestCase):
 
 class TestMcxVchainDirty(TestCase):
 
+
+    def test_mcx_v_chain_3targets(self):
+
+        # mcx_v_chain_circuit
+        num_controls = 3
+        num_target_qubit = 2
+        mcx_v_chain_circuit = McxVchainDirty(num_controls, num_target_qubit=num_target_qubit).definition
+
+        # qiskit_circuit
+        qiskit_circuit = QuantumCircuit(6)
+        qiskit_circuit.mcx([0, 1, 2], [3])
+        qiskit_circuit.mcx([0, 1, 2], [4])
+        qiskit_circuit.mcx([0, 1, 2], [5])
+
+        mcx_v_chain_op = Operator(mcx_v_chain_circuit).data
+        qiskit_mcx_op = Operator(qiskit_circuit).data
+
+        np.allclose(mcx_v_chain_op, qiskit_mcx_op)
+
+
+
     def test_mcx_v_chain_dirty_depth(self):
         """ Test mcx_v_chain_dirty depth"""
 
