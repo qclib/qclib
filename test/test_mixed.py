@@ -36,7 +36,8 @@ class TestMixed(TestCase):
         state_vector2 = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
         state_vector2 = state_vector2 / np.linalg.norm(state_vector2)
 
-        circuit = MixedInitialize([state_vector1, state_vector2], reset=False).definition
+        ensemble = [state_vector1, state_vector2]
+        circuit = MixedInitialize(ensemble, reset=False).definition
 
         zero = [1, 0]
         one = [0, 1]
@@ -53,22 +54,22 @@ class TestMixed(TestCase):
         n_qubits = 3
         n_states = 5
 
-        state_vectors = []
+        ensemble = []
         for _ in range(n_states):
             state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
             state_vector = state_vector / np.linalg.norm(state_vector)
-            state_vectors.append(state_vector)
+            ensemble.append(state_vector)
 
         probabilities = np.random.rand(n_states)
         probabilities = probabilities / sum(probabilities)
 
         circuit_classical = MixedInitialize(
-            state_vectors,
+            ensemble,
             probabilities=probabilities,
             classical=True
         ).definition
         circuit_quantum = MixedInitialize(
-            state_vectors,
+            ensemble,
             probabilities=probabilities,
             classical=False
         ).definition
