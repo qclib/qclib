@@ -16,7 +16,7 @@
 Initializes a mixed quantum state.
 """
 
-from math import log2, ceil
+from math import log2, ceil, isclose
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.gates.initialize import Initialize
@@ -37,6 +37,7 @@ class MixedInitialize(InitializeMixed):
             params,
             initializer=LowRankInitialize,
             opt_params=None,
+            probabilities=None,
             label=None,
             reset=True,
             classical = True
@@ -68,8 +69,16 @@ class MixedInitialize(InitializeMixed):
             not issubclass(initializer, Initialize) and
             not issubclass(initializer, InitializeSparse)
         ):
-            print(initializer)
             raise TypeError("The value of initializer should be Initialize or InitializeSparse.")
+
+        if probabilities is None:
+            probabilities = [1/len(params)] * len(params)
+        elif any(i < 0.0 for i in probabilities):
+            raise ValueError("All probabilities must greater than or equal to 0.")
+        elif any(i > 1.0 for i in probabilities):
+            raise ValueError("All probabilities must less than or equal to 1.")
+        elif not isclose(sum(probabilities), 1.0):
+            raise ValueError("The sum of the probabilities must be 1.0.")
 
         self._name = "mixed"
         self._get_num_qubits(params)
@@ -77,6 +86,7 @@ class MixedInitialize(InitializeMixed):
         self._initializer = initializer
         self._reset = reset
         self._opt_params = opt_params
+        self._probabilities = probabilities
         self._classical = classical
 
         self._num_ctrl_qubits = int(ceil(log2(len(params))))
@@ -98,23 +108,13 @@ class MixedInitialize(InitializeMixed):
         if self._classical:
             # Calculates the pure state classically.
             pure_state = np.zeros(2**(self._num_qubits), dtype=complex)
-            for index, state_vector in enumerate(self._list_params):
+            for index, (state_vector, prob) in enumerate(
+                zip(self._list_params, self._probabilities)
+            ):
                 basis = np.zeros(2**self._num_ctrl_qubits)
                 basis[index] = 1
 
-                pure_state += np.kron(state_vector, basis)
-
-            # Completes the index register.
-            zero_state = np.zeros(2**self._num_data_qubits)
-            zero_state[0] = 1
-            for index in range(len(self._list_params), 2**self._num_ctrl_qubits):
-                basis = np.zeros(2**self._num_ctrl_qubits)
-                basis[index] = 1
-
-                pure_state += np.kron(zero_state, basis)
-
-            # Normalizes the pure_state.
-            pure_state = (1/np.sqrt(2**self._num_ctrl_qubits)) * pure_state
+                pure_state += np.kron(np.sqrt(prob) * state_vector, basis)
 
             purified_circuit = self._initializer(
                 pure_state,
@@ -122,7 +122,20 @@ class MixedInitialize(InitializeMixed):
             ).definition
 
         else:
-            purified_circuit.h(range(self._num_ctrl_qubits))
+            # Calculates the pure state quantically.
+            aux_state = np.concatenate((
+                np.sqrt(self._probabilities),
+                [0] * (2**(self._num_ctrl_qubits) - len(self._probabilities))
+            ))
+
+            sub_circuit = self._initializer(
+                aux_state,
+                opt_params=self._opt_params
+            ).definition
+
+            sub_circuit.name = 'aux. space'
+
+            purified_circuit.append(sub_circuit, range(self._num_ctrl_qubits))
 
             for index, state in enumerate(self._list_params):
                 sub_circuit = self._initializer(
@@ -137,13 +150,13 @@ class MixedInitialize(InitializeMixed):
                     ctrl_state = f"{index:0{self._num_ctrl_qubits}b}"
                 )
 
-                purified_circuit.append(sub_circuit, purified_circuit.qubits)
+                purified_circuit.compose(sub_circuit, purified_circuit.qubits, inplace=True)
 
         purified_circuit.name = 'purified state'
 
         circuit = QuantumCircuit()
         circuit.add_register(QuantumRegister(self._num_ctrl_qubits, 'aux'))
-        circuit.add_register(QuantumRegister(self._num_data_qubits, 'data'))
+        circuit.add_register(QuantumRegister(self._num_data_qubits, 'rho'))
         circuit.append(purified_circuit, circuit.qubits)
 
         if self._reset:
@@ -152,13 +165,25 @@ class MixedInitialize(InitializeMixed):
         return circuit
 
     @staticmethod
-    def initialize(q_circuit, states, qubits=None, opt_params=None):
+    def initialize(q_circuit, ensemble, qubits=None, opt_params=None, probabilities=None):
         """
         Appends a MixedInitialize gate into the q_circuit
         """
         if qubits is None:
             q_circuit.append(
-                MixedInitialize(states, opt_params=opt_params), q_circuit.qubits
+                MixedInitialize(
+                    ensemble,
+                    opt_params=opt_params,
+                    probabilities=probabilities
+                )
+                , q_circuit.qubits
             )
         else:
-            q_circuit.append(MixedInitialize(states, opt_params=opt_params), qubits)
+            q_circuit.append(
+                MixedInitialize(
+                    ensemble,
+                    opt_params=opt_params,
+                    probabilities=probabilities
+                )
+                , qubits
+            )

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-Tests for the lowrank.py module.
+Tests for the mixed.py module.
 """
 
 from unittest import TestCase
@@ -59,12 +59,17 @@ class TestMixed(TestCase):
             state_vector = state_vector / np.linalg.norm(state_vector)
             state_vectors.append(state_vector)
 
+        probabilities = np.random.rand(n_states)
+        probabilities = probabilities / sum(probabilities)
+
         circuit_classical = MixedInitialize(
             state_vectors,
+            probabilities=probabilities,
             classical=True
         ).definition
         circuit_quantum = MixedInitialize(
             state_vectors,
+            probabilities=probabilities,
             classical=False
         ).definition
 

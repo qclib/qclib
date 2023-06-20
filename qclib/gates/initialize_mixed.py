@@ -18,7 +18,7 @@ from qiskit.circuit.gate import Gate
 
 class InitializeMixed(Gate):
     @staticmethod
-    def initialize(q_circuit, states, qubits=None):
+    def initialize(q_circuit, ensemble, qubits=None, opt_params=None, probabilities=None):
         pass
 
     def inverse(self):
@@ -38,6 +38,6 @@ class InitializeMixed(Gate):
         elif isinstance(parameter, np.number):
             return complex(parameter.item())
         else:
-            raise Exception(
+            raise ValueError(
                 f"invalid param type {type(parameter)} for instruction {self.name}."
             )
