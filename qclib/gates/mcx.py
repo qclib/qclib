@@ -24,8 +24,6 @@ from qiskit import QuantumRegister, QuantumCircuit
 
 from qiskit.circuit.library import C3XGate, C4XGate
 from qiskit.circuit import Gate
-
-# Alterei aqui
 from qclib.gates.toffoli import Toffoli
 from qclib.gates.util import apply_ctrl_state
 
@@ -82,11 +80,9 @@ class McxVchainDirty(Gate):
         num_ctrl = len(self.control_qubits)
         num_target = len(self.target_qubits)
         num_ancilla = num_ctrl - 2
-        # targets = [*self.target_qubits] + self.ancilla_qubits[:num_ancilla][::-1]
         targets_aux = self.target_qubits[0:1] + self.ancilla_qubits[:num_ancilla][::-1]
 
         self._apply_ctrl_state()
-        # Generalização: checar os vários targets
         if num_ctrl < 3:
             for k, _ in enumerate(self.target_qubits):
                 self.definition.mcx(
@@ -103,7 +99,6 @@ class McxVchainDirty(Gate):
             for j in range(2):
                 for i, _ in enumerate(self.control_qubits):  # action part
                     if i < num_ctrl - 2:
-                        # Trocamos != por not in
                         if (
                             targets_aux[i] not in self.target_qubits
                             or self.relative_phase
@@ -114,8 +109,8 @@ class McxVchainDirty(Gate):
                                 self.ancilla_qubits[num_ancilla - i - 1],
                             ]
 
-                            # cancel rightmost gates of action part with leftmost gates of reset part
-                            # trocamos o = por in
+                            # cancel rightmost gates of action part
+                            # with leftmost gates of reset part
                             if (
                                 self.relative_phase
                                 and targets_aux[i] in self.target_qubits
@@ -157,7 +152,6 @@ class McxVchainDirty(Gate):
                     )
 
                 if self.action_only:
-                    # Generalizei aqui para multiplos targets
                     for target in self.target_qubits:
                         self.definition.ccx(
                             control_qubit1=self.control_qubits[-1],
@@ -244,13 +238,10 @@ class LinearMcx(Gate):
                 [],
             )
         else:
-            num_ctrl = len(self.control_qubits)
-
             # split controls to halve the number of qubits used for each mcx
+            num_ctrl = len(self.control_qubits)
             k_2 = int(np.ceil(self.num_qubits / 2.0))
             k_1 = num_ctrl - k_2 + 1
-
-            # when relative_phase=True only approximate Toffoli is applied because only aux qubits are targeted
             first_gate = McxVchainDirty(k_1, relative_phase=True).definition
             second_gate = McxVchainDirty(k_2).definition
             self.definition.append(
@@ -274,7 +265,6 @@ class LinearMcx(Gate):
                 + [self.ancilla_qubit],
             )
 
-            # when action_only=True only the action part of the circuit happens due to gate cancelling
             last_gate = McxVchainDirty(k_2, action_only=self.action_only).definition
             self.definition.append(
                 last_gate,
@@ -290,8 +280,7 @@ class LinearMcx(Gate):
         circuit.append(
             LinearMcx(len(controls), ctrl_state, action_only), [*controls, target]
         )
-        # else:
-        #    circuit.append(LinearMcx(len(controls), ctrl_state, action_only, len(targets)), [*controls, *target])
+
 
 
 LinearMcx._apply_ctrl_state = apply_ctrl_state
