@@ -204,35 +204,6 @@ class TestLinearMCX(TestCase):
 class TestMcxVchainDirty(TestCase):
     """Test class McxVchainDirty"""
 
-    def test_mcx_v_chain_3targets(self):
-        """Test multiple targets McxVchainDirty"""
-
-        # mcx_v_chain_circuit
-        num_controls = 4
-        num_target_qubit = 3
-        mcx_v_chain_circuit = McxVchainDirty(
-            num_controls, num_target_qubit=num_target_qubit
-        ).definition
-
-        # qiskit_circuit
-        qiskit_circuit = QuantumCircuit(9)
-        controls_idx = list(np.arange(4))
-        for target_idx in range(6, 9):
-            qiskit_circuit.mcx(controls_idx, [target_idx])
-
-        mcx_v_chain_op = Operator(mcx_v_chain_circuit).data
-        qiskit_mcx_op = Operator(qiskit_circuit).data
-
-        tr_mcx_v_chain = transpile(mcx_v_chain_circuit, basis_gates=["u", "cx"])
-
-        np.allclose(mcx_v_chain_op, qiskit_mcx_op)
-
-        if num_controls > 3:
-            self.assertTrue(
-                10 + (num_controls - 2) * 8 + (num_target_qubit - 1) * 12
-                == tr_mcx_v_chain.count_ops()["cx"]
-            )
-
     def test_mcx_v_chain_dirty_depth(self):
         """Test mcx_v_chain_dirty depth"""
 
@@ -291,6 +262,36 @@ class TestMcxVchainDirty(TestCase):
                 mode="v-chain-dirty",
                 ctrl_state=ctrl_state,
             )
+    
+    def test_mcx_v_chain_3targets(self):
+        """Test multiple targets McxVchainDirty"""
+
+        # mcx_v_chain_circuit
+        num_controls = 4
+        num_target_qubit = 3
+        mcx_v_chain_circuit = McxVchainDirty(
+            num_controls, num_target_qubit=num_target_qubit
+        ).definition
+
+        # qiskit_circuit
+        qiskit_circuit = QuantumCircuit(9)
+        controls_idx = list(np.arange(4))
+        for target_idx in range(6, 9):
+            qiskit_circuit.mcx(controls_idx, [target_idx])
+
+        mcx_v_chain_op = Operator(mcx_v_chain_circuit).data
+        qiskit_mcx_op = Operator(qiskit_circuit).data
+
+        tr_mcx_v_chain = transpile(mcx_v_chain_circuit, basis_gates=["u", "cx"])
+
+        np.allclose(mcx_v_chain_op, qiskit_mcx_op)
+
+        if num_controls > 3:
+            self.assertTrue(
+                10 + (num_controls - 2) * 8 + (num_target_qubit - 1) * 12
+                == tr_mcx_v_chain.count_ops()["cx"]
+            )
+
 
     def _operator_cmp(
         self,
