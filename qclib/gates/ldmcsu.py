@@ -139,6 +139,7 @@ class Ldmcsu(Gate):
         return s_op
 
     def linear_depth_mcv(
+        # função a ser modificada
         self,
         x_value,
         z_value,
