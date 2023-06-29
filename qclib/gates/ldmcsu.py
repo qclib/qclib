@@ -29,6 +29,7 @@ from qiskit.circuit import Gate, Qubit
 from qclib.gates.mcx import LinearMcx, McxVchainDirty
 from qclib.gates.util import check_su2, apply_ctrl_state, isclose
 
+
 # pylint: disable=protected-access
 
 
@@ -41,12 +42,12 @@ class Ldmcsu(Gate):
     `unitary` must be a SU(2) matrix.
     """
 
-    def __init__(self, unitary, num_controls, ctrl_state: str = None):
+    def __init__(self, unitary, num_controls, num_target_qubit=1, ctrl_state: str = None):
 
         check_su2(unitary)
         self.unitary = unitary
         self.controls = QuantumRegister(num_controls)
-        self.target = QuantumRegister(1)
+        self.target = QuantumRegister(num_target_qubit)
         self.num_controls = num_controls + 1
         self.ctrl_state = ctrl_state
 
@@ -138,15 +139,78 @@ class Ldmcsu(Gate):
         s_op = np.array([[alpha, -np.conj(beta)], [beta, np.conj(alpha)]])
         return s_op
 
+    # x_values = [x_value_1, ..., x_value_p]
+    # z_values = [z_value_1, ..., z_value_p]
+    def linear_depth_mcv_multi_target(
+            self,
+            x_values,
+            z_values,
+            controls: Union[QuantumRegister, List[Qubit]],
+            target: Qubit,
+            ctrl_state: str = None,
+            general_su2_optimization=False,
+    ):
+        """
+                Implementa p operadores $U \in SU2$ multicontrolados
+                Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
+        """
+        gates_a = []
+        num_target_qubit = len(x_values)
+        for p in range(num_target_qubit):
+            op_a = Ldmcsu._compute_gate_a(x_values[p], z_values[p])
+            gates_a.append(UnitaryGate(op_a))
+
+        num_ctrl = len(controls)
+        k_1 = int(np.ceil(num_ctrl / 2.0))
+        k_2 = int(np.floor(num_ctrl / 2.0))
+
+        ctrl_state_k_1 = None
+        ctrl_state_k_2 = None
+
+        if ctrl_state is not None:
+            ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
+            ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
+
+        mcx_k1 = McxVchainDirty(k_1, num_target_qubit=num_target_qubit, ctrl_state=ctrl_state_k_1).definition
+        mcx_k2 = McxVchainDirty(k_2, num_target_qubit=num_target_qubit, ctrl_state=ctrl_state_k_2).definition
+
+        # 1 - fazer append mcx_k1
+
+        # 2 - fazer append dos p operadores A
+        for p, t in range(num_target_qubit):
+            self.definition.append(gates_a[p], [target][p])
+
+        # 3 - fazer append mcx_k2
+
+        # 4 - fazer append dos p operadores A^\dagger
+        for p in range(num_target_qubit):
+            self.definition.append(gates_a[p].inverse(), [target])
+
+        # 1 - fazer append mcx_k1
+
+        # 2 - fazer append dos p operadores A
+        for p in range(num_target_qubit):
+            self.definition.append(gates_a[p], [target])
+
+        # 3 - fazer append mcx_k2
+
+        # 4 - fazer append dos p operadores A^\dagger
+        for p in range(num_target_qubit):
+            self.definition.append(gates_a[p].inverse(), [target])
+
+
+
+
+
     def linear_depth_mcv(
-        # função a ser modificada
-        self,
-        x_value,
-        z_value,
-        controls: Union[QuantumRegister, List[Qubit]],
-        target: Qubit,
-        ctrl_state: str = None,
-        general_su2_optimization=False,
+            # função a ser modificada
+            self,
+            x_value,
+            z_value,
+            controls: Union[QuantumRegister, List[Qubit]],
+            target: Qubit,
+            ctrl_state: str = None,
+            general_su2_optimization=False,
     ):
         """
         Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
@@ -169,7 +233,7 @@ class Ldmcsu(Gate):
         if not general_su2_optimization:
             mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
             self.definition.append(
-                mcx_1, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
+                mcx_1, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [target]
             )
         self.definition.append(gate_a, [target])
 
@@ -177,30 +241,30 @@ class Ldmcsu(Gate):
             k_2, ctrl_state=ctrl_state_k_2, action_only=general_su2_optimization
         ).definition
         self.definition.append(
-            mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
+            mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [target]
         )
         self.definition.append(gate_a.inverse(), [target])
 
         mcx_3 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
         self.definition.append(
-            mcx_3, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
+            mcx_3, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [target]
         )
         self.definition.append(gate_a, [target])
 
         mcx_4 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
         self.definition.append(
-            mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
+            mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [target]
         )
         self.definition.append(gate_a.inverse(), [target])
 
     def half_linear_depth_mcv(
-        self,
-        x_value,
-        z_value,
-        controls: Union[QuantumRegister, List[Qubit]],
-        target: Qubit,
-        ctrl_state: str = None,
-        inverse: bool = False,
+            self,
+            x_value,
+            z_value,
+            controls: Union[QuantumRegister, List[Qubit]],
+            target: Qubit,
+            ctrl_state: str = None,
+            inverse: bool = False,
     ):
         """
         Theorem 4 - https://arxiv.org/pdf/2302.06377.pdf
@@ -239,7 +303,7 @@ class Ldmcsu(Gate):
                 k_2, ctrl_state=ctrl_state_k_2, action_only=True
             ).definition
             self.definition.append(
-                mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
+                mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [target]
             )
 
             self.definition.append(s_gate.inverse(), [target])
@@ -249,7 +313,7 @@ class Ldmcsu(Gate):
         else:
             mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
             self.definition.append(
-                mcx_1, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
+                mcx_1, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [target]
             )
             self.definition.append(h_gate, [target])
 
@@ -257,7 +321,7 @@ class Ldmcsu(Gate):
 
             mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
             self.definition.append(
-                mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
+                mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [target]
             )
             self.definition.append(s_gate.inverse(), [target])
 
@@ -265,11 +329,11 @@ class Ldmcsu(Gate):
 
     @staticmethod
     def ldmcsu(
-        circuit,
-        unitary,
-        controls: Union[QuantumRegister, List[Qubit]],
-        target: Qubit,
-        ctrl_state: str = None,
+            circuit,
+            unitary,
+            controls: Union[QuantumRegister, List[Qubit]],
+            target: Qubit,
+            ctrl_state: str = None,
     ):
         """
         Apply multi-controlled SU(2)
