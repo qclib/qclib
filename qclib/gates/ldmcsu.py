@@ -71,7 +71,6 @@ class Ldmcsu(Gate):
             eig_vals, eig_vecs = np.linalg.eig(self.unitary)
 
             x_vecs, z_vecs = self._get_x_z(eig_vecs)
-            x_vals, z_vals = self._get_x_z(np.diag(eig_vals))
 
             self.half_linear_depth_mcv(
                 x_vecs,
@@ -82,8 +81,7 @@ class Ldmcsu(Gate):
                 inverse=True,
             )
             self.linear_depth_mcv(
-                x_vals,
-                z_vals,
+                np.diag(eig_vals),
                 self.controls,
                 self.target,
                 self.ctrl_state,
@@ -94,12 +92,11 @@ class Ldmcsu(Gate):
             )
 
         else:
-            x_value, z_value = self._get_x_z(self.unitary)
 
             if not is_secondary_diag_real:
                 self.definition.h(self.target)
 
-            self.linear_depth_mcv(x_value, z_value, self.controls, self.target, self.ctrl_state)
+            self.linear_depth_mcv(self.unitary, self.controls, self.target, self.ctrl_state)
 
             if not is_secondary_diag_real:
                 self.definition.h(self.target)
@@ -140,8 +137,7 @@ class Ldmcsu(Gate):
 
     def linear_depth_mcv(
         self,
-        x_value,
-        z_value,
+        su2_unitary,
         controls: Union[QuantumRegister, List[Qubit]],
         target: Qubit,
         ctrl_state: str = None,
@@ -151,6 +147,9 @@ class Ldmcsu(Gate):
         Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
         """
         # S gate definition
+
+        x_value, z_value = self._get_x_z(su2_unitary)
+
         op_a = Ldmcsu._compute_gate_a(x_value, z_value)
         gate_a = UnitaryGate(op_a)
 
