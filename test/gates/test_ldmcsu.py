@@ -177,7 +177,7 @@ class TestMcSpecialUnitary(TestCase):
         """
         su_2 = RXGate(0.3).to_matrix()
         for num_controls in range(8, 10):
-            ldmcsu_circ = Ldmcsu(su_2, num_controls).definition
+            ldmcsu_circ = Ldmcsu([su_2], num_controls).definition
             ldmcsu_count = get_cnot_count(ldmcsu_circ)
 
             self.assertTrue(ldmcsu_count <= 16 * (num_controls + 1)-40)
