@@ -173,43 +173,42 @@ class Ldmcsu(Gate):
         if not general_su2_optimization:
             mcx_1 = McxVchainDirty(
                 k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1).definition
-            #problema neste append
             self.definition.append(
-                mcx_1, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [target]
+                mcx_1, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [*target]
             )
 
         for idx, gate_a in enumerate(gates_a):
-            self.definition.append(gate_a, [num_ctrl + idx - 1])
+            self.definition.append(gate_a, [num_ctrl + idx])
 
         mcx_2 = McxVchainDirty(
             k_2, num_target_qubit=target_size, ctrl_state=ctrl_state_k_2, action_only=general_su2_optimization
         ).definition
-        # problema neste append
+
         self.definition.append(
-            mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [target]
+            mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [*target]
         )
 
 
         for idx, gate_a in enumerate(gates_a):
-            self.definition.append(gate_a.inverse(), [num_ctrl + idx - 1])
+            self.definition.append(gate_a.inverse(), [num_ctrl + idx])
 
         mcx_3 = McxVchainDirty(k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1).definition
         # problema neste append
         self.definition.append(
-            mcx_3, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [target]
+            mcx_3, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [*target]
         )
 
         for idx, gate_a in enumerate(gates_a):
-            self.definition.append(gate_a, [num_ctrl + idx - 1])
+            self.definition.append(gate_a, [num_ctrl + idx])
 
         mcx_4 = McxVchainDirty(k_2, num_target_qubit=target_size, ctrl_state=ctrl_state_k_2).definition
         # problema neste append
         self.definition.append(
-            mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [target]
+            mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [*target]
         )
 
         for idx, gate_a in enumerate(gates_a):
-            self.definition.append(gate_a.inverse(), [num_ctrl + idx - 1])
+            self.definition.append(gate_a.inverse(), [num_ctrl + idx])
 
 
     def half_linear_depth_mcv(
