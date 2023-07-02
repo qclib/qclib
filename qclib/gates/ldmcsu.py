@@ -97,13 +97,13 @@ class Ldmcsu(Gate):
 
         for idx, unitary in enumerate(self.unitaries):
             if not is_secondary_diags_real[idx] and is_main_diags_real[idx]:
-                self.definition.h(self.target)
+                self.definition.h(self.target[idx])
 
         self.linear_depth_mcv(self.unitaries, self.controls, self.target, self.ctrl_state)
 
         for idx, unitary in enumerate(self.unitaries):
             if not is_secondary_diags_real[idx] and is_main_diags_real[idx]:
-                self.definition.h(self.target)
+                self.definition.h(self.target[idx])
 
     @staticmethod
     def _get_x_z(su2):
