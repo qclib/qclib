@@ -16,8 +16,8 @@
 
 from unittest import TestCase
 import numpy as np
-from qiskit import QuantumCircuit
-from qiskit.circuit.library import RXGate
+from qiskit import QuantumCircuit, transpile
+from qiskit.circuit.library import RXGate, RYGate, RZGate
 from qiskit.quantum_info import Operator
 from qiskit.extensions import UnitaryGate
 from scipy.stats import unitary_group
@@ -189,25 +189,37 @@ class TestMcSpecialUnitary(TestCase):
 
         su2_gate1 = UnitaryGate(unitaries[0])
         su2_gate2 = UnitaryGate(unitaries[1])
+        su2_gate3 = UnitaryGate(unitaries[2])
         controls_list = list(range(num_controls))
         target = num_controls
-        qiskit_circ = QuantumCircuit(num_controls + 2)
-        qiskit_circ.append(su2_gate1.control(num_controls, ctrl_state=ctrl_state),
-                           [*controls_list, target])
-        qiskit_circ.append(su2_gate2.control(num_controls, ctrl_state=ctrl_state),
-                           [*controls_list, target + 1])
+        qiskit_circ = QuantumCircuit(num_controls + 3)
+        qiskit_circ.mcrx(0.7, controls_list, target)
+        qiskit_circ.mcrx(0.13, controls_list, target+1)
+        qiskit_circ.mcrx(0.5, controls_list, target+2)
+
+        # qiskit_circ.append(su2_gate2.control(num_controls, ctrl_state=ctrl_state),
+        #                    [*controls_list, target + 1])
+        # qiskit_circ.append(su2_gate3.control(num_controls, ctrl_state=ctrl_state),
+        #                    [*controls_list, target + 2])
         return qiskit_circ
 
     def test_lcmcsu_2targets(self):
         """
 
         """
-        num_controls = 6
-        num_target_qubit = 2
-        unitaries = [RXGate(0.3).to_matrix(), RXGate(0.3).to_matrix()]
+        num_controls = 7
+        num_target_qubit = 3
+        unitaries = [RXGate(0.7).to_matrix(), RXGate(0.13).to_matrix(), RXGate(0.5).to_matrix()]
 
         qiskit_circ = self._build_qiskit_circuit_2target(unitaries, num_controls)
         ldmcsu_circ = Ldmcsu(unitaries, num_controls, num_target=num_target_qubit).definition
+
+        qiskitt = transpile(qiskit_circ, basis_gates=['u', 'cx'], optimization_level=3)
+        ldmcsut = transpile(ldmcsu_circ, basis_gates=['u', 'cx'], optimization_level=3)
+
+        qiskit_ops = qiskitt.count_ops()
+        qclib_ops = ldmcsut.count_ops()
+        self.assertTrue(qiskit_ops['cx'] > qclib_ops['cx'])
 
         ldmcsu_op = Operator(ldmcsu_circ).data
         qiskit_op = Operator(qiskit_circ).data
