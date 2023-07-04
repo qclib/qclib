@@ -41,13 +41,12 @@ class Ldmcsu(Gate):
     `unitary` must be a SU(2) matrix.
     """
 
-    def __init__(self, unitaries, num_controls, num_target=1, ctrl_state: str = None):
+    def __init__(self, unitary, num_controls, ctrl_state: str = None):
 
-        for unitary in unitaries:
-            check_su2(unitary)
-        self.unitaries = unitaries
+        check_su2(unitary)
+        self.unitary = unitary
         self.controls = QuantumRegister(num_controls)
-        self.target = QuantumRegister(num_target)
+        self.target = QuantumRegister(1)
         self.num_controls = num_controls + 1
         self.ctrl_state = ctrl_state
 
@@ -57,52 +56,49 @@ class Ldmcsu(Gate):
 
         self.definition = QuantumCircuit(self.controls, self.target)
 
-        is_main_diags_real = []
-        is_secondary_diags_real = []
-        for unitary in self.unitaries:
-            is_main_diags_real.append(
-                isclose(unitary[0, 0].imag, 0.0) and isclose(unitary[1, 1].imag, 0.0))
+        is_main_diag_real = isclose(self.unitary[0, 0].imag, 0.0) and isclose(
+            self.unitary[1, 1].imag, 0.0
+        )
+        is_secondary_diag_real = isclose(self.unitary[0, 1].imag, 0.0) and isclose(
+            self.unitary[1, 0].imag, 0.0
+        )
 
-            is_secondary_diags_real.append(
-                isclose(unitary[0, 1].imag, 0.0) and isclose(unitary[1, 0].imag, 0.0))
+        if not is_main_diag_real and not is_secondary_diag_real:
+            # U = V D V^-1, where the entries of the diagonal D are the eigenvalues
+            # `eig_vals` of U and the column vectors of V are the eigenvectors
+            # `eig_vecs` of U. These columns are orthonormal and the main diagonal
+            # of V is real-valued.
+            eig_vals, eig_vecs = np.linalg.eig(self.unitary)
 
-        for idx, unitary in enumerate(self.unitaries):
+            x_vecs, z_vecs = self._get_x_z(eig_vecs)
 
-            is_main_diag_real = is_main_diags_real[idx]
-            is_secondary_diag_real = is_secondary_diags_real[idx]
-            if not is_main_diag_real and not is_secondary_diag_real:
-                # U = V D V^-1, where the entries of the diagonal D are the eigenvalues
-                # `eig_vals` of U and the column vectors of V are the eigenvectors
-                # `eig_vecs` of U. These columns are orthonormal and the main diagonal
-                # of V is real-valued.
-                eig_vals, eig_vecs = np.linalg.eig(unitary)
+            self.half_linear_depth_mcv(
+                x_vecs,
+                z_vecs,
+                self.controls,
+                self.target,
+                self.ctrl_state,
+                inverse=True,
+            )
+            self.linear_depth_mcv(
+                np.diag(eig_vals),
+                self.controls,
+                self.target,
+                self.ctrl_state,
+                general_su2_optimization=True,
+            )
+            self.half_linear_depth_mcv(
+                x_vecs, z_vecs, self.controls, self.target, self.ctrl_state
+            )
 
-                self.half_linear_depth_mcv(
-                    unitary,
-                    self.controls,
-                    self.target,
-                    self.ctrl_state,
-                    inverse=True,
-                )
-                self.linear_depth_mcv(
-                    np.diag(eig_vals),
-                    self.controls,
-                    self.target,
-                    self.ctrl_state,
-                    general_su2_optimization=True,
-                )
-                self.half_linear_depth_mcv(
-                    unitary, self.controls, self.target, self.ctrl_state
-                )
+        else:
 
-        for idx, unitary in enumerate(self.unitaries):
-            if not is_secondary_diags_real[idx] and is_main_diags_real[idx]:
+            if not is_secondary_diag_real:
                 self.definition.h(self.target)
 
-        self.linear_depth_mcv(self.unitaries, self.controls, self.target, self.ctrl_state)
+            self.linear_depth_mcv(self.unitary, self.controls, self.target, self.ctrl_state)
 
-        for idx, unitary in enumerate(self.unitaries):
-            if not is_secondary_diags_real[idx] and is_main_diags_real[idx]:
+            if not is_secondary_diag_real:
                 self.definition.h(self.target)
 
     @staticmethod
@@ -141,7 +137,7 @@ class Ldmcsu(Gate):
 
     def linear_depth_mcv(
         self,
-        su2_unitaries,
+        su2_unitary,
         controls: Union[QuantumRegister, List[Qubit]],
         target: Qubit,
         ctrl_state: str = None,
@@ -151,7 +147,7 @@ class Ldmcsu(Gate):
         Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
         """
         # S gate definition
-        su2_unitary = su2_unitaries[0]
+
         x_value, z_value = self._get_x_z(su2_unitary)
 
         op_a = Ldmcsu._compute_gate_a(x_value, z_value)
@@ -197,7 +193,8 @@ class Ldmcsu(Gate):
 
     def half_linear_depth_mcv(
         self,
-        unitary,
+        x_value,
+        z_value,
         controls: Union[QuantumRegister, List[Qubit]],
         target: Qubit,
         ctrl_state: str = None,
@@ -206,9 +203,6 @@ class Ldmcsu(Gate):
         """
         Theorem 4 - https://arxiv.org/pdf/2302.06377.pdf
         """
-
-        eig_vals, eig_vecs = np.linalg.eig(unitary)
-        x_value, z_value = self._get_x_z(eig_vecs)
 
         alpha_r = np.sqrt((z_value.real + 1.0) / 2.0)
         alpha_i = z_value.imag / np.sqrt(2 * (z_value.real + 1.0))
