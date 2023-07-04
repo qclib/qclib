@@ -151,15 +151,13 @@ class Ldmcsu(Gate):
         Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
         """
         # S gate definition
-        gates_a = []
-        for su2_unitary in su2_unitaries:
-            x_value, z_value = self._get_x_z(su2_unitary)
-            op_a = Ldmcsu._compute_gate_a(x_value, z_value)
-            gates_a.append(UnitaryGate(op_a))
+        su2_unitary = su2_unitaries[0]
+        x_value, z_value = self._get_x_z(su2_unitary)
+
+        op_a = Ldmcsu._compute_gate_a(x_value, z_value)
+        gate_a = UnitaryGate(op_a)
 
         num_ctrl = len(controls)
-        target_size = len(target)
-
         k_1 = int(np.ceil(num_ctrl / 2.0))
         k_2 = int(np.floor(num_ctrl / 2.0))
 
@@ -171,46 +169,31 @@ class Ldmcsu(Gate):
             ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
         if not general_su2_optimization:
-            mcx_1 = McxVchainDirty(
-                k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1).definition
-            #problema neste append
+            mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
             self.definition.append(
-                mcx_1, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [target]
+                mcx_1, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
             )
-
-        for idx, gate_a in enumerate(gates_a):
-            self.definition.append(gate_a, [num_ctrl + idx - 1])
+        self.definition.append(gate_a, [target])
 
         mcx_2 = McxVchainDirty(
-            k_2, num_target_qubit=target_size, ctrl_state=ctrl_state_k_2, action_only=general_su2_optimization
+            k_2, ctrl_state=ctrl_state_k_2, action_only=general_su2_optimization
         ).definition
-        # problema neste append
         self.definition.append(
-            mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [target]
+            mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
         )
+        self.definition.append(gate_a.inverse(), [target])
 
-
-        for idx, gate_a in enumerate(gates_a):
-            self.definition.append(gate_a.inverse(), [num_ctrl + idx - 1])
-
-        mcx_3 = McxVchainDirty(k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1).definition
-        # problema neste append
+        mcx_3 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
         self.definition.append(
-            mcx_3, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [target]
+            mcx_3, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
         )
+        self.definition.append(gate_a, [target])
 
-        for idx, gate_a in enumerate(gates_a):
-            self.definition.append(gate_a, [num_ctrl + idx - 1])
-
-        mcx_4 = McxVchainDirty(k_2, num_target_qubit=target_size, ctrl_state=ctrl_state_k_2).definition
-        # problema neste append
+        mcx_4 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
         self.definition.append(
-            mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [target]
+            mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
         )
-
-        for idx, gate_a in enumerate(gates_a):
-            self.definition.append(gate_a.inverse(), [num_ctrl + idx - 1])
-
+        self.definition.append(gate_a.inverse(), [target])
 
     def half_linear_depth_mcv(
         self,
