@@ -203,11 +203,11 @@ class TestMcSpecialUnitary(TestCase):
 
         """
         num_controls = 6
-        num_target_qubit = 2
+        num_target = 2
         unitaries = [RXGate(0.3).to_matrix(), RXGate(0.3).to_matrix()]
 
         qiskit_circ = self._build_qiskit_circuit_2target(unitaries, num_controls)
-        ldmcsu_circ = Ldmcsu(unitaries, num_controls, num_target=num_target_qubit).definition
+        ldmcsu_circ = Ldmcsu(unitaries, num_controls, num_target=num_target).definition
 
         ldmcsu_op = Operator(ldmcsu_circ).data
         qiskit_op = Operator(qiskit_circ).data
