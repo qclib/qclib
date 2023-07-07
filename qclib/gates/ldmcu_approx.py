@@ -22,7 +22,9 @@ import qiskit
 from qiskit.circuit import Gate
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.gates.util import check_u2, apply_ctrl_state
-from qclib.gates.ldmcsu import  Ldmcsu
+from qclib.gates.ldmcsu import Ldmcsu
+
+
 # pylint: disable=maybe-no-member
 # pylint: disable=protected-access
 class LdmcuApprox(Gate):
@@ -51,10 +53,10 @@ class LdmcuApprox(Gate):
 
         self.num_qubits = num_controls + 1
 
-        self.n_ctrl_base= self._get_num_base_ctrl_qubits(self.unitary, self.error)
-        if self.n_ctrl_base==0 :
+        self.n_ctrl_base = self._get_num_base_ctrl_qubits(self.unitary, self.error)
+        if self.n_ctrl_base == 0:
             raise Exception("The number of base qubits is 0")
-        if self.n_ctrl_base> num_controls:
+        if self.n_ctrl_base > num_controls:
             raise Exception("The number of control qubits is too low")
 
         self.ctrl_state = ctrl_state
@@ -72,7 +74,7 @@ class LdmcuApprox(Gate):
 
             self._c1c2(self.unitary, self.num_qubits, self.n_ctrl_base, gate_circuit)
             self._c1c2(self.unitary, self.num_qubits, self.n_ctrl_base, gate_circuit, step=-1)
-            #Attention to the number of qubits
+            # Attention to the number of qubits
             self._c1c2(self.unitary, self.num_qubits - 1, self.n_ctrl_base, gate_circuit, False)
             self._c1c2(self.unitary, self.num_qubits - 1, self.n_ctrl_base, gate_circuit,
                        False, step=-1)
@@ -84,7 +86,6 @@ class LdmcuApprox(Gate):
         else:
             self.definition = QuantumCircuit(self.target_qubit)
             self.definition.unitary(self.unitary, 0)
-
 
     def _get_num_base_ctrl_qubits(self, unitary, error):
         '''
@@ -99,19 +100,19 @@ class LdmcuApprox(Gate):
         ln_d = np.diag(log_eig_vals)
         prod = eig_vecs @ ln_d @ np.transpose(eig_vecs)
         aux_error = prod.max()
-        n_base =  np.log2(aux_error/error)
-        if n_base<=0 :
+        n_base = np.log2(aux_error / error)
+        if n_base <= 0:
             return 0
         return math.ceil(n_base)
 
 
-    def _c1c2(self, unitary, n_qubits,n_ctrl_base, gate_circ, first=True, step=1):
+    def _c1c2(self, unitary, n_qubits, n_ctrl_base, gate_circ, first=True, step=1):
         pairs = namedtuple("pairs", ["control", "target"])
-        #Get the number of extra qubits
+        # Get the number of extra qubits
         if first:
-            n_qubits_base=n_ctrl_base+1
+            n_qubits_base = n_ctrl_base + 1
         else:
-            n_qubits_base=n_ctrl_base
+            n_qubits_base = n_ctrl_base
         extra_q = n_qubits - n_qubits_base
 
         if step == 1:
@@ -129,35 +130,44 @@ class LdmcuApprox(Gate):
 
         qubit_pairs.sort(key=lambda e: e.control + e.target, reverse=reverse)
 
+        unitary_list = []
+        targets = []
+        soma = 0
         for pair in qubit_pairs:
             exponent = pair.target - pair.control
             if pair.control == 0:
                 exponent = exponent - 1
-            param = 2**exponent
+            param = 2 ** exponent
             signal = -1 if (pair.control == 0 and not first) else 1
             signal = step * signal
-            #Perform a translation of the qubits by extra_q qubits in all cases
-            #When target == last qubit and first==true apply the U gates, except
-            #when control==0, in which case we don't do anything
+            # Perform a translation of the qubits by extra_q qubits in all cases
+            # When target == last qubit and first==true apply the U gates, except
+            # when control==0, in which case we don't do anything
             if pair.target == n_qubits_base - 1 and first:
-                if pair.control!=0:
+                if pair.control != 0:
                     csqgate = LdmcuApprox._gate_u(unitary, param, signal)
                     gate_circ.compose(csqgate,
-                                    qubits=[pair.control+extra_q, pair.target+extra_q],
-                                    inplace=True)
-            #For the controlled rotations, when control==0, apply a multicontrolled
-            #rotation with the extra control qubits
+                                      qubits=[pair.control + extra_q, pair.target + extra_q],
+                                      inplace=True)
+            # For the controlled rotations, when control==0, apply a multicontrolled
+            # rotation with the extra control qubits
             else:
-                if pair.control==0 and extra_q>=1:
-                    #Apply a multi-controlled Rx gate with the additional control qubits
-                    control_list = np.array(range(0, extra_q+1))
+                if pair.control == 0 and extra_q >= 1:
+                    # Apply a multi-controlled Rx gate with the additional control qubits
+                    control_list = np.array(range(0, extra_q + 1))
                     theta = signal * np.pi / param
-                    rx_matrix = np.array([[np.cos(theta/2) , (-1j)*np.sin(theta/2)], [(-1j)*np.sin(theta/2), np.cos(theta/2)]])
-                    #mudar este trecho!!!!!!!!
-                    Ldmcsu.ldmcsu(gate_circ, rx_matrix, control_list, pair.target+extra_q)
+                    rx_matrix = np.array([[np.cos(theta / 2), (-1j) * np.sin(theta / 2)],
+                                          [(-1j) * np.sin(theta / 2), np.cos(theta / 2)]])
+                    # start
+                    unitary_list.append(rx_matrix)
+                    targets.append(pair.target + extra_q)
+                    # end
+                    soma += 1
+                    # mudar este trecho!!!!!!!!
+                    Ldmcsu.ldmcsu(gate_circ, rx_matrix, control_list, pair.target + extra_q)
                 else:
-                    gate_circ.crx(signal * np.pi / param, pair.control+extra_q, pair.target+extra_q)
-
+                    gate_circ.crx(signal * np.pi / param, pair.control + extra_q, pair.target + extra_q)
+        #print(soma)
     @staticmethod
     def _gate_u(agate, coef, signal):
         param = 1 / np.abs(coef)
@@ -165,8 +175,8 @@ class LdmcuApprox(Gate):
         values, vectors = np.linalg.eig(agate)
         gate = np.power(values[0] + 0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T
         gate = (
-            gate
-            + np.power(values[1] + 0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
+                gate
+                + np.power(values[1] + 0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
         )
 
         if signal < 0:
@@ -187,5 +197,6 @@ class LdmcuApprox(Gate):
             LdmcuApprox(unitary, len(controls), error, ctrl_state=ctrl_state),
             [*controls, target]
         )
+
 
 LdmcuApprox._apply_ctrl_state = apply_ctrl_state
