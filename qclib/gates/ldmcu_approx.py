@@ -22,7 +22,7 @@ import qiskit
 from qiskit.circuit import Gate
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.gates.util import check_u2, apply_ctrl_state
-from qclib.gates.ldmcsu import Ldmcsu
+from qclib.gates.cldmcsu import Cldmcsu
 
 
 # pylint: disable=maybe-no-member
@@ -132,7 +132,7 @@ class LdmcuApprox(Gate):
 
         unitary_list = []
         targets = []
-        soma = 0
+        count = 0
         for pair in qubit_pairs:
             exponent = pair.target - pair.control
             if pair.control == 0:
@@ -158,16 +158,21 @@ class LdmcuApprox(Gate):
                     theta = signal * np.pi / param
                     rx_matrix = np.array([[np.cos(theta / 2), (-1j) * np.sin(theta / 2)],
                                           [(-1j) * np.sin(theta / 2), np.cos(theta / 2)]])
-                    # start
+
                     unitary_list.append(rx_matrix)
                     targets.append(pair.target + extra_q)
-                    # end
-                    soma += 1
-                    # mudar este trecho!!!!!!!!
-                    Ldmcsu.ldmcsu(gate_circ, rx_matrix, control_list, pair.target + extra_q)
+
+                    #print(count)
+                    # funciona em test_mcz_cnot_count, pois lá o ultimo laço ocorre quanto count = 6.
+                    # if count == 6:
+                    #     Cldmcsu.cldmcsu(gate_circ, unitary_list, control_list, targets)
+                    #
+
+                    Cldmcsu.cldmcsu(gate_circ, rx_matrix, control_list, pair.target + extra_q)
+                    count += 1
                 else:
                     gate_circ.crx(signal * np.pi / param, pair.control + extra_q, pair.target + extra_q)
-        #print(soma)
+
     @staticmethod
     def _gate_u(agate, coef, signal):
         param = 1 / np.abs(coef)

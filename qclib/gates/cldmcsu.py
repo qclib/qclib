@@ -40,8 +40,12 @@ class Cldmcsu(Gate):
 
     def __init__(self, unitaries, num_controls, num_target=1, ctrl_state: str = None):
 
-        for unitary in unitaries:
-            check_su2(unitary)
+        if isinstance(unitaries, list):
+            for unitary in unitaries:
+                check_su2(unitary)
+        else:
+            check_su2(unitaries)
+
         self.unitaries = unitaries
         self.controls = QuantumRegister(num_controls)
         self.target = QuantumRegister(num_target)
@@ -79,11 +83,11 @@ class Cldmcsu(Gate):
 
             self.definition = QuantumCircuit(self.controls, self.target)
 
-            is_main_diag_real = isclose(self.unitary[0, 0].imag, 0.0) and isclose(
-                self.unitary[1, 1].imag, 0.0
+            is_main_diag_real = isclose(self.unitaries[0, 0].imag, 0.0) and isclose(
+                self.unitaries[1, 1].imag, 0.0
             )
-            is_secondary_diag_real = isclose(self.unitary[0, 1].imag, 0.0) and isclose(
-                self.unitary[1, 0].imag, 0.0
+            is_secondary_diag_real = isclose(self.unitaries[0, 1].imag, 0.0) and isclose(
+                self.unitaries[1, 0].imag, 0.0
             )
 
             if not is_main_diag_real and not is_secondary_diag_real:
@@ -91,11 +95,11 @@ class Cldmcsu(Gate):
                 # `eig_vals` of U and the column vectors of V are the eigenvectors
                 # `eig_vecs` of U. These columns are orthonormal and the main diagonal
                 # of V is real-valued.
-                eig_vals, eig_vecs = np.linalg.eig(self.unitary)
+                eig_vals, eig_vecs = np.linalg.eig(self.unitaries)
 
-                x_vecs, z_vecs = self._get_x_z(eig_vecs)
+                x_vecs, z_vecs = Ldmcsu._get_x_z(eig_vecs)
 
-                self.half_linear_depth_mcv(
+                Ldmcsu.half_linear_depth_mcv(
                     x_vecs,
                     z_vecs,
                     self.controls,
@@ -103,14 +107,14 @@ class Cldmcsu(Gate):
                     self.ctrl_state,
                     inverse=True,
                 )
-                self.linear_depth_mcv(
+                Ldmcsu.linear_depth_mcv(
                     np.diag(eig_vals),
                     self.controls,
                     self.target,
                     self.ctrl_state,
                     general_su2_optimization=True,
                 )
-                self.half_linear_depth_mcv(
+                Ldmcsu.half_linear_depth_mcv(
                     x_vecs, z_vecs, self.controls, self.target, self.ctrl_state
                 )
 
@@ -119,7 +123,7 @@ class Cldmcsu(Gate):
                 if not is_secondary_diag_real:
                     self.definition.h(self.target)
 
-                self.linear_depth_mcv(self.unitary, self.controls, self.target, self.ctrl_state)
+                Ldmcsu.linear_depth_mcv(self.unitaries, self.controls, self.target, self.ctrl_state)
 
                 if not is_secondary_diag_real:
                     self.definition.h(self.target)
@@ -196,4 +200,24 @@ class Cldmcsu(Gate):
         for idx, gate_a in enumerate(gates_a):
             self.definition.append(gate_a.inverse(), [num_ctrl + idx])
 
-
+    @staticmethod
+    def cldmcsu(
+            circuit,
+            unitary,
+            controls: Union[QuantumRegister, List[Qubit]],
+            target: Qubit,
+            ctrl_state: str = None,
+    ):
+        """
+        Apply multi-controlled SU(2)
+        https://arxiv.org/abs/2302.06377
+        """
+        if isinstance(unitary, list):
+            num_target = len(unitary)
+            circuit.append(
+                Cldmcsu(unitary, len(controls), num_target=num_target).definition, [*controls, *target]
+            )
+        else:
+            circuit.append(
+                Ldmcsu(unitary, len(controls), ctrl_state=ctrl_state), [*controls, target]
+            )

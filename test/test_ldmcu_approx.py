@@ -107,7 +107,7 @@ class TestLinearU2(TestCase):
 
     def test_mcz_cnot_count(self):
         error = 0.01
-        u = np.array([[1,0], [0,-1]])
+        u = np.array([[1, 0], [0, -1]])
         ldmcu_approx_test = LdmcuApprox(u, num_controls=100, error=error)
         base_ctrl_qubits = ldmcu_approx_test._get_num_base_ctrl_qubits(u,error)
         for n_controls in range(base_ctrl_qubits+60, base_ctrl_qubits+62):
