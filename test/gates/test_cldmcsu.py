@@ -17,7 +17,7 @@
 from unittest import TestCase
 import numpy as np
 from qiskit import QuantumRegister, QuantumCircuit, transpile
-from qiskit.circuit.library import RXGate, RYGate, RZGate
+from qiskit.circuit.library import RXGate
 from qiskit.quantum_info import Operator
 from qclib.gates.cldmcsu import Cldmcsu
 
@@ -71,12 +71,12 @@ class TestCMcSpecialUnitary(TestCase):
 
         return cldmcsu_circ
 
-    def test_clcmcsu_2targets(self):
+    def test_clcmcsu_3targets(self):
         """
-
+        Test for comparison of a cascade uf 3 multi-controlled SU(2) using
+        qiskit and cldmcsu implementations.
         """
         num_controls = 7
-        num_target_qubit = 3
         unitary_list = [RXGate(0.7).to_matrix(), RXGate(0.13).to_matrix(), RXGate(0.5).to_matrix()]
 
         qiskit_circ = self._build_qiskit_circ(num_controls)
