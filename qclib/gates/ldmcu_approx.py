@@ -72,11 +72,11 @@ class LdmcuApprox(Gate):
 
             gate_circuit = qiskit.QuantumCircuit(self.num_qubits, name="T" + str(0))
 
-            self._c1c2(self.unitary, self.num_qubits, self.n_ctrl_base, gate_circuit)
-            self._c1c2(self.unitary, self.num_qubits, self.n_ctrl_base, gate_circuit, step=-1)
+            self._c1c2(self.unitary, self.num_qubits, self.n_ctrl_base, gate_circuit, self.error)
+            self._c1c2(self.unitary, self.num_qubits, self.n_ctrl_base, gate_circuit, self.error, step=-1)
             # Attention to the number of qubits
-            self._c1c2(self.unitary, self.num_qubits - 1, self.n_ctrl_base, gate_circuit, False)
-            self._c1c2(self.unitary, self.num_qubits - 1, self.n_ctrl_base, gate_circuit,
+            self._c1c2(self.unitary, self.num_qubits - 1, self.n_ctrl_base, gate_circuit, self.error, False)
+            self._c1c2(self.unitary, self.num_qubits - 1, self.n_ctrl_base, gate_circuit, self.error,
                        False, step=-1)
 
             self.definition.append(gate_circuit, [*self.control_qubits, self.target_qubit])
@@ -106,7 +106,9 @@ class LdmcuApprox(Gate):
         return math.ceil(n_base)
 
 
-    def _c1c2(self, unitary, n_qubits, n_ctrl_base, gate_circ, first=True, step=1):
+    def _c1c2(self, unitary, n_qubits, n_ctrl_base, gate_circ, error, first=True, step=1):
+
+        limit = self._get_num_base_ctrl_qubits(unitary, error) - 2
         pairs = namedtuple("pairs", ["control", "target"])
         # Get the number of extra qubits
         if first:
@@ -161,14 +163,9 @@ class LdmcuApprox(Gate):
 
                     unitary_list.append(rx_matrix)
                     targets.append(pair.target + extra_q)
+                    if count == limit:
+                        Cldmcsu.cldmcsu(gate_circ, unitary_list, control_list, targets)
 
-                    #print(count)
-                    # funciona em test_mcz_cnot_count, pois lá o ultimo laço ocorre quanto count = 6.
-                    # if count == 6:
-                    #     Cldmcsu.cldmcsu(gate_circ, unitary_list, control_list, targets)
-                    #
-
-                    Cldmcsu.cldmcsu(gate_circ, rx_matrix, control_list, pair.target + extra_q)
                     count += 1
                 else:
                     gate_circ.crx(signal * np.pi / param, pair.control + extra_q, pair.target + extra_q)
