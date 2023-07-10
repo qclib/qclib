@@ -17,6 +17,8 @@
       Bergholm et al (2005) available in:
         https://journals.aps.org/pra/abstract/10.1103/PhysRevA.71.052330
 """
+
+import math
 import numpy as np
 import numpy.linalg as la
 from qiskit import QuantumCircuit, QuantumRegister
@@ -75,7 +77,6 @@ class UCGInitialize(Initialize):
         bit_target = self.str_target[self.num_qubits - tree_level]
 
         mult, mult_controls, target = self._define_mult(children, parent, tree_level)
-
         if self.preserve:
             self._preserve_previous(mult, mult_controls, r_gate, target)
 
@@ -103,6 +104,190 @@ class UCGInitialize(Initialize):
         else:
             self.circuit.unitary(current_level_mux[0], target) # pylint: disable=maybe-no-member
         return ucg
+
+    def _simplify(self, table):
+        """ simplifies the multiplexer """
+
+        simple = {}
+        ops = set()
+        for array in table:
+            ops.add(tuple(array.flatten()))
+        ops = [np.array(arr).reshape(array.shape) for arr in ops]
+
+        size = len(table)
+
+        for i in ops:
+            v = []
+            for j in range(size):
+                if np.allclose(i, table[j]):
+                    key = format(j, f"0{int(math.log2(size))}b")
+                    v.append(key)
+            tp = []
+            while tp != v:
+                tp = v.copy()
+                self._reduction(v)
+            index = tuple(i.flatten())
+            simple[index] = v
+
+        nqubits = math.log2(size)
+        dict_ops_pos = {}
+        dict_ops_ctrl = {}
+
+        set_controls = set()
+        ctrls_empty = 0
+        for i in simple:
+            pos = []
+            ctrl = []
+            for j in simple[i]:
+                controls = set()
+                index = 0
+                for k in j:
+                    if k != '_':
+                        controls.add(nqubits - index)
+                    index += 1
+                t_ctrl = tuple(controls)
+                set_controls.add(t_ctrl)
+                string_pos = j.replace("_", "")
+                ctrl.append(controls)
+                if (string_pos):
+                    pos.append(int(string_pos, 2))
+                else:
+                    ctrls_empty = 1
+
+            dict_ops_pos[tuple(i)] = pos
+            dict_ops_ctrl[tuple(i)] = ctrl
+
+        dict_mult = {}
+        for i in set_controls:
+            vec = []
+            for j in range(pow(2, len(i))):
+                vec.append(np.zeros((2, 2)))
+            dict_mult[i] = vec
+
+        for i in dict_ops_pos:
+            if (ctrls_empty):
+                op = np.array(i)
+                op_form = op.reshape((2, 2))
+                empty_tp = ()
+                vec = [op_form]
+                dict_mult[empty_tp] = vec
+            t = 0
+            for j in enumerate(dict_ops_pos[i]):
+                t_ctrl = tuple(dict_ops_ctrl[i][t])
+                position = dict_ops_pos[i][t]
+                op = np.array(i)
+                op_form = op.reshape((2, 2))
+                dict_mult[t_ctrl][position] = op_form
+                t += 1
+        return dict_mult
+
+    def _reduction(self, v):
+        """ apply the reduction to the multiplexer"""
+
+        applied_simp = self._better_simp(v)
+        for it in applied_simp.indexes:
+            v.remove(it)
+        if applied_simp.simp:
+            v.append(applied_simp.simp)
+        return v
+
+    def _better_simp(self, v):
+        """ finds the best simplification that can be applied """
+
+        class Item:
+            def __init__(self, indexes, simp, size):
+                self.indexes = indexes
+                self.simp = simp
+                self.simps = set()
+                self.size = size
+
+        new_v = v[:]
+        w = []
+        for key1 in new_v:
+            for key2 in new_v:
+                if self._hamming(key1, key2) == 1:
+                    set_index = {key1, key2}
+                    item = Item(set_index, self._filter_controls(key1, key2), len(set_index))
+                    item.simps.add(item.simp)
+                    w.append(item)
+        temp = self._better_simp_aux(w)
+        while temp != w:
+            w = temp
+            temp = self._better_simp_aux(temp)
+
+        if len(w):
+
+            max_simp = {}
+            max_value = 0
+
+            for value in w:
+                if value.size > max_value:
+                    max_value = value.size
+            for value in w:
+                if value.size == max_value:
+                    max_simp[value.simp] = [value, 0]
+
+            for index in max_simp:
+                factor = 0
+                pair = max_simp[index]
+                indexes = v[:]
+                for ind in pair[0].indexes:
+                    indexes.remove(ind)
+                for i in indexes:
+                    for j in indexes:
+                        if self._hamming(i, j) == 1:
+                            factor += 1
+                max_simp[index][1] = factor
+
+            max_factor = 0
+            for e in max_simp:
+                if max_factor == 0:
+                    max_index = e
+                if max_simp[e][1] > max_factor:
+                    max_factor = max_simp[e][1]
+                    max_index = e
+            btt = max_simp[max_index][0]
+
+        else:
+            btt = Item(set(), "", 0)
+
+        return btt
+
+    def _better_simp_aux(self, v):
+        """ auxiliary function to better_simp """
+
+        class Item:
+            def __init__(self, indexes, simp, size):
+                self.indexes = indexes
+                self.simp = simp
+                self.simps = set()
+                self.size = size
+
+        new_list = v[:]
+        for it1 in new_list:
+            for it2 in new_list:
+                simp1 = it1.simp
+                simp2 = it2.simp
+                if self._hamming(simp1, simp2) == 1:
+                    find = any(simp1 in obj.simps and simp2 in obj.simps for obj in new_list)
+                    if not find:
+                        set_index = it1.indexes | it2.indexes
+                        item = Item(set_index, self._filter_controls(simp1, simp2), len(set_index))
+                        item.simps.update([simp1, simp2])
+                        if not any(item.indexes <= obj.indexes for obj in new_list):
+                            new_list.append(item)
+        return new_list
+
+    def _hamming(self, string1, string2):
+        """ Calculates the hamming distance between two strings """
+
+        distance = sum(c1 != c2 for c1, c2 in zip(string1, string2))
+        return distance
+
+    def _filter_controls(self, string1, string2):
+        """ Creates a new element by eliminating the different control """
+
+        return ''.join('_' if c1 != c2 else c1 for c1, c2 in zip(string1, string2))
 
     def _preserve_previous(self, mux: 'list[np.ndarray]',
                            mult_controls: 'list[int]',
