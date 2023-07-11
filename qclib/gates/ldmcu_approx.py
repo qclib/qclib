@@ -96,14 +96,16 @@ class LdmcuApprox(Gate):
         error: Error of the approximation
         '''
         eig_vals, eig_vecs = np.linalg.eig(unitary)
-        log_eig_vals = np.angle(eig_vals)
-        ln_d = np.diag(log_eig_vals)
-        prod = eig_vecs @ ln_d @ np.transpose(eig_vecs)
-        aux_error = prod.max()
-        n_base = np.log2(aux_error / error)
-        if n_base <= 0:
-            return 0
-        return math.ceil(n_base)
+        angles = np.angle(eig_vals)
+
+        if (1 - np.cos(angles[0])) >= (1 - np.cos(angles[1])):
+                angle = angles[0]
+
+        else:
+                angle = angles[1]
+
+        quotient = angle / np.arccos(1 - error)
+        return int(np.ceil(np.log2(quotient)))
 
 
     def _c1c2(self, unitary, n_qubits, n_ctrl_base, gate_circ, first=True, step=1):
