@@ -73,15 +73,17 @@ class UCGInitialize(Initialize):
                            parent: 'list[float]',
                            r_gate: int, tree_level: int):
         """ Apply UCGate to disentangle qubit target"""
-
+        print("TEST")
         bit_target = self.str_target[self.num_qubits - tree_level]
 
         mult, mult_controls, target = self._define_mult(children, parent, tree_level)
+
         if self.preserve:
             self._preserve_previous(mult, mult_controls, r_gate, target)
 
-        ucg = self._apply_ucg(mult, mult_controls, target)
-
+        mult_simp = self._simplify(mult)
+        for i in mult_simp:
+            ucg = self._apply_ucg(mult_simp[i], list(i), target)
         return bit_target, ucg
 
     def _define_mult(self, children: 'list[float]', parent: 'list[float]', tree_level: int):
@@ -129,7 +131,6 @@ class UCGInitialize(Initialize):
             index = tuple(i.flatten())
             simple[index] = v
 
-        nqubits = math.log2(size)
         dict_ops_pos = {}
         dict_ops_ctrl = {}
 
@@ -142,14 +143,14 @@ class UCGInitialize(Initialize):
                 controls = set()
                 index = 0
                 for k in j:
-                    if k != '_':
-                        controls.add(nqubits - index)
+                    if k != '_' and size > 1:
+                        controls.add(self.num_qubits - index - 1)
                     index += 1
                 t_ctrl = tuple(controls)
                 set_controls.add(t_ctrl)
                 string_pos = j.replace("_", "")
                 ctrl.append(controls)
-                if (string_pos):
+                if size > 1:
                     pos.append(int(string_pos, 2))
                 else:
                     ctrls_empty = 1
@@ -161,24 +162,25 @@ class UCGInitialize(Initialize):
         for i in set_controls:
             vec = []
             for j in range(pow(2, len(i))):
-                vec.append(np.zeros((2, 2)))
+                vec.append(np.identity(2))
             dict_mult[i] = vec
 
         for i in dict_ops_pos:
-            if (ctrls_empty):
+            if ctrls_empty:
                 op = np.array(i)
                 op_form = op.reshape((2, 2))
                 empty_tp = ()
                 vec = [op_form]
                 dict_mult[empty_tp] = vec
-            t = 0
-            for j in enumerate(dict_ops_pos[i]):
-                t_ctrl = tuple(dict_ops_ctrl[i][t])
-                position = dict_ops_pos[i][t]
-                op = np.array(i)
-                op_form = op.reshape((2, 2))
-                dict_mult[t_ctrl][position] = op_form
-                t += 1
+            else:
+                t = 0
+                for j in enumerate(dict_ops_pos[i]):
+                    t_ctrl = tuple(dict_ops_ctrl[i][t])
+                    position = dict_ops_pos[i][t]
+                    op = np.array(i)
+                    op_form = op.reshape((2, 2))
+                    dict_mult[t_ctrl][position] = op_form
+                    t += 1
         return dict_mult
 
     def _reduction(self, v):
