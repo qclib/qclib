@@ -151,7 +151,7 @@ class TestLinearU2(TestCase):
     def test_to_compare_ldmcu_and_ldmcu_approx(self):
 
         unitary = np.array([[0, 1], [1, 0]])
-        error = 1 * 10e-4
+        error = 1 * 10e-6
         ldmcu_approx_test = LdmcuApprox(unitary, num_controls=100, error=error)
         base_ctrl_qubits = ldmcu_approx_test._get_num_base_ctrl_qubits(unitary, error)
 
@@ -168,4 +168,4 @@ class TestLinearU2(TestCase):
         ldmcu_approx_op = Operator(ldmcu_approx_circ).data
 
         # absolute(a - b) <= (atol + rtol * absolute(b)
-        self.assertTrue(np.allclose(ldmcu_op, ldmcu_approx_op, rtol=error, atol=0.1))
+        self.assertTrue(np.allclose(ldmcu_op, ldmcu_approx_op, atol=0.01))
