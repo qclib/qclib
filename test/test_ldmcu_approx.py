@@ -167,4 +167,5 @@ class TestLinearU2(TestCase):
         ldmcu_op = Operator(ldmcu_circ).data
         ldmcu_approx_op = Operator(ldmcu_approx_circ).data
 
-        self.assertTrue(np.allclose(ldmcu_op, ldmcu_approx_op, rtol=0.1, atol=0.1))
+        # absolute(a - b) <= (atol + rtol * absolute(b)
+        self.assertTrue(np.allclose(ldmcu_op, ldmcu_approx_op, rtol=error, atol=0.1))
