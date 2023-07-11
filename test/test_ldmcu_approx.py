@@ -21,6 +21,7 @@ from scipy.stats import unitary_group
 import random 
 import qiskit
 from qiskit import QuantumRegister, QuantumCircuit
+from qiskit.quantum_info import Operator
 from qiskit.circuit.library import MCXGate
 import qclib.util
 from qclib.gates.ldmcu import Ldmcu
@@ -146,3 +147,24 @@ class TestLinearU2(TestCase):
             cnot_og = qclib.util.get_cnot_count(circ=circuit_og)
 
             self.assertLessEqual(cnot_approx, cnot_og)
+
+    def test_to_compare_ldmcu_and_ldmcu_approx(self):
+
+        unitary = np.array([[0, 1], [1, 0]])
+        error = 1 * 10e-4
+        ldmcu_approx_test = LdmcuApprox(unitary, num_controls=100, error=error)
+        base_ctrl_qubits = ldmcu_approx_test._get_num_base_ctrl_qubits(unitary, error)
+
+        controls = QuantumRegister(base_ctrl_qubits)
+        target = QuantumRegister(1)
+
+        ldmcu_circ = QuantumCircuit(controls, target)
+        Ldmcu.ldmcu(ldmcu_circ, unitary, controls, target)
+
+        ldmcu_approx_circ = QuantumCircuit(controls, target)
+        LdmcuApprox.ldmcu_approx(ldmcu_approx_circ, unitary, controls, target, error)
+
+        ldmcu_op = Operator(ldmcu_circ).data
+        ldmcu_approx_op = Operator(ldmcu_approx_circ).data
+
+        self.assertTrue(np.allclose(ldmcu_op, ldmcu_approx_op, rtol=0.1, atol=0.1))
