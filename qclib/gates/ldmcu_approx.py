@@ -135,7 +135,7 @@ class LdmcuApprox(Gate):
 
         unitary_list = []
         targets = []
-        count = 0
+
         for pair in qubit_pairs:
             exponent = pair.target - pair.control
             if pair.control == 0:
@@ -167,8 +167,6 @@ class LdmcuApprox(Gate):
 
                     if pair.target == 1:
                         Cldmcsu.cldmcsu(gate_circ, unitary_list, control_list, targets)
-
-                    count += 1
                 else:
                     gate_circ.crx(signal * np.pi / param, pair.control + extra_q, pair.target + extra_q)
 
