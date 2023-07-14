@@ -25,7 +25,6 @@ from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.extensions.quantum_initializer.uc import UCGate
 from qclib.gates.initialize import Initialize
 
-
 class UCGInitialize(Initialize):
     """
         Quantum circuits with uniformly controlled one-qubit gates
@@ -73,7 +72,6 @@ class UCGInitialize(Initialize):
                            parent: 'list[float]',
                            r_gate: int, tree_level: int):
         """ Apply UCGate to disentangle qubit target"""
-        print("TEST")
         bit_target = self.str_target[self.num_qubits - tree_level]
 
         mult, mult_controls, target = self._define_mult(children, parent, tree_level)
@@ -82,8 +80,19 @@ class UCGInitialize(Initialize):
             self._preserve_previous(mult, mult_controls, r_gate, target)
 
         mult_simp = self._simplify(mult)
+
+        isSeparable = 0
+
         for i in mult_simp:
-            ucg = self._apply_ucg(mult_simp[i], list(i), target)
+            if len(i) == math.log2(len(mult)):
+                ucg = self._apply_ucg(mult, mult_controls, target)
+                isSeparable = 1
+                break
+
+        if not isSeparable:
+            for i in mult_simp:
+                ucg = self._apply_ucg(mult_simp[i], list(i), target)
+
         return bit_target, ucg
 
     def _define_mult(self, children: 'list[float]', parent: 'list[float]', tree_level: int):
@@ -150,7 +159,7 @@ class UCGInitialize(Initialize):
                 set_controls.add(t_ctrl)
                 string_pos = j.replace("_", "")
                 ctrl.append(controls)
-                if size > 1:
+                if string_pos != "":
                     pos.append(int(string_pos, 2))
                 else:
                     ctrls_empty = 1
