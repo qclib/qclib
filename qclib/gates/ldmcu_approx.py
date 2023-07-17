@@ -104,7 +104,7 @@ class LdmcuApprox(Gate):
         else:
                 angle = angles[1]
 
-        quotient = angle / np.arccos(1 - error)
+        quotient = angle / np.arccos(1 - error**2/2)
         return int(np.ceil(np.log2(quotient)))
 
 
