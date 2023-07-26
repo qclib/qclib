@@ -9,6 +9,10 @@ __pycache__/
 # notebooks
 *.ipynb
 
+# Images
+*.png
+*.svg
+
 # Distribution / packaging
 .Python
 build/
