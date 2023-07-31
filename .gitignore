@@ -7,7 +7,9 @@ __pycache__/
 *.so
 
 # notebooks
-*.ipynb
+compare_cnot_count.ipynb
+ldmcsu.ipynb
+cascadeldm
 
 # Images
 *.png
@@ -140,3 +142,4 @@ dmypy.json
 
 # vscode
 *.json
+qclib/gates/cascadeldmcsu.ipynb
