@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 # notebooks
-compare_cnot_count.ipynb
+#compare_cnot_count.ipynb
 ldmcsu.ipynb
 cascadeldm
 
