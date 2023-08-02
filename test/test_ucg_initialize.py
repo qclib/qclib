@@ -100,3 +100,20 @@ class TestUCGInitialize(TestCase):
         output_state = get_state(circuit)
 
         self.assertTrue(np.allclose(output_state, state))
+
+    def test_separable_state(self):
+        nqubits = 2
+        state1 = np.random.rand(2 ** nqubits)
+        state2 = np.random.rand(2 ** nqubits)
+        state = np.kron(state1, state2)
+
+        state = state / np.linalg.norm(state)
+
+        initialize = UCGInitialize.initialize
+        circuit = QuantumCircuit(nqubits)
+
+        initialize(circuit, state.tolist())
+
+        output_state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state, output_state))
