@@ -183,7 +183,7 @@ class Cldmcsu(Gate):
             self.definition.append(gate_a.inverse(), [num_ctrl + idx])
 
         mcx_3 = McxVchainDirty(k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1).definition
-        # problema neste append
+
         self.definition.append(
             mcx_3, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [*target]
         )
@@ -192,7 +192,7 @@ class Cldmcsu(Gate):
             self.definition.append(gate_a, [num_ctrl + idx])
 
         mcx_4 = McxVchainDirty(k_2, num_target_qubit=target_size, ctrl_state=ctrl_state_k_2).definition
-        # problema neste append
+
         self.definition.append(
             mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [*target]
         )
