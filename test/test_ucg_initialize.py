@@ -110,7 +110,7 @@ class TestUCGInitialize(TestCase):
         state = state / np.linalg.norm(state)
 
         initialize = UCGInitialize.initialize
-        circuit = QuantumCircuit(nqubits)
+        circuit = QuantumCircuit(4)
 
         initialize(circuit, state.tolist())
 
