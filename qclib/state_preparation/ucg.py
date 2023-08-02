@@ -59,7 +59,8 @@ class UCGInitialize(Initialize):
         while tree_level > 0:
 
             bit_target, ucg = self._disentangle_qubit(children, parent, r_gate, tree_level)
-            children = self._apply_diagonal(bit_target, parent, ucg)
+            # children = self._apply_diagonal(bit_target, parent, ucg)
+            children = parent
             parent = self._update_parent(children)
 
             # prepare next iteration
@@ -117,14 +118,13 @@ class UCGInitialize(Initialize):
                    target: int):
         """ Creates and applies multiplexer """
 
-        ucg = UCGate(current_level_mux, up_to_diagonal=True)
-        #UCGate recebe uma lista de listas?
 
-        for i, it in enumerate(current_level_mux):
-            if len(it) != 1:
+        for i, mux in enumerate(current_level_mux):
+            ucg = UCGate(current_level_mux[i], up_to_diagonal=False)
+            if len(mux) != 1:
                 self.circuit.append(ucg, [target] + mult_controls[i])
             else:
-                self.circuit.unitary(it[0], target) # pylint: disable=maybe-no-member
+                self.circuit.unitary(mux[0], target) # pylint: disable=maybe-no-member
 
         return ucg
 
