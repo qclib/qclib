@@ -90,7 +90,7 @@ class McxVchainDirty(Gate):
                     target_qubit=self.target_qubits[k],
                     mode="noancilla",
                 )
-        elif not self.relative_phase and num_ctrl == 3 and num_target<9:
+        elif not self.relative_phase and num_ctrl == 3 and num_target < 9:
             for k, _ in enumerate(self.target_qubits):
                 self.definition.append(
                     C3XGate(), [*self.control_qubits[:], self.target_qubits[k]], []
