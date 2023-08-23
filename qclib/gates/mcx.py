@@ -282,5 +282,4 @@ class LinearMcx(Gate):
         )
 
 
-
 LinearMcx._apply_ctrl_state = apply_ctrl_state
