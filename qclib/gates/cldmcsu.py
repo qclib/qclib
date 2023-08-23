@@ -82,9 +82,7 @@ class Cldmcsu(Gate):
                 if not is_secondary_diags_real[idx] and is_main_diags_real[idx]:
                     self.definition.h(self.target[idx])
 
-            self.clinear_depth_mcv(
-                self.unitaries, self.target, self.ctrl_state
-            )
+            self.clinear_depth_mcv()
 
             for idx, unitary in enumerate(self.unitaries):
                 if not is_secondary_diags_real[idx] and is_main_diags_real[idx]:
@@ -139,21 +137,15 @@ class Cldmcsu(Gate):
                 if not is_secondary_diag_real:
                     self.definition.h(self.target)
 
-    def clinear_depth_mcv(
-        self,
-        su2_unitaries,
-        target: Qubit,
-        ctrl_state: str = None,
-        general_su2_optimization=False,
-    ):
+    def clinear_depth_mcv(self, general_su2_optimization=False):
         """
         Multi-target version of Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
         """
         # S gate definition
-        gates_a = self._s_gate_definition(su2_unitaries)
+        gates_a = self._s_gate_definition(self.unitaries)
 
         num_ctrl = len(self.controls)
-        target_size = len(target)
+        target_size = len(self.target)
 
         k_1 = int(np.ceil(num_ctrl / 2.0))
         k_2 = int(np.floor(num_ctrl / 2.0))
@@ -161,16 +153,17 @@ class Cldmcsu(Gate):
         ctrl_state_k_1 = None
         ctrl_state_k_2 = None
 
-        if ctrl_state is not None:
-            ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
-            ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
+        if self.ctrl_state is not None:
+            ctrl_state_k_1 = self.ctrl_state[::-1][:k_1][::-1]
+            ctrl_state_k_2 = self.ctrl_state[::-1][k_1:][::-1]
 
         if not general_su2_optimization:
             mcx_1 = McxVchainDirty(
                 k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1
             ).definition
             self.definition.append(
-                mcx_1, self.controls[:k_1] + self.controls[k_1 : 2 * k_1 - 2] + [*target]
+                mcx_1,
+                self.controls[:k_1] + self.controls[k_1 : 2 * k_1 - 2] + [*self.target],
             )
 
         for idx, gate_a in enumerate(gates_a):
@@ -184,7 +177,8 @@ class Cldmcsu(Gate):
         ).definition
 
         self.definition.append(
-            mcx_2.inverse(), self.controls[k_1:] + self.controls[k_1 - k_2 + 2 : k_1] + [*target]
+            mcx_2.inverse(),
+            self.controls[k_1:] + self.controls[k_1 - k_2 + 2 : k_1] + [*self.target],
         )
 
         for idx, gate_a in enumerate(gates_a):
@@ -195,7 +189,8 @@ class Cldmcsu(Gate):
         ).definition
 
         self.definition.append(
-            mcx_3, self.controls[:k_1] + self.controls[k_1 : 2 * k_1 - 2] + [*target]
+            mcx_3,
+            self.controls[:k_1] + self.controls[k_1 : 2 * k_1 - 2] + [*self.target],
         )
 
         for idx, gate_a in enumerate(gates_a):
@@ -206,7 +201,8 @@ class Cldmcsu(Gate):
         ).definition
 
         self.definition.append(
-            mcx_4, self.controls[k_1:] + self.controls[k_1 - k_2 + 2 : k_1] + [*target]
+            mcx_4,
+            self.controls[k_1:] + self.controls[k_1 - k_2 + 2 : k_1] + [*self.target],
         )
 
         for idx, gate_a in enumerate(gates_a):
