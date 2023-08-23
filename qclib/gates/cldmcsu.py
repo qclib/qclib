@@ -31,14 +31,21 @@ from qclib.gates.util import check_su2, isclose
 
 class Cldmcsu(Gate):
     """
-    Linear depth Multi-Controlled Gate for Special Unitary
+    Multi-target Multi-Controlled Gate for Special Unitary
     ------------------------------------------------
 
     Multicontrolled gate decomposition with linear cost.
-    `unitary` must be a SU(2) matrix.
     """
 
     def __init__(self, unitaries, num_controls, num_target=1, ctrl_state: str = None):
+        """
+        Parameters
+        ----------
+        unitaries (list): List of SU(2) matrices
+        num_controls (int): Number of control gastes
+        num_target (int): Number of target gates
+        ctrl_state (str): Control state in decimal or as a bitstring
+        """
 
         if isinstance(unitaries, list):
             for unitary in unitaries:
@@ -55,40 +62,43 @@ class Cldmcsu(Gate):
         super().__init__("ldmcsu", self.num_controls, [], "ldmcsu")
 
     def _define(self):
-
         if isinstance(self.unitaries, list):
-
             self.definition = QuantumCircuit(self.controls, self.target)
 
             is_main_diags_real = []
             is_secondary_diags_real = []
             for unitary in self.unitaries:
                 is_main_diags_real.append(
-                    isclose(unitary[0, 0].imag, 0.0) and isclose(unitary[1, 1].imag, 0.0))
+                    isclose(unitary[0, 0].imag, 0.0)
+                    and isclose(unitary[1, 1].imag, 0.0)
+                )
 
                 is_secondary_diags_real.append(
-                    isclose(unitary[0, 1].imag, 0.0) and isclose(unitary[1, 0].imag, 0.0))
+                    isclose(unitary[0, 1].imag, 0.0)
+                    and isclose(unitary[1, 0].imag, 0.0)
+                )
 
             for idx, unitary in enumerate(self.unitaries):
                 if not is_secondary_diags_real[idx] and is_main_diags_real[idx]:
                     self.definition.h(self.target[idx])
 
-            self.clinear_depth_mcv(self.unitaries, self.controls, self.target, self.ctrl_state)
+            self.clinear_depth_mcv(
+                self.unitaries, self.target, self.ctrl_state
+            )
 
             for idx, unitary in enumerate(self.unitaries):
                 if not is_secondary_diags_real[idx] and is_main_diags_real[idx]:
                     self.definition.h(self.target[idx])
 
         else:
-
             self.definition = QuantumCircuit(self.controls, self.target)
 
             is_main_diag_real = isclose(self.unitaries[0, 0].imag, 0.0) and isclose(
                 self.unitaries[1, 1].imag, 0.0
             )
-            is_secondary_diag_real = isclose(self.unitaries[0, 1].imag, 0.0) and isclose(
-                self.unitaries[1, 0].imag, 0.0
-            )
+            is_secondary_diag_real = isclose(
+                self.unitaries[0, 1].imag, 0.0
+            ) and isclose(self.unitaries[1, 0].imag, 0.0)
 
             if not is_main_diag_real and not is_secondary_diag_real:
                 # U = V D V^-1, where the entries of the diagonal D are the eigenvalues
@@ -119,35 +129,30 @@ class Cldmcsu(Gate):
                 )
 
             else:
-
                 if not is_secondary_diag_real:
                     self.definition.h(self.target)
 
-                Ldmcsu.linear_depth_mcv(self.unitaries, self.controls, self.target, self.ctrl_state)
+                Ldmcsu.linear_depth_mcv(
+                    self.unitaries, self.controls, self.target, self.ctrl_state
+                )
 
                 if not is_secondary_diag_real:
                     self.definition.h(self.target)
-
 
     def clinear_depth_mcv(
         self,
         su2_unitaries,
-        controls: Union[QuantumRegister, List[Qubit]],
         target: Qubit,
         ctrl_state: str = None,
         general_su2_optimization=False,
     ):
         """
-        Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
+        Multi-target version of Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
         """
         # S gate definition
-        gates_a = []
-        for su2_unitary in su2_unitaries:
-            x_value, z_value = Ldmcsu._get_x_z(su2_unitary)
-            op_a = Ldmcsu._compute_gate_a(x_value, z_value)
-            gates_a.append(UnitaryGate(op_a))
+        gates_a = self._s_gate_definition(su2_unitaries)
 
-        num_ctrl = len(controls)
+        num_ctrl = len(self.controls)
         target_size = len(target)
 
         k_1 = int(np.ceil(num_ctrl / 2.0))
@@ -162,62 +167,79 @@ class Cldmcsu(Gate):
 
         if not general_su2_optimization:
             mcx_1 = McxVchainDirty(
-                k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1).definition
+                k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1
+            ).definition
             self.definition.append(
-                mcx_1, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [*target]
+                mcx_1, self.controls[:k_1] + self.controls[k_1 : 2 * k_1 - 2] + [*target]
             )
 
         for idx, gate_a in enumerate(gates_a):
             self.definition.append(gate_a, [num_ctrl + idx])
 
         mcx_2 = McxVchainDirty(
-            k_2, num_target_qubit=target_size, ctrl_state=ctrl_state_k_2, action_only=general_su2_optimization
+            k_2,
+            num_target_qubit=target_size,
+            ctrl_state=ctrl_state_k_2,
+            action_only=general_su2_optimization,
         ).definition
 
         self.definition.append(
-            mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [*target]
+            mcx_2.inverse(), self.controls[k_1:] + self.controls[k_1 - k_2 + 2 : k_1] + [*target]
         )
-
 
         for idx, gate_a in enumerate(gates_a):
             self.definition.append(gate_a.inverse(), [num_ctrl + idx])
 
-        mcx_3 = McxVchainDirty(k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1).definition
+        mcx_3 = McxVchainDirty(
+            k_1, num_target_qubit=target_size, ctrl_state=ctrl_state_k_1
+        ).definition
 
         self.definition.append(
-            mcx_3, controls[:k_1] + controls[k_1: 2 * k_1 - 2] + [*target]
+            mcx_3, self.controls[:k_1] + self.controls[k_1 : 2 * k_1 - 2] + [*target]
         )
 
         for idx, gate_a in enumerate(gates_a):
             self.definition.append(gate_a, [num_ctrl + idx])
 
-        mcx_4 = McxVchainDirty(k_2, num_target_qubit=target_size, ctrl_state=ctrl_state_k_2).definition
+        mcx_4 = McxVchainDirty(
+            k_2, num_target_qubit=target_size, ctrl_state=ctrl_state_k_2
+        ).definition
 
         self.definition.append(
-            mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2: k_1] + [*target]
+            mcx_4, self.controls[k_1:] + self.controls[k_1 - k_2 + 2 : k_1] + [*target]
         )
 
         for idx, gate_a in enumerate(gates_a):
             self.definition.append(gate_a.inverse(), [num_ctrl + idx])
 
+    def _s_gate_definition(self, su2_unitaries):
+        gates_a = []
+        for su2_unitary in su2_unitaries:
+            x_value, z_value = Ldmcsu._get_x_z(su2_unitary)
+            op_a = Ldmcsu._compute_gate_a(x_value, z_value)
+            gates_a.append(UnitaryGate(op_a))
+        return gates_a
+
     @staticmethod
     def cldmcsu(
-            circuit,
-            unitary,
-            controls: Union[QuantumRegister, List[Qubit]],
-            target: Qubit,
-            ctrl_state: str = None,
+        circuit,
+        unitary,
+        controls: Union[QuantumRegister, List[Qubit]],
+        target: Qubit,
+        ctrl_state: str = None,
     ):
         """
-        Apply multi-controlled SU(2)
+        Multi-target version of multi-controlled SU(2)
         https://arxiv.org/abs/2302.06377
         """
         if isinstance(unitary, list):
             num_target = len(unitary)
             circuit.append(
-                Cldmcsu(unitary, len(controls), num_target=num_target).definition, [*controls, *target]
+                Cldmcsu(unitary, len(controls), num_target=num_target).definition,
+                [*controls, *target],
             )
         else:
             circuit.append(
-                Ldmcsu(unitary, len(controls), ctrl_state=ctrl_state), [*controls, target]
+                Ldmcsu(unitary, len(controls), ctrl_state=ctrl_state),
+                [*controls, target],
             )
