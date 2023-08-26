@@ -288,7 +288,7 @@ class TestMcxVchainDirty(TestCase):
 
         if num_controls > 3:
             self.assertTrue(
-                10 + (num_controls - 2) * 8 + (num_target_qubit - 1) * 12
+                10 + (num_controls - 2) * 8 + (num_target_qubit - 1) * 12 - 4 * (num_target_qubit - 1)
                 == tr_mcx_v_chain.count_ops()["cx"]
             )
 
