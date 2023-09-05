@@ -65,9 +65,9 @@ class TestEntanglement(TestCase):
         partition = [0, 1]
 
         result = schmidt_decomposition(state, partition)
-        self.assertTrue(np.allclose(result.U, u_matrix))
-        self.assertTrue(np.allclose(result.S, singular_values))
-        self.assertTrue(np.allclose(result.Vh, vh_matrix))
+        self.assertTrue(np.allclose(result[1], u_matrix))
+        self.assertTrue(np.allclose(result[2], singular_values))
+        self.assertTrue(np.allclose(result[3], vh_matrix[:result[0], :]))
 
     def test_schmidt_composition(self):
         state = np.random.rand(2**8) + np.random.rand(2**8) * 1.0j
