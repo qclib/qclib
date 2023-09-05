@@ -3,6 +3,7 @@ from qclib.state_preparation.pivot import PivotInitialize
 from qiskit import *
 from qiskit.quantum_info import Operator
 
+
 def build_state_dict(state):
     """
     Builds a dict of the non zero amplitudes with their
@@ -13,16 +14,19 @@ def build_state_dict(state):
     """
     n_qubits = np.ceil(np.log(len(state))).astype(int)
     state_dict = {}
-    for (value_idx, value) in enumerate(state):
+    for value_idx, value in enumerate(state):
         if value != 0:
             binary_string = f"{value_idx:0{n_qubits}b}"
             state_dict[binary_string] = value
     return state_dict
-#%% md
+
+
+# %% md
 
 
 from scipy.stats import unitary_group
 import numpy as np
+
 
 def householder_reflection_matrix(U):
     """
@@ -40,7 +44,7 @@ def householder_reflection_matrix(U):
 
 
 def householder_reflection_zero(num_qubits, phi=np.pi):
-    """    
+    """
     Perform a Houlseholder reflection H_0^\phi
     (https://arxiv.org/pdf/2006.00016.pdf section 3 )
 
@@ -50,7 +54,7 @@ def householder_reflection_zero(num_qubits, phi=np.pi):
 
     qc = QuantumCircuit(1)
     qc.unitary([[np.e ** (1j * phi), 0], [0, 1]], [0])
-    qc_ctrl = qc.control(num_qubits-1, ctrl_state=(num_qubits-1)*'0')
+    qc_ctrl = qc.control(num_qubits - 1, ctrl_state=(num_qubits - 1) * "0")
 
     return qc_ctrl
 
@@ -65,11 +69,11 @@ def generalized_householder_reflection(data_list, x, y):
     x: input vector
     y: desired vector
     """
-    
+
     # Angle involved in Householder reflection
     a = x
     b = y
-    z = a-b
+    z = a - b
     y = (z.conj().T @ b) / (z.conj().T @ a)
     phi = np.angle(y)
 
@@ -95,6 +99,7 @@ def generalized_householder_reflection(data_list, x, y):
 
     return circuit
 
+
 def householder_decomposition(isometry):
     """
     Perform a Householder Decomposition
@@ -104,16 +109,21 @@ def householder_decomposition(isometry):
     """
 
     # We select the number of rows and columns for the chosen isometry
-    num_isometry_rows = len(isometry[:,0])
-    num_isometry_columns = len(isometry[0,:])
+    num_isometry_rows = len(isometry[:, 0])
+    num_isometry_columns = len(isometry[0, :])
 
     # We create a diagonal matrix of the same dimensions as the isometry
-    diagonal_matrix = np.array([[1 if ii == jj else 0 for jj in range(num_isometry_columns)] for ii in range(num_isometry_rows)]).astype(complex)
+    diagonal_matrix = np.array(
+        [
+            [1 if ii == jj else 0 for jj in range(num_isometry_columns)]
+            for ii in range(num_isometry_rows)
+        ]
+    ).astype(complex)
 
     # We create a circuit to store all the H Householder operators
     circuit = QuantumCircuit(np.log2(num_isometry_rows))
 
-    ii=0
+    ii = 0
     while not np.allclose(isometry, diagonal_matrix):
         x = isometry[:, ii]
         y = diagonal_matrix[:, ii]
@@ -122,10 +132,10 @@ def householder_decomposition(isometry):
         v = list(v)
         H = generalized_householder_reflection(v, x, y)
         circuit.compose(H, inplace=True)
-        V = Operator(H).data@isometry
+        V = Operator(H).data @ isometry
         isometry = V
 
-        if ii >= (num_isometry_columns-1):
+        if ii >= (num_isometry_columns - 1):
             break
 
         ii += 1

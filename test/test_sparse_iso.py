@@ -2,8 +2,10 @@ from unittest import TestCase
 
 import numpy as np
 from scipy.stats import unitary_group, ortho_group
-from householder import householder_reflection_zero, householder_reflection_matrix, generalized_householder_reflection, householder_decomposition
+from qclib.state_preparation.householder import householder_reflection_zero, householder_reflection_matrix, generalized_householder_reflection, householder_decomposition
 from qiskit.quantum_info import Operator
+from qiskit import transpile
+
 class TestSparseIso(TestCase):
     def test_householder_reflection_zero_real(self):
         h0 = householder_reflection_zero(2)
@@ -50,13 +52,38 @@ class TestSparseIso(TestCase):
         mcirc = Operator(circ).data
         self.assertTrue(np.allclose(mcirc, matrix_H))
 
-    def test_householder_decomposition(self):
+    def test_householder_decomposition_real(self):
         """
         Teste da função householder_decomposition
         """
         np.random.seed(1)
         matriz1 = ortho_group.rvs(4)
+        matriz1 = matriz1[:, [0, 1]]
 
         circ = householder_decomposition(matriz1)
         mcirc = Operator(circ).data
-        self.assertTrue(np.allclose(matriz1, mcirc.T))
+        self.assertTrue(np.allclose(matriz1, mcirc.T[:, [0, 1]]))
+
+    def test_householder_decomposition_complex(self):
+        """
+        Teste da função householder_decomposition
+        """
+        np.random.seed(1)
+        matriz1 = unitary_group.rvs(4)
+        matriz1 = matriz1[:, [0, 1]]
+
+        circ = householder_decomposition(matriz1)
+        mcirc = Operator(circ).data
+        self.assertTrue(np.allclose(matriz1, mcirc.conj().T[:, [0, 1]]))
+
+    def test_householder_decomposition_complex(self):
+        """
+        Teste da função householder_decomposition
+        """
+        np.random.seed(1)
+        matriz1 = unitary_group.rvs(4)
+        matriz1 = matriz1[:, [0, 1]]
+
+        circ = householder_decomposition(matriz1)
+        t_circ = transpile(circ, basis_gates=['u', 'cx'])
+        print(t_circ.count_ops())
