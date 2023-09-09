@@ -109,7 +109,7 @@ class LdmcuApprox(Gate):
             angle = angles[1]
 
         quotient = angle / np.arccos(1 - error**2 / 2)
-        return int(np.ceil(np.log2(quotient)))
+        return int(np.ceil(np.log2(quotient)))+1
 
     def _c1c2(self, n_qubits, gate_circ, first=True, step=1):
         pairs = namedtuple("pairs", ["control", "target"])
