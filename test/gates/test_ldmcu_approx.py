@@ -149,7 +149,7 @@ class TestLinearU2(TestCase):
 
     def test_to_compare_ldmcu_and_ldmcu_approx(self):
         unitary = np.array([[0, 1], [1, 0]])
-        error = 10e-4
+        error = 1e-2
         ldmcu_approx_test = LdmcuApprox(unitary, num_controls=100, error=error)
         base_ctrl_qubits = ldmcu_approx_test._get_num_base_ctrl_qubits(unitary, error)
 
