@@ -14,7 +14,8 @@
 
 """Multicontrolled gate decompositions for unitaries in U(2) and SU(2)"""
 
-from qiskit import QuantumCircuit, QuantumRegister
+from math import isclose
+from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.circuit import Gate
 from .ldmcu import Ldmcu
 from .ldmcsu import Ldmcsu
@@ -74,9 +75,20 @@ class Mcg(Gate):
             else:
                 if self.up_to_diagonal:
                     su_2, _ = u2_to_su2(self.unitary)
-                    self.mcg(su_2, self.controls, self.target, self.ctrl_state)
+                    self.mcg(
+                        su_2,
+                        self.controls,
+                        self.target,
+                        self.ctrl_state
+                    )
                 else:
-                    Ldmcu.ldmcu(self.definition, self.unitary, self.controls[:], self.target[0], self.ctrl_state)
+                    Ldmcu.ldmcu(
+                        self.definition,
+                        self.unitary,
+                        self.controls[:],
+                        self.target[0],
+                        self.ctrl_state
+                    )
 
     @staticmethod
     def mcg(
@@ -87,6 +99,36 @@ class Mcg(Gate):
         ctrl_state: str = None
     ):
         circuit.append(
-            Mcg(unitary, len(controls), ctrl_state=ctrl_state), 
+            Mcg(unitary, len(controls), ctrl_state=ctrl_state),
             [*controls, target]
         )
+
+def cnot_count(unitary, num_controls, up_to_diagonal: bool=False):
+
+    if num_controls >= 7:
+        if check_su2(unitary):
+            is_main_diag_real = isclose(unitary[0, 0].imag, 0.0) and isclose(
+                unitary[1, 1].imag, 0.0
+            )
+            is_secondary_diag_real = isclose(unitary[0, 1].imag, 0.0) and isclose(
+                unitary[1, 0].imag, 0.0
+            )
+
+            num_qubits = num_controls + 1
+            if is_main_diag_real or is_secondary_diag_real:
+                return 16*num_qubits - 40
+
+            if num_qubits % 2 != 0:
+                return 20*num_qubits - 38
+
+            return 20*num_qubits - 42
+        else:
+            return 4*num_qubits**2 - 12*num_qubits + 10
+
+    mcgate = Mcg(
+        unitary,
+        num_controls,
+        up_to_diagonal = up_to_diagonal
+    ).definition
+    transpiled_mcgate = transpile(mcgate, basis_gates=['u', 'cx'], optimization_level=0)
+    return transpiled_mcgate.count_ops().get('cx', 0)
