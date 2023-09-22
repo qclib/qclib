@@ -79,20 +79,25 @@ class McxVchainDirty(Gate):
         self.num_targets = num_targets
         size = self.num_targets + 2
         circuit = QuantumCircuit(size)
-        sx_gate = SXGate().control(1)
-        sxdg_gate = SXdgGate().control(1)
 
-        for i in range(self.num_targets - 1):
-            circuit.cx(size - i - 2, size - i - 1)
+        if self.num_targets == 1:
+            circuit.ccx(0, 1, 2)
+        else:
 
-        circuit.append(sx_gate, [1, 2])
-        circuit.cx(0, 1)
-        circuit.append(sxdg_gate, [1, 2])
-        circuit.cx(0, 1)
-        circuit.append(sx_gate, [0, 2])
+            sx_gate = SXGate().control(1)
+            sxdg_gate = SXdgGate().control(1)
 
-        for i in range(self.num_targets - 1):
-            circuit.cx(i + 2, i + 3)
+            for i in range(self.num_targets - 1):
+                circuit.cx(size - i - 2, size - i - 1)
+
+            circuit.append(sx_gate, [1, 2])
+            circuit.cx(0, 1)
+            circuit.append(sxdg_gate, [1, 2])
+            circuit.cx(0, 1)
+            circuit.append(sx_gate, [0, 2])
+
+            for i in range(self.num_targets - 1):
+                circuit.cx(i + 2, i + 3)
 
         return circuit
 
