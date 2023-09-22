@@ -49,8 +49,8 @@ class FnPointsInitialize(InitializeSparse):
 
         For instance, to initialize the state
         1/sqrt(3)|01> + 1/sqrt(3)*e^(1*i*2pi/N)|10> + 1/sqrt(3)*e^(2*i*2pi/N)c|11>
-            $ state = {1: 0, 2: 1, 3: 2}
-            $ circuit = initialize(state, n=2, N=3)
+            $ state = {'01': 0, '10': 1, '11': 2}
+            $ circuit = initialize(state, opt_params={'n_output_values': max(state.values())-1})
 
         Parameters
         ----------
@@ -81,6 +81,15 @@ class FnPointsInitialize(InitializeSparse):
             self._label = "FNSP"
 
         super().__init__(self._name, self.num_qubits, params.items(), label)
+
+    def _get_num_qubits(self, params):
+        """
+        Computes the number of qubits, based
+        on the number of 0 or 1 characters in
+        the dictionary key.
+        """
+        bit_string = next(iter(params))
+        self.num_qubits = len(bit_string)
 
     def _define(self):
         self.definition = self._define_initialize()

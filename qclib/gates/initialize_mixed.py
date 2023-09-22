@@ -38,6 +38,6 @@ class InitializeMixed(Gate):
         elif isinstance(parameter, np.number):
             return complex(parameter.item())
         else:
-            raise ValueError(
+            raise TypeError(
                 f"invalid param type {type(parameter)} for instruction {self.name}."
             )

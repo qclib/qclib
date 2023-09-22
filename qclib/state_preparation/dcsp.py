@@ -75,7 +75,7 @@ class DcspInitialize(Initialize):
 
     def _get_num_qubits(self, params):
         if not log2(len(params)).is_integer():
-            Exception("The number of amplitudes is not a power of 2")
+            raise ValueError("The number of amplitudes is not a power of 2")
         self.num_qubits = len(params) - 1
 
     @staticmethod

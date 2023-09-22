@@ -19,6 +19,7 @@ import numpy as np
 from qiskit import ClassicalRegister
 from qiskit_aer import AerSimulator
 from qclib.state_preparation import BdspInitialize
+from qclib.util import get_state
 from .util import measurement
 
 backend = AerSimulator()
@@ -54,9 +55,12 @@ class TestBdsp(TestCase):
         vector = np.random.rand(16) + np.random.rand(16) * 1j
         vector = vector / np.linalg.norm(vector)
 
-        state = TestBdsp.bdsp_experiment(vector, int(np.log2(len(vector))))
+        opt_params = {'split': int(np.log2(len(vector))), 'global_phase': True}
+        circuit = BdspInitialize(vector, opt_params=opt_params).definition
 
-        self.assertTrue(np.allclose(np.power(np.abs(vector), 2), state, rtol=1e-01, atol=0.005))
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(vector, state))
 
     def test_sublinear(self):
         """ Testing bdsp """

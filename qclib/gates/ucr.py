@@ -16,7 +16,7 @@
 Constructs a multiplexor gate.
 """
 
-from math import log2
+from math import log2, isclose
 from typing import List, Union, Type
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
@@ -45,27 +45,27 @@ def ucr(
     control = reg[n_qubits - 1]
 
     if n_qubits == 1:
-        if abs(angles[0]) > 10**-8:
+        if not isclose(angles[0], 0.0):
             circuit.append(r_gate(angles[0]), [target])
         return circuit
 
     angle_multiplexor = np.kron(
         [[0.5, 0.5], [0.5, -0.5]], np.identity(2 ** (n_qubits - 2))
     )
-    multiplexed_angles = angle_multiplexor.dot(angles)
+    multiplexed_angles = angle_multiplexor @ angles
 
     # Figure 2 from Synthesis of Quantum Logic Circuits:
     #   The recursive decomposition of a multiplexed Rz gate.
     #   The boxed CNOT gates may be canceled.
-    # This is why "last_cnot=False" in both calls of "rotation_multiplexor()" and
+    # This is why "last_control=False" in both calls of "rotation_multiplexor()" and
     # also why the multiplexer in the second "circuit.append()" is reversed.
     mult = ucr(r_gate, multiplexed_angles[: size // 2], c_gate, False)
-    circuit.append(mult.to_instruction(), reg[0:-1])
+    circuit.append(mult, reg[0:-1])
 
     circuit.append(c_gate(), [control, target])
 
     mult = ucr(r_gate, multiplexed_angles[size // 2 :], c_gate, False)
-    circuit.append(mult.reverse_ops().to_instruction(), reg[0:-1])
+    circuit.append(mult.reverse_ops(), reg[0:-1])
 
     # The following condition allows saving CNOTs when two multiplexors are used
     # in sequence. Any multiplexor can have its operation reversed. Therefore, if

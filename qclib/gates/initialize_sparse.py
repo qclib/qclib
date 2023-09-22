@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy as np
-from re import match
 from math import isclose
+from re import match
+import numpy as np
 from qclib.gates.initialize import Initialize
 
 
@@ -30,12 +30,16 @@ class InitializeSparse(Initialize):
         on the number of 0 or 1 characters in
         the dictionary key.
         """
-        bit_string = list(params.keys())[0]
+        bit_string = next(iter(params))
         self.num_qubits = len(bit_string)
 
         # Check if probabilities (amplitudes squared) sum to 1
         if not isclose(sum(np.absolute(list(params.values())) ** 2), 1.0, abs_tol=1e-10):
-            Exception("Sum of amplitudes-squared does not equal one.")
+            raise ValueError(
+                f"Sum of amplitudes-squared "
+                f"{sum(np.absolute(list(params.values())) ** 2)} "
+                f"does not equal one."
+            )
 
     def validate_parameter(self, parameter):
         """
@@ -46,10 +50,10 @@ class InitializeSparse(Initialize):
         """
         if isinstance(parameter, tuple):
             if not match("([01])+", parameter[0]):
-                raise Exception("Dictionary keys must be binary strings")
-            validated_value = super().validate_parameter(parameter[1])
+                raise ValueError("Dictionary keys must be binary strings")
+            validated_value = Initialize.validate_parameter(self, parameter[1])
             return parameter[0], validated_value
 
-        raise Exception(
+        raise TypeError(
             "Input param must be a dictionary with pairs (binary_string, values)"
         )
