@@ -51,11 +51,13 @@ class BdspInitialize(Initialize):
             split: int
                 Level (enumerated from bottom to top, where 1 ≤ s ≤ n)
                 at which the angle tree is split.
-                Default value is ``ceil(n_qubits/2)`` (sublinear).
+                Default value is ``ceil(n/2)`` (sublinear).
         """
         if opt_params is None:
             self.split = int(ceil(log2(len(params)) / 2))  # sublinear
+            self.global_phase = False
         else:
+            self.global_phase = opt_params.get("global_phase", False)
             if opt_params.get("split") is None:
                 self.split = int(ceil(log2(len(params)) / 2))  # sublinear
             else:
@@ -85,12 +87,15 @@ class BdspInitialize(Initialize):
         top_down(angle_tree, circuit, n_qubits - self.split)
         bottom_up(angle_tree, circuit, n_qubits - self.split)
 
+        if self.global_phase:
+            circuit.global_phase += sum(np.angle(self.params)) / 2**n_qubits
+
         return circuit
 
     def _get_num_qubits(self, params):
         n_qubits = log2(len(params))
         if not n_qubits.is_integer():
-            Exception("The number of amplitudes is not a power of 2")
+            raise ValueError("The number of amplitudes is not a power of 2")
         n_qubits = int(n_qubits)
         self.num_qubits = (self.split + 1) * 2 ** (n_qubits - self.split) - 1
 
