@@ -25,6 +25,8 @@ from qiskit.circuit.library import C3XGate, C4XGate
 from qiskit.circuit import Gate
 from qclib.gates.toffoli import Toffoli
 from qclib.gates.util import apply_ctrl_state
+from qiskit.circuit.library.standard_gates import SXGate
+from qiskit.circuit.library import SXdgGate
 
 
 # pylint: disable=protected-access
@@ -72,42 +74,28 @@ class McxVchainDirty(Gate):
         )
 
     def toffoli_multi_target(self, num_targets):
-
+        """"
+        """
         self.num_targets = num_targets
-
-        size = 2 + self.num_targets
-        angle = self.num_targets * (np.pi / 4)
+        size = self.num_targets + 2
         circuit = QuantumCircuit(size)
-        for i in range(self.num_targets):
-            circuit.h(2 + i)
-        for i in range(self.num_targets):
-            circuit.cx(1, 2 + i)
-        for i in range(self.num_targets):
-            circuit.tdg(2 + i)
-        for i in range(self.num_targets):
-            circuit.cx(0, 2 + i)
-        for i in range(self.num_targets):
-            circuit.t(2 + i)
-        for i in range(self.num_targets):
-            circuit.cx(1, 2 + i)
-        for i in range(self.num_targets):
-            circuit.tdg(2 + i)
-        for i in range(self.num_targets):
-            circuit.cx(0, 2 + i)
-        for i in range(self.num_targets):
-            circuit.t(2 + i)
-        for i in range(self.num_targets):
-            circuit.h(2 + i)
+        sx_gate = SXGate().control(1)
+        sxdg_gate = SXdgGate().control(1)
 
-        circuit.barrier()
+        for i in range(self.num_targets - 1):
+            circuit.cx(size - i - 2, size - i - 1)
 
-        circuit.p(angle, 1)
+        circuit.append(sx_gate, [1, 2])
         circuit.cx(0, 1)
-        circuit.p(angle, 0)
-        circuit.p(-angle, 1)
+        circuit.append(sxdg_gate, [1, 2])
         circuit.cx(0, 1)
+        circuit.append(sx_gate, [0, 2])
+
+        for i in range(self.num_targets - 1):
+            circuit.cx(i + 2, i + 3)
 
         return circuit
+
 
     def _define(self):
         self.definition = QuantumCircuit(
