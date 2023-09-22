@@ -82,7 +82,7 @@ class MergeInitialize(InitializeSparse):
             if bit == "1":
                 quantum_circuit.x(bit_idx)
 
-        return quantum_circuit.reverse_ops()
+        return quantum_circuit.reverse_ops().reverse_bits()
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None):

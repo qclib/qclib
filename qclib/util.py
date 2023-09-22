@@ -66,7 +66,7 @@ def get_cnot_count(circ, optimization_level=0):
     -------
     cnot_count: number of cnot gates in the quantum circuit
     """
-    tcirc = transpile(circ, basis_gates=['u', 'cx'], optimization_level=0)
+    tcirc = transpile(circ, basis_gates=['u', 'cx'], optimization_level=optimization_level)
     return tcirc.count_ops().get('cx', 0)
 
 
@@ -270,6 +270,6 @@ def build_state_dict(state):
     state_dict = {}
     for (value_idx, value) in enumerate(state):
         if value != 0:
-            binary_string = f"{value_idx:0{n_qubits}b}"[::-1]
+            binary_string = f"{value_idx:0{n_qubits}b}"
             state_dict[binary_string] = value
     return state_dict
