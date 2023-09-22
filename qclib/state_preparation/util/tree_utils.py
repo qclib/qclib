@@ -56,6 +56,15 @@ def leftmost(tree):
 
     return tree.right
 
+def rightmost(tree):
+    """
+    :param tree: a tree node
+    :return: the rightmost node relative to tree, or None if tree is leaf.
+    """
+    if tree.right:
+        return tree.right
+
+    return tree.left
 
 def node_index(tree):
     """
