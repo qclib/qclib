@@ -17,7 +17,7 @@ https://arxiv.org/abs/2108.10182
 """
 
 import qiskit
-from qclib.state_preparation.util.tree_utils import children
+from qclib.state_preparation.util.tree_utils import children, is_leaf
 
 
 def output(angle_tree, output_qubits):
@@ -32,8 +32,15 @@ def output(angle_tree, output_qubits):
 
 def _add_register(angle_tree, qubits, start_level):
     if angle_tree:
-        angle_tree.qubit = qubits.pop(0)
-        if angle_tree.level < start_level:
+        if not angle_tree.pruned:
+            angle_tree.qubit = qubits.pop(0)
+        else:
+            angle_tree.qubit = None
+
+        if (
+            angle_tree.level < start_level or
+            (angle_tree.level == start_level and is_leaf(angle_tree))
+        ):
             _add_register(angle_tree.left, qubits, start_level)
             _add_register(angle_tree.right, qubits, start_level)
         else:
@@ -41,7 +48,6 @@ def _add_register(angle_tree, qubits, start_level):
                 _add_register(angle_tree.left, qubits, start_level)
             else:
                 _add_register(angle_tree.right, qubits, start_level)
-
 
 def add_register(circuit, angle_tree, start_level):
     """
@@ -52,12 +58,12 @@ def add_register(circuit, angle_tree, start_level):
     level_nodes = []
     nodes = [angle_tree]
     while len(nodes) > 0:  # count nodes per level
-        level_nodes.append(len(nodes))
+        level_nodes.append(len([1 for node in nodes if not node.pruned]))
         nodes = children(nodes)
         level += 1
 
     noutput = level  # one output qubits per level
-    nqubits = sum(level_nodes[:start_level])  # bottom-up qubits
+    nqubits = sum(level_nodes[:start_level]) # bottom-up qubits
 
     # top-down qubits: (number of sub-states) * (number of qubits per sub-state)
     nqubits += level_nodes[start_level] * (noutput - start_level)

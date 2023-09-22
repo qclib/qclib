@@ -19,7 +19,7 @@ https://arxiv.org/abs/2108.10182
 import math
 from dataclasses import dataclass
 from qclib.state_preparation.util.tree_utils import is_leaf
-
+from qclib.state_preparation.util.state_tree_preparation import Node
 
 @dataclass
 class NodeAngleTree:
@@ -33,6 +33,9 @@ class NodeAngleTree:
     angle_z: float
     left: "NodeAngleTree"
     right: "NodeAngleTree"
+    parent: "NodeAngleTree"
+    state_node: "Node"
+    pruned: bool = False
 
     def __str__(self):
         return (
@@ -43,34 +46,40 @@ class NodeAngleTree:
         )
 
 
-def create_angles_tree(state_tree):
+def create_angles_tree(state_tree, parent=None):
     """
     :param state_tree: state_tree is an output of state_decomposition function
     :param tree: used in the recursive calls
     :return: tree with angles that will be used to perform the state preparation
     """
-    mag = 0.0
-    if state_tree.mag != 0.0:
-        mag = state_tree.right.mag / state_tree.mag
-
-    arg = state_tree.right.arg - state_tree.arg
+    beta  = state_tree.beta
+    lmbda  = state_tree.lmbda
 
     # Avoid out-of-domain value due to numerical error.
-    if mag < -1.0:
+    if beta < -1.0:
         angle_y = -math.pi
-    elif mag > 1.0:
+    elif beta > 1.0:
         angle_y = math.pi
     else:
-        angle_y = 2 * math.asin(mag)
+        angle_y = 2 * math.asin(beta)
 
-    angle_z = 2 * arg
+    angle_z = 2 * lmbda
 
     node = NodeAngleTree(
-        state_tree.index, state_tree.level, angle_y, angle_z, None, None
+        state_tree.index,
+        state_tree.level,
+        angle_y,
+        angle_z,
+        None,
+        None,
+        parent,
+        state_tree
     )
 
-    if not is_leaf(state_tree.left):
-        node.right = create_angles_tree(state_tree.right)
-        node.left = create_angles_tree(state_tree.left)
+    if state_tree.left and not is_leaf(state_tree.left):
+        node.left = create_angles_tree(state_tree.left, node)
+
+    if state_tree.right and not is_leaf(state_tree.right):
+        node.right = create_angles_tree(state_tree.right, node)
 
     return node
