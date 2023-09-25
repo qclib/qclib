@@ -147,6 +147,7 @@ class Cldmcsu(Gate):
         num_ctrl = len(self.controls)
         target_size = len(self.target)
 
+
         k_1 = int(np.ceil(num_ctrl / 2.0))
         k_2 = int(np.floor(num_ctrl / 2.0))
 

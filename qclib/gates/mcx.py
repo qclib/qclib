@@ -77,27 +77,33 @@ class McxVchainDirty(Gate):
         """"
         """
         self.num_targets = num_targets
-        size = self.num_targets + 2
+        size = 2 + self.num_targets
         circuit = QuantumCircuit(size)
 
-        if self.num_targets == 1:
-            circuit.ccx(0, 1, 2)
-        else:
+        for i in range(self.num_targets - 1):
+            circuit.cx(size - i - 2, size - i - 1)
 
-            sx_gate = SXGate().control(1)
-            sxdg_gate = SXdgGate().control(1)
+        circuit.h(2)
+        circuit.cx(1, 2)
+        circuit.tdg(2)
+        circuit.cx(0, 2)
+        circuit.t(2)
+        circuit.cx(1, 2)
+        circuit.tdg(2)
+        circuit.cx(0, 2)
+        circuit.t(2)
+        circuit.h(2)
 
-            for i in range(self.num_targets - 1):
-                circuit.cx(size - i - 2, size - i - 1)
+        for i in range(self.num_targets - 1):
+            circuit.cx(i + 2, i + 3)
 
-            circuit.append(sx_gate, [1, 2])
-            circuit.cx(0, 1)
-            circuit.append(sxdg_gate, [1, 2])
-            circuit.cx(0, 1)
-            circuit.append(sx_gate, [0, 2])
+        circuit.barrier()
 
-            for i in range(self.num_targets - 1):
-                circuit.cx(i + 2, i + 3)
+        circuit.t(1)
+        circuit.cx(0, 1)
+        circuit.t(0)
+        circuit.tdg(1)
+        circuit.cx(0, 1)
 
         return circuit
 
@@ -111,15 +117,21 @@ class McxVchainDirty(Gate):
         num_target = len(self.target_qubits)
         num_ancilla = num_ctrl - 2
         targets_aux = self.target_qubits[0:1] + self.ancilla_qubits[:num_ancilla][::-1]
-
         self._apply_ctrl_state()
+
         if num_ctrl < 3:
-            for k, _ in enumerate(self.target_qubits):
-                self.definition.mcx(
-                    control_qubits=self.control_qubits,
-                    target_qubit=self.target_qubits[k],
-                    mode="noancilla",
+            if num_ctrl == 2:
+                self.definition.append(
+                    self.toffoli_multi_target(len(self.target_qubits)),
+                    [*self.control_qubits, *self.target_qubits]
                 )
+            elif num_ctrl == 1:
+                for k, _ in enumerate(self.target_qubits):
+                    self.definition.mcx(
+                        control_qubits=self.control_qubits,
+                        target_qubit=self.target_qubits[k],
+                        mode="noancilla",
+                    )
 
         elif not self.relative_phase and num_ctrl == 3 and num_target < 2:
             for k, _ in enumerate(self.target_qubits):
