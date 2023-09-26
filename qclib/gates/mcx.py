@@ -107,7 +107,6 @@ class McxVchainDirty(Gate):
 
         return circuit
 
-
     def _define(self):
         self.definition = QuantumCircuit(
             self.control_qubits, self.ancilla_qubits, self.target_qubits
@@ -195,7 +194,6 @@ class McxVchainDirty(Gate):
                     )
 
                 if self.action_only:
-
                     control_1 = self.control_qubits[-1]
                     control_2 = self.ancilla_qubits[-1]
                     targets = self.target_qubits
