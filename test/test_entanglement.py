@@ -27,6 +27,15 @@ from qclib.entanglement import (
     _undo_separation_matrix
 )
 
+
+def manual_factors_to_state(factors):
+    prod_state = factors[0]
+    for i in range(1, len(factors)):
+        prod_state = np.kron(prod_state, factors[i])
+    prod_state = prod_state.reshape(1, -1).flatten()
+    return prod_state
+
+
 class TestEntanglement(TestCase):
 
     """ Tests for entanglement.py"""
@@ -35,16 +44,32 @@ class TestEntanglement(TestCase):
         ghz4 = np.zeros(16)
         ghz4[0] = 1 / np.sqrt(2)
         ghz4[15] = 1 / np.sqrt(2)
-        gme = geometric_entanglement(ghz4)
+        gme, product_state, product_state_factors = geometric_entanglement(
+            state_vector=ghz4,
+            return_product_state=True,
+            product_state_with_factors=True
+        )
+        product_state_b = manual_factors_to_state(product_state_factors)
+
         self.assertTrue(np.isclose(gme, 0.5))
+        self.assertTrue(np.isclose(np.vdot(ghz4, product_state) ** 2, 1 - gme))
+        self.assertTrue(np.isclose(np.linalg.norm(product_state - product_state_b), 0, 1e-2))
 
         nqbits = 5
         w6_state = np.zeros(2**nqbits)
         for k in range(nqbits):
             w6_state[2**k] = 1 / np.sqrt(nqbits)
 
-        gme = geometric_entanglement(w6_state)
+        gme, product_state, product_state_factors = geometric_entanglement(
+            state_vector=w6_state,
+            return_product_state=True,
+            product_state_with_factors=True
+        )
+        product_state_b = manual_factors_to_state(product_state_factors)
+
         self.assertTrue(np.abs(gme - 0.59) < 1e-3)
+        self.assertTrue(np.isclose(np.vdot(w6_state, product_state) ** 2, 1- gme))
+        self.assertTrue(np.isclose(np.linalg.norm(product_state - product_state_b), 0, 1e-2))
 
     def test_schmidt_decomposition(self):
         state = np.zeros(8)
