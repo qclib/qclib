@@ -29,7 +29,7 @@ from qclib.gates.util import check_su2, isclose
 # pylint: disable=protected-access
 
 
-class Cldmcsu(Gate):
+class MultiTargetMcSU2(Gate):
     """
     Multi-target Multi-Controlled Gate for Special Unitary
     ------------------------------------------------
@@ -89,53 +89,7 @@ class Cldmcsu(Gate):
                     self.definition.h(self.target[idx])
 
         else:
-            self.definition = QuantumCircuit(self.controls, self.target)
-
-            is_main_diag_real = isclose(self.unitaries[0, 0].imag, 0.0) and isclose(
-                self.unitaries[1, 1].imag, 0.0
-            )
-            is_secondary_diag_real = isclose(
-                self.unitaries[0, 1].imag, 0.0
-            ) and isclose(self.unitaries[1, 0].imag, 0.0)
-
-            if not is_main_diag_real and not is_secondary_diag_real:
-                # U = V D V^-1, where the entries of the diagonal D are the eigenvalues
-                # `eig_vals` of U and the column vectors of V are the eigenvectors
-                # `eig_vecs` of U. These columns are orthonormal and the main diagonal
-                # of V is real-valued.
-                eig_vals, eig_vecs = np.linalg.eig(self.unitaries)
-
-                x_vecs, z_vecs = Ldmcsu._get_x_z(eig_vecs)
-
-                Ldmcsu.half_linear_depth_mcv(
-                    x_vecs,
-                    z_vecs,
-                    self.controls,
-                    self.target,
-                    self.ctrl_state,
-                    inverse=True,
-                )
-                Ldmcsu.linear_depth_mcv(
-                    np.diag(eig_vals),
-                    self.controls,
-                    self.target,
-                    self.ctrl_state,
-                    general_su2_optimization=True,
-                )
-                Ldmcsu.half_linear_depth_mcv(
-                    x_vecs, z_vecs, self.controls, self.target, self.ctrl_state
-                )
-
-            else:
-                if not is_secondary_diag_real:
-                    self.definition.h(self.target)
-
-                Ldmcsu.linear_depth_mcv(
-                    self.unitaries, self.controls, self.target, self.ctrl_state
-                )
-
-                if not is_secondary_diag_real:
-                    self.definition.h(self.target)
+            self.definition = Ldmcsu(self.unitaries, self.num_controls)
 
     def clinear_depth_mcv(self, general_su2_optimization=False):
         """
@@ -232,7 +186,7 @@ class Cldmcsu(Gate):
         if isinstance(unitary, list):
             num_target = len(unitary)
             circuit.append(
-                Cldmcsu(unitary, len(controls), num_target=num_target).definition,
+                MultiTargetMcSU2(unitary, len(controls), num_target=num_target).definition,
                 [*controls, *target],
             )
         else:

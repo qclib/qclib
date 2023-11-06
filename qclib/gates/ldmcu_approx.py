@@ -21,7 +21,7 @@ import qiskit
 from qiskit.circuit import Gate
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.gates.util import check_u2, apply_ctrl_state
-from qclib.gates.cldmcsu import Cldmcsu
+from qclib.gates.multitargetmcsu2 import MultiTargetMcSU2
 
 
 # pylint: disable=maybe-no-member
@@ -152,7 +152,7 @@ class LdmcuApprox(Gate):
                     targets.append(pair.target + extra_q)
 
                     if pair.target == 1:
-                        Cldmcsu.cldmcsu(gate_circ, unitary_list, control_list, targets)
+                        MultiTargetMcSU2.cldmcsu(gate_circ, unitary_list, control_list, targets)
                 else:
                     gate_circ.crx(
                         signal * np.pi / param,

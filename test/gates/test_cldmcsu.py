@@ -19,7 +19,7 @@ import numpy as np
 from qiskit import QuantumRegister, QuantumCircuit, transpile
 from qiskit.circuit.library import RXGate
 from qiskit.quantum_info import Operator
-from qclib.gates.cldmcsu import Cldmcsu
+from qclib.gates.multitargetmcsu2 import MultiTargetMcSU2
 
 
 
@@ -53,9 +53,9 @@ class TestCMcSpecialUnitary(TestCase):
         controls_list = list(range(num_controls))
         target = num_controls
         ldmcsu_circ = QuantumCircuit(num_controls + 3)
-        Cldmcsu.cldmcsu(ldmcsu_circ, unitary_list[0], controls_list, target)
-        Cldmcsu.cldmcsu(ldmcsu_circ, unitary_list[1], controls_list, target + 1)
-        Cldmcsu.cldmcsu(ldmcsu_circ, unitary_list[2], controls_list, target + 2)
+        MultiTargetMcSU2.cldmcsu(ldmcsu_circ, unitary_list[0], controls_list, target)
+        MultiTargetMcSU2.cldmcsu(ldmcsu_circ, unitary_list[1], controls_list, target + 1)
+        MultiTargetMcSU2.cldmcsu(ldmcsu_circ, unitary_list[2], controls_list, target + 2)
 
         return ldmcsu_circ
 
@@ -67,7 +67,7 @@ class TestCMcSpecialUnitary(TestCase):
         controls = QuantumRegister(num_controls)
         target = QuantumRegister(len(unitary_list))
         cldmcsu_circ = QuantumCircuit(controls, target)
-        Cldmcsu.cldmcsu(cldmcsu_circ, unitary_list, controls, target)
+        MultiTargetMcSU2.cldmcsu(cldmcsu_circ, unitary_list, controls, target)
 
         return cldmcsu_circ
 

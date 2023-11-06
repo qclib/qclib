@@ -6,15 +6,6 @@ __pycache__/
 # C extensions
 *.so
 
-# notebooks
-#compare_cnot_count.ipynb
-ldmcsu.ipynb
-cascadeldm
-
-# Images
-*.png
-*.svg
-
 # Distribution / packaging
 .Python
 build/
