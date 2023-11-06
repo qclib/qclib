@@ -1,4 +1,5 @@
 qiskit
+qiskit_aer
 deprecation
 numpy
 tensorly
