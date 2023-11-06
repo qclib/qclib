@@ -152,7 +152,7 @@ class LdmcuApprox(Gate):
                     targets.append(pair.target + extra_q)
 
                     if pair.target == 1:
-                        MultiTargetMcSU2.cldmcsu(gate_circ, unitary_list, control_list, targets)
+                        MultiTargetMcSU2.multi_target_mcsu2(gate_circ, unitary_list, control_list, targets)
                 else:
                     gate_circ.crx(
                         signal * np.pi / param,

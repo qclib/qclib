@@ -34,7 +34,8 @@ class MultiTargetMcSU2(Gate):
     Multi-target Multi-Controlled Gate for Special Unitary
     ------------------------------------------------
 
-    Multicontrolled gate decomposition with linear cost.
+    Linear decomposition of approximate multi-controlled single qubit gates
+    https://arxiv.org/abs/2310.14974 Lemma 7
     """
 
     def __init__(self, unitaries, num_controls, num_target=1, ctrl_state: str = None):
@@ -100,7 +101,6 @@ class MultiTargetMcSU2(Gate):
 
         num_ctrl = len(self.controls)
         target_size = len(self.target)
-
 
         k_1 = int(np.ceil(num_ctrl / 2.0))
         k_2 = int(np.floor(num_ctrl / 2.0))
@@ -172,7 +172,7 @@ class MultiTargetMcSU2(Gate):
         return gates_a
 
     @staticmethod
-    def cldmcsu(
+    def multi_target_mcsu2(
         circuit,
         unitary,
         controls: Union[QuantumRegister, List[Qubit]],
