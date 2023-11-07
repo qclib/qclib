@@ -22,7 +22,7 @@ from qiskit import QuantumRegister, QuantumCircuit
 from qiskit.quantum_info import Operator
 import qclib.util
 from qclib.gates.ldmcu import Ldmcu
-from qclib.gates.mcugate import MCUGate
+from qclib.gates.mcu import MCU
 
 
 class TestLinearU2(TestCase):
@@ -44,13 +44,13 @@ class TestLinearU2(TestCase):
     def test_get_num_qubits(self):
         error = 0.1
         u1 = np.array([[0, 1], [1, 0]])
-        ldmcu_approx = MCUGate(u1, num_controls=10, error=error)
+        ldmcu_approx = MCU(u1, num_controls=10, error=error)
         self.assertTrue(ldmcu_approx._get_num_base_ctrl_qubits(u1, error), 4)
 
     def test_mcz(self):
         error = 0.1
         u = np.array([[1, 0], [0, -1]])
-        ldmcu_approx_test = MCUGate(u, num_controls=100, error=error)
+        ldmcu_approx_test = MCU(u, num_controls=100, error=error)
         base_ctrl_qubits = ldmcu_approx_test._get_num_base_ctrl_qubits(u, error)
 
         controls = QuantumRegister(base_ctrl_qubits)
@@ -59,7 +59,7 @@ class TestLinearU2(TestCase):
         N = len(controls)
         for i in range(N):
             circuit.x(i)
-        MCUGate.ldmcu_approx(circuit, u, controls, target, error)
+        MCU.mcu(circuit, u, controls, target, error)
         state = qclib.util.get_state(circuit)
         res_u = self._get_result_unitary(u, base_ctrl_qubits)
         self.assertTrue(np.isclose(state[2**N - 1], res_u[0, 0]))
@@ -71,7 +71,7 @@ class TestLinearU2(TestCase):
         N = len(controls)
         for i in range(N):
             circuit.x(i)
-        MCUGate.ldmcu_approx(circuit, u, controls, target, error)
+        MCU.mcu(circuit, u, controls, target, error)
         state = qclib.util.get_state(circuit)
         res_u = self._get_result_unitary(u, base_ctrl_qubits)
         self.assertTrue(np.isclose(state[2**N - 1], res_u[0, 0]))
@@ -80,7 +80,7 @@ class TestLinearU2(TestCase):
     def test_mcx(self):
         error = 0.1
         u = np.array([[0, 1], [1, 0]])
-        ldmcu_approx_test = MCUGate(u, num_controls=100, error=error)
+        ldmcu_approx_test = MCU(u, num_controls=100, error=error)
         base_ctrl_qubits = ldmcu_approx_test._get_num_base_ctrl_qubits(u, error)
 
         controls = QuantumRegister(base_ctrl_qubits)
@@ -89,7 +89,7 @@ class TestLinearU2(TestCase):
         N = len(controls)
         for i in range(N):
             circuit.x(i)
-        MCUGate.ldmcu_approx(circuit, u, controls, target, error)
+        MCU.mcu(circuit, u, controls, target, error)
         state = qclib.util.get_state(circuit)
         res_u = self._get_result_unitary(u, base_ctrl_qubits)
         self.assertTrue(np.isclose(state[2**N - 1], res_u[0, 0]))
@@ -101,7 +101,7 @@ class TestLinearU2(TestCase):
         N = len(controls)
         for i in range(N):
             circuit.x(i)
-        MCUGate.ldmcu_approx(circuit, u, controls, target, error)
+        MCU.mcu(circuit, u, controls, target, error)
         state = qclib.util.get_state(circuit)
         res_u = self._get_result_unitary(u, base_ctrl_qubits)
         self.assertTrue(np.isclose(state[2**N - 1], res_u[0, 0]))
@@ -110,13 +110,13 @@ class TestLinearU2(TestCase):
     def test_mcz_cnot_count(self):
         error = 0.01
         u = np.array([[1, 0], [0, -1]])
-        ldmcu_approx_test = MCUGate(u, num_controls=100, error=error)
+        ldmcu_approx_test = MCU(u, num_controls=100, error=error)
         base_ctrl_qubits = ldmcu_approx_test._get_num_base_ctrl_qubits(u, error)
         for n_controls in range(base_ctrl_qubits + 60, base_ctrl_qubits + 62):
             controls = QuantumRegister(n_controls)
             target = QuantumRegister(1)
             circuit_approx = qiskit.QuantumCircuit(controls, target)
-            MCUGate.ldmcu_approx(circuit_approx, u, controls, target, error)
+            MCU.mcu(circuit_approx, u, controls, target, error)
             cnot_approx = qclib.util.get_cnot_count(circ=circuit_approx)
 
             controls = QuantumRegister(n_controls)
@@ -130,13 +130,13 @@ class TestLinearU2(TestCase):
     def test_mcx_cnot_count(self):
         error = 0.01
         u = np.array([[0, 1], [1, 0]])
-        ldmcu_approx_test = MCUGate(u, num_controls=100, error=error)
+        ldmcu_approx_test = MCU(u, num_controls=100, error=error)
         base_ctrl_qubits = ldmcu_approx_test._get_num_base_ctrl_qubits(u, error)
         for n_controls in range(base_ctrl_qubits + 60, base_ctrl_qubits + 62):
             controls = QuantumRegister(n_controls)
             target = QuantumRegister(1)
             circuit_approx = qiskit.QuantumCircuit(controls, target)
-            MCUGate.ldmcu_approx(circuit_approx, u, controls, target, error)
+            MCU.mcu(circuit_approx, u, controls, target, error)
             cnot_approx = qclib.util.get_cnot_count(circ=circuit_approx)
 
             controls = QuantumRegister(n_controls)
@@ -150,7 +150,7 @@ class TestLinearU2(TestCase):
     def test_to_compare_ldmcu_and_ldmcu_approx(self):
         unitary = np.array([[0, 1], [1, 0]])
         error = 1e-2
-        ldmcu_approx_test = MCUGate(unitary, num_controls=100, error=error)
+        ldmcu_approx_test = MCU(unitary, num_controls=100, error=error)
         base_ctrl_qubits = ldmcu_approx_test._get_num_base_ctrl_qubits(unitary, error)
 
         controls = QuantumRegister(base_ctrl_qubits)
@@ -160,7 +160,7 @@ class TestLinearU2(TestCase):
         Ldmcu.ldmcu(ldmcu_circ, unitary, controls, target)
 
         ldmcu_approx_circ = QuantumCircuit(controls, target)
-        MCUGate.ldmcu_approx(ldmcu_approx_circ, unitary, controls, target, error)
+        MCU.mcu(ldmcu_approx_circ, unitary, controls, target, error)
 
         ldmcu_op = Operator(ldmcu_circ).data
         ldmcu_approx_op = Operator(ldmcu_approx_circ).data

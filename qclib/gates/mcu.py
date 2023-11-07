@@ -25,7 +25,7 @@ from qclib.gates.multitargetmcsu2 import MultiTargetMcSU2
 
 
 # pylint: disable=protected-access
-class MCUGate(Gate):
+class MCU(Gate):
     """
     Approximated Multi-Controlled Unitary Gate
     https://arxiv.org/abs/2310.14974
@@ -34,7 +34,7 @@ class MCUGate(Gate):
     Implements gate decomposition of a munticontrolled operator in U(2)
     """
 
-    def __init__(self, unitary, num_controls, error, ctrl_state: str = None):
+    def __init__(self, unitary, num_controls, error=0, ctrl_state: str = None):
         """
 
         Parameters
@@ -133,7 +133,7 @@ class MCUGate(Gate):
             # when control==0, in which case we don't do anything
             if pair.target == n_qubits_base - 1 and first:
                 if pair.control != 0:
-                    csqgate = MCUGate._gate_u(self.unitary, param, signal)
+                    csqgate = MCU._gate_u(self.unitary, param, signal)
                     gate_circ.compose(
                         csqgate,
                         qubits=[pair.control + extra_q, pair.target + extra_q],
@@ -218,14 +218,14 @@ class MCUGate(Gate):
         return csqgate
 
     @staticmethod
-    def ldmcu_approx(circuit, unitary, controls, target, error, ctrl_state=None):
+    def mcu(circuit, unitary, controls, target, error, ctrl_state=None):
         """
-        Append LdmcuApprox to the circuit
+        Append MCU to the circuit
         """
         circuit.append(
-            MCUGate(unitary, len(controls), error, ctrl_state=ctrl_state),
+            MCU(unitary, len(controls), error, ctrl_state=ctrl_state),
             [*controls, target],
         )
 
 
-MCUGate._apply_ctrl_state = apply_ctrl_state
+MCU._apply_ctrl_state = apply_ctrl_state
