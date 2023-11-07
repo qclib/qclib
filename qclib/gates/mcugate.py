@@ -24,11 +24,12 @@ from qclib.gates.util import check_u2, apply_ctrl_state
 from qclib.gates.multitargetmcsu2 import MultiTargetMcSU2
 
 
-# pylint: disable=maybe-no-member
 # pylint: disable=protected-access
-class LdmcuApprox(Gate):
+class MCUGate(Gate):
     """
-    Linear  Multi-Controlled Unitary
+    Approximated Multi-Controlled Unitary Gate
+    https://arxiv.org/abs/2310.14974
+
     -----------------------------------------
     Implements gate decomposition of a munticontrolled operator in U(2)
     """
@@ -55,8 +56,6 @@ class LdmcuApprox(Gate):
 
         self.target_qubit = QuantumRegister(1)
 
-        self.num_qubits = num_controls + 1
-
         self.n_ctrl_base = self._get_num_base_ctrl_qubits(self.unitary, self.error)
         if self.n_ctrl_base == 0:
             raise ValueError("The number of base qubits is 0")
@@ -65,7 +64,7 @@ class LdmcuApprox(Gate):
 
         self.ctrl_state = ctrl_state
 
-        super().__init__("LdmcuApprox", self.num_qubits, [], "LdmcuApprox")
+        super().__init__("LdmcuApprox", num_controls + 1, [], "LdmcuApprox")
 
     def _define(self):
         if len(self.control_qubits) > 0:
@@ -109,10 +108,10 @@ class LdmcuApprox(Gate):
             angle = angles[1]
 
         quotient = angle / np.arccos(1 - error**2 / 2)
-        return int(np.ceil(np.log2(quotient)))+1
+        return int(np.ceil(np.log2(quotient))) + 1
 
     def _c1c2(self, n_qubits, gate_circ, first=True, step=1):
-        pairs = namedtuple("pairs", ["control", "target"])
+
         # Get the number of extra qubits
         if first:
             n_qubits_base = self.n_ctrl_base + 1
@@ -120,7 +119,7 @@ class LdmcuApprox(Gate):
             n_qubits_base = self.n_ctrl_base
         extra_q = n_qubits - n_qubits_base
 
-        qubit_pairs = self._compute_qubit_pairs(n_qubits_base, pairs, step)
+        qubit_pairs = self._compute_qubit_pairs(n_qubits_base, step)
 
         unitary_list = []
         targets = []
@@ -134,7 +133,7 @@ class LdmcuApprox(Gate):
             # when control==0, in which case we don't do anything
             if pair.target == n_qubits_base - 1 and first:
                 if pair.control != 0:
-                    csqgate = LdmcuApprox._gate_u(self.unitary, param, signal)
+                    csqgate = MCUGate._gate_u(self.unitary, param, signal)
                     gate_circ.compose(
                         csqgate,
                         qubits=[pair.control + extra_q, pair.target + extra_q],
@@ -146,13 +145,14 @@ class LdmcuApprox(Gate):
                 if pair.control == 0 and extra_q >= 1:
                     # Apply a multi-controlled Rx gate with the additional control qubits
                     control_list = np.array(range(0, extra_q + 1))
-                    rx_matrix = self._compute_rx_matrix(param, signal)
 
-                    unitary_list.append(rx_matrix)
+                    unitary_list.append(self._compute_rx_matrix(param, signal))
                     targets.append(pair.target + extra_q)
 
                     if pair.target == 1:
-                        MultiTargetMcSU2.multi_target_mcsu2(gate_circ, unitary_list, control_list, targets)
+                        MultiTargetMcSU2.multi_target_mcsu2(
+                            gate_circ, unitary_list, control_list, targets
+                        )
                 else:
                     gate_circ.crx(
                         signal * np.pi / param,
@@ -177,7 +177,8 @@ class LdmcuApprox(Gate):
         )
         return rx_matrix
 
-    def _compute_qubit_pairs(self, n_qubits_base, pairs, step):
+    def _compute_qubit_pairs(self, n_qubits_base, step):
+        pairs = namedtuple("pairs", ["control", "target"])
         if step == 1:
             start = 0
             reverse = True
@@ -222,9 +223,9 @@ class LdmcuApprox(Gate):
         Append LdmcuApprox to the circuit
         """
         circuit.append(
-            LdmcuApprox(unitary, len(controls), error, ctrl_state=ctrl_state),
+            MCUGate(unitary, len(controls), error, ctrl_state=ctrl_state),
             [*controls, target],
         )
 
 
-LdmcuApprox._apply_ctrl_state = apply_ctrl_state
+MCUGate._apply_ctrl_state = apply_ctrl_state
