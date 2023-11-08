@@ -21,7 +21,7 @@ import qiskit
 from qiskit.circuit import Gate
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.gates.util import check_u2, apply_ctrl_state
-from qclib.gates.multitargetmcsu2 import MultiTargetMcSU2
+from qclib.gates.multitargetmcsu2 import MultiTargetMCSU2
 
 
 # pylint: disable=protected-access
@@ -76,7 +76,7 @@ class MCU(Gate):
 
             self._c1c2(self.num_qubits, gate_circuit)
             self._c1c2(self.num_qubits, gate_circuit, step=-1)
-            # Attention to the number of qubits
+
             self._c1c2(self.num_qubits - 1, gate_circuit, False)
             self._c1c2(self.num_qubits - 1, gate_circuit, False, -1)
 
@@ -112,12 +112,7 @@ class MCU(Gate):
 
     def _c1c2(self, n_qubits, gate_circ, first=True, step=1):
 
-        # Get the number of extra qubits
-        if first:
-            n_qubits_base = self.n_ctrl_base + 1
-        else:
-            n_qubits_base = self.n_ctrl_base
-        extra_q = n_qubits - n_qubits_base
+        extra_q, n_qubits_base = self._calc_extra_qubits(first, n_qubits)
 
         qubit_pairs = self._compute_qubit_pairs(n_qubits_base, step)
 
@@ -150,7 +145,7 @@ class MCU(Gate):
                     targets.append(pair.target + extra_q)
 
                     if pair.target == 1:
-                        MultiTargetMcSU2.multi_target_mcsu2(
+                        MultiTargetMCSU2.multi_target_mcsu2(
                             gate_circ, unitary_list, control_list, targets
                         )
                 else:
@@ -159,6 +154,14 @@ class MCU(Gate):
                         pair.control + extra_q,
                         pair.target + extra_q,
                     )
+
+    def _calc_extra_qubits(self, first, n_qubits):
+        if first:
+            n_qubits_base = self.n_ctrl_base + 1
+        else:
+            n_qubits_base = self.n_ctrl_base
+        extra_q = n_qubits - n_qubits_base
+        return extra_q, n_qubits_base
 
     def _compute_param(self, pair):
         exponent = pair.target - pair.control
@@ -220,7 +223,8 @@ class MCU(Gate):
     @staticmethod
     def mcu(circuit, unitary, controls, target, error, ctrl_state=None):
         """
-        Append MCU to the circuit
+        Approximated Multi-Controlled Unitary Gate
+        https://arxiv.org/abs/2310.14974
         """
         circuit.append(
             MCU(unitary, len(controls), error, ctrl_state=ctrl_state),
