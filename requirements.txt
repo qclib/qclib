@@ -4,4 +4,3 @@ deprecation
 numpy
 tensorly
 graphviz
-qiskit_aer
