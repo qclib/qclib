@@ -17,7 +17,6 @@
 linear-depth n-qubit controlled X with ancilla
 """
 
-
 import numpy as np
 
 from qiskit import QuantumRegister, QuantumCircuit
@@ -26,7 +25,6 @@ from qiskit.circuit.library import C3XGate, C4XGate
 from qiskit.circuit import Gate
 from qclib.gates.toffoli import Toffoli
 from qclib.gates.util import apply_ctrl_state
-
 
 # pylint: disable=protected-access
 
@@ -72,6 +70,39 @@ class McxVchainDirty(Gate):
             "mcx_vc_dirty", num_controls + num_ancilla + 1, [], "mcx_vc_dirty"
         )
 
+    def toffoli_multi_target(self, num_targets):
+        """ " """
+
+        size = 2 + num_targets
+        circuit = QuantumCircuit(size)
+
+        for i in range(num_targets - 1):
+            circuit.cx(size - i - 2, size - i - 1)
+
+        circuit.h(2)
+        circuit.cx(1, 2)
+        circuit.tdg(2)
+        circuit.cx(0, 2)
+        circuit.t(2)
+        circuit.cx(1, 2)
+        circuit.tdg(2)
+        circuit.cx(0, 2)
+        circuit.t(2)
+        circuit.h(2)
+
+        for i in range(num_targets - 1):
+            circuit.cx(i + 2, i + 3)
+
+        circuit.barrier()
+
+        circuit.t(1)
+        circuit.cx(0, 1)
+        circuit.t(0)
+        circuit.tdg(1)
+        circuit.cx(0, 1)
+
+        return circuit
+
     def _define(self):
         self.definition = QuantumCircuit(
             self.control_qubits, self.ancilla_qubits, self.target_qubits
@@ -81,69 +112,29 @@ class McxVchainDirty(Gate):
         num_target = len(self.target_qubits)
         num_ancilla = num_ctrl - 2
         targets_aux = self.target_qubits[0:1] + self.ancilla_qubits[:num_ancilla][::-1]
-
         self._apply_ctrl_state()
-        if num_ctrl < 3:
+
+        if num_ctrl == 2:
+            self.definition.append(
+                self.toffoli_multi_target(len(self.target_qubits)),
+                [*self.control_qubits, *self.target_qubits],
+            )
+        elif num_ctrl == 1:
             for k, _ in enumerate(self.target_qubits):
                 self.definition.mcx(
                     control_qubits=self.control_qubits,
                     target_qubit=self.target_qubits[k],
                     mode="noancilla",
                 )
-        elif not self.relative_phase and num_ctrl == 3:
+
+        elif not self.relative_phase and num_ctrl == 3 and num_target < 2:
             for k, _ in enumerate(self.target_qubits):
                 self.definition.append(
                     C3XGate(), [*self.control_qubits[:], self.target_qubits[k]], []
                 )
         else:
             for j in range(2):
-                for i, _ in enumerate(self.control_qubits):  # action part
-                    if i < num_ctrl - 2:
-                        if (
-                            targets_aux[i] not in self.target_qubits
-                            or self.relative_phase
-                        ):
-                            # gate cancelling
-                            controls = [
-                                self.control_qubits[num_ctrl - i - 1],
-                                self.ancilla_qubits[num_ancilla - i - 1],
-                            ]
-
-                            # cancel rightmost gates of action part
-                            # with leftmost gates of reset part
-                            if (
-                                self.relative_phase
-                                and targets_aux[i] in self.target_qubits
-                                and j == 1
-                            ):
-                                self.definition.append(
-                                    Toffoli(cancel="left"), [*controls, targets_aux[i]]
-                                )
-                            else:
-                                self.definition.append(
-                                    Toffoli(cancel="right"), [*controls, targets_aux[i]]
-                                )
-
-                        else:
-                            for k, _ in enumerate(self.target_qubits):
-                                self.definition.ccx(
-                                    control_qubit1=self.control_qubits[
-                                        num_ctrl - i - 1
-                                    ],
-                                    control_qubit2=self.ancilla_qubits[
-                                        num_ancilla - i - 1
-                                    ],
-                                    target_qubit=self.target_qubits[k],
-                                )
-                    else:
-                        controls = [
-                            self.control_qubits[num_ctrl - i - 2],
-                            self.control_qubits[num_ctrl - i - 1],
-                        ]
-
-                        self.definition.append(Toffoli(), [*controls, targets_aux[i]])
-
-                        break
+                self._action_circuit(j, num_ancilla, num_ctrl, targets_aux)
 
                 for i, _ in enumerate(self.ancilla_qubits[1:]):  # reset part
                     controls = [self.control_qubits[2 + i], self.ancilla_qubits[i]]
@@ -152,16 +143,66 @@ class McxVchainDirty(Gate):
                     )
 
                 if self.action_only:
-                    for target in self.target_qubits:
-                        self.definition.ccx(
-                            control_qubit1=self.control_qubits[-1],
-                            control_qubit2=self.ancilla_qubits[-1],
-                            target_qubit=target,
-                        )
+                    control_1 = self.control_qubits[-1]
+                    control_2 = self.ancilla_qubits[-1]
+                    targets = self.target_qubits
+                    num_targets = len(targets)
+                    self.definition.append(
+                        self.toffoli_multi_target(num_targets),
+                        [control_1, control_2, *targets],
+                    )
 
                     break
 
         self._apply_ctrl_state()
+
+    def _action_circuit(self, j, num_ancilla, num_ctrl, targets_aux):
+        for i, _ in enumerate(self.control_qubits):  # action part
+            if i < num_ctrl - 2:
+                if (
+                        targets_aux[i] not in self.target_qubits
+                        or self.relative_phase
+                ):
+                    # gate cancelling
+                    controls = [
+                        self.control_qubits[num_ctrl - i - 1],
+                        self.ancilla_qubits[num_ancilla - i - 1],
+                    ]
+
+                    # cancel rightmost gates of action part
+                    # with leftmost gates of reset part
+                    if (
+                            self.relative_phase
+                            and targets_aux[i] in self.target_qubits
+                            and j == 1
+                    ):
+                        self.definition.append(
+                            Toffoli(cancel="left"), [*controls, targets_aux[i]]
+                        )
+                    else:
+                        self.definition.append(
+                            Toffoli(cancel="right"), [*controls, targets_aux[i]]
+                        )
+
+                else:
+                    control_1 = self.control_qubits[num_ctrl - i - 1]
+                    control_2 = self.ancilla_qubits[num_ancilla - i - 1]
+                    targets = self.target_qubits
+                    num_targets = len(targets)
+                    self.definition.append(
+                        self.toffoli_multi_target(num_targets),
+                        [control_1, control_2, *targets],
+                    )
+
+            else:
+                controls = [
+                    self.control_qubits[num_ctrl - i - 2],
+                    self.control_qubits[num_ctrl - i - 1],
+                ]
+
+                self.definition.append(Toffoli(), [*controls, targets_aux[i]])
+
+                break
 
     @staticmethod
     def mcx_vchain_dirty(
@@ -172,6 +213,12 @@ class McxVchainDirty(Gate):
         relative_phase=False,
         action_only=False,
     ):
+        """
+        Implementation based on lemma 8 of Iten et al. (2016) arXiv:1501.06911.
+        Decomposition of a multicontrolled X gate with at least k <= ceil(n/2) ancilae
+        for n as the total number of qubits in the system. It also includes optimizations
+        using approximated Toffoli gates up to a diagonal.
+        """
         circuit.append(
             McxVchainDirty(len(controls), ctrl_state, relative_phase, action_only),
             [*controls, target],
@@ -277,10 +324,16 @@ class LinearMcx(Gate):
 
     @staticmethod
     def mcx(circuit, controls=None, target=None, ctrl_state=None, action_only=False):
+        """
+        Implementation based on lemma 9 of Iten et al. (2016) arXiv:1501.06911.
+        Decomposition of a multicontrolled X gate with a dirty ancilla by splitting
+        it into two sequences of two alternating multicontrolled X gates on
+        k1 = ceil((n+1)/2) and k2 = floor((n+1)/2) qubits. For n the total
+        number of qubits in the system. Where it also reuses some optimizations available
+        """
         circuit.append(
             LinearMcx(len(controls), ctrl_state, action_only), [*controls, target]
         )
-
 
 
 LinearMcx._apply_ctrl_state = apply_ctrl_state

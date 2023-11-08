@@ -16,10 +16,10 @@
 
 from unittest import TestCase
 import numpy as np
-from qiskit import QuantumCircuit, transpile
-from qiskit.circuit.library import RXGate, RYGate, RZGate
+from qiskit import QuantumRegister, QuantumCircuit, transpile
+from qiskit.circuit.library import RXGate
 from qiskit.quantum_info import Operator
-from qclib.gates.cldmcsu import Cldmcsu
+from qclib.gates.multitargetmcsu2 import MultiTargetMCSU2
 
 
 
@@ -30,7 +30,7 @@ class TestCMcSpecialUnitary(TestCase):
         https://arxiv.org/pdf/2302.06377.pdf
     """
 
-    def _build_qiskit_circuit_2target(
+    def _build_qiskit_circ(
             self,
             num_controls
     ):
@@ -45,16 +45,42 @@ class TestCMcSpecialUnitary(TestCase):
 
         return qiskit_circ
 
-    def test_clcmcsu_2targets(self):
+    def _build_ldmcsu_circ(self, unitary_list, num_controls):
+        """"
+        default mode: target = controls
         """
 
+        controls_list = list(range(num_controls))
+        target = num_controls
+        ldmcsu_circ = QuantumCircuit(num_controls + 3)
+        MultiTargetMCSU2.multi_target_mcsu2(ldmcsu_circ, unitary_list[0], controls_list, target)
+        MultiTargetMCSU2.multi_target_mcsu2(ldmcsu_circ, unitary_list[1], controls_list, target + 1)
+        MultiTargetMCSU2.multi_target_mcsu2(ldmcsu_circ, unitary_list[2], controls_list, target + 2)
+
+        return ldmcsu_circ
+
+    def _build_cldmcsu_circ(self, unitary_list, num_controls):
+        """"
+        default mode: target = controls
+        """
+
+        controls = QuantumRegister(num_controls)
+        target = QuantumRegister(len(unitary_list))
+        cldmcsu_circ = QuantumCircuit(controls, target)
+        MultiTargetMCSU2.multi_target_mcsu2(cldmcsu_circ, unitary_list, controls, target)
+
+        return cldmcsu_circ
+
+    def test_clcmcsu_3targets(self):
+        """
+        Test for comparison of a cascade uf 3 multi-controlled SU(2) using
+        qiskit and cldmcsu implementations.
         """
         num_controls = 7
-        num_target_qubit = 3
-        unitaries = [RXGate(0.7).to_matrix(), RXGate(0.13).to_matrix(), RXGate(0.5).to_matrix()]
+        unitary_list = [RXGate(0.7).to_matrix(), RXGate(0.13).to_matrix(), RXGate(0.5).to_matrix()]
 
-        qiskit_circ = self._build_qiskit_circuit_2target(num_controls)
-        cldmcsu_circ = Cldmcsu(unitaries, num_controls, num_target=num_target_qubit).definition
+        qiskit_circ = self._build_qiskit_circ(num_controls)
+        cldmcsu_circ = self._build_cldmcsu_circ(unitary_list, num_controls)
 
         qiskitt = transpile(qiskit_circ, basis_gates=['u', 'cx'], optimization_level=3)
         cldmcsut = transpile(cldmcsu_circ, basis_gates=['u', 'cx'], optimization_level=3)
@@ -67,4 +93,3 @@ class TestCMcSpecialUnitary(TestCase):
         qiskit_op = Operator(qiskit_circ).data
 
         self.assertTrue(np.allclose(cldmcsu_op, qiskit_op))
-
