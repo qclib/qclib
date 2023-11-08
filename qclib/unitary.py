@@ -29,7 +29,7 @@ from qiskit.quantum_info.synthesis import two_qubit_decompose
 from qiskit.quantum_info import Operator
 from qiskit.circuit.library import UCGate
 from qclib.gates.ucr import ucr
-from qclib.decompose2q import TwoQubitDecomposeUpToDiagonal
+from qiskit.quantum_info.synthesis.two_qubit_decompose import TwoQubitDecomposeUpToDiagonal
 
 
 def unitary(gate, decomposition="qsd", iso=0, apply_a2=True):
