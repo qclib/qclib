@@ -29,7 +29,7 @@ from qclib.gates.util import check_su2, isclose
 # pylint: disable=protected-access
 
 
-class MultiTargetMcSU2(Gate):
+class MultiTargetMCSU2(Gate):
     """
     Multi-target Multi-Controlled Gate for Special Unitary
     ------------------------------------------------
@@ -186,7 +186,7 @@ class MultiTargetMcSU2(Gate):
         if isinstance(unitary, list):
             num_target = len(unitary)
             circuit.append(
-                MultiTargetMcSU2(unitary, len(controls), num_target=num_target).definition,
+                MultiTargetMCSU2(unitary, len(controls), num_target=num_target).definition,
                 [*controls, *target],
             )
         else:
