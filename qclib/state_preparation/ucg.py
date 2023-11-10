@@ -20,7 +20,7 @@
 import numpy as np
 import numpy.linalg as la
 from qiskit import QuantumCircuit, QuantumRegister
-from qiskit.extensions.quantum_initializer.uc import UCGate
+from qiskit.circuit.library import UCGate
 from qclib.gates.initialize import Initialize
 
 
