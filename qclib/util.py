@@ -66,7 +66,7 @@ def get_cnot_count(circ, optimization_level=0):
     -------
     cnot_count: number of cnot gates in the quantum circuit
     """
-    tcirc = transpile(circ, basis_gates=['u', 'cx'], optimization_level=0)
+    tcirc = transpile(circ, basis_gates=['u', 'cx'], optimization_level=optimization_level)
     return tcirc.count_ops().get('cx', 0)
 
 

@@ -20,7 +20,7 @@
 import numpy as np
 import numpy.linalg as la
 from qiskit import QuantumCircuit, QuantumRegister
-from qiskit.extensions.quantum_initializer.uc import UCGate
+from qiskit.extensions.quantum_initializer import UCGate
 from qclib.gates.initialize import Initialize
 
 
@@ -174,8 +174,8 @@ class UCGInitialize(Initialize):
 
         for parent_idx, sibling_idx in zip(range(len_pnodes), range(0, len_snodes, 2)):
             if parent_amplitudes[parent_idx] != 0:
-                amp_ket0 = (children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx])
-                amp_ket1 = (children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx])
+                amp_ket0 = children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx]
+                amp_ket1 = children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx]
                 if amp_ket0 != 0:
                     gates += [self._get_branch_operator(amp_ket0, amp_ket1, bit_target)]
                 else:
