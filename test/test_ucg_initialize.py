@@ -17,7 +17,7 @@
 """
 from unittest import TestCase
 import numpy as np
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, transpile
 from qclib.state_preparation import UCGInitialize
 from qclib.util import get_state
 
@@ -100,3 +100,27 @@ class TestUCGInitialize(TestCase):
         output_state = get_state(circuit)
 
         self.assertTrue(np.allclose(output_state, state))
+
+    def test_ucg_disentangled(self):
+        num_qubits = 6
+        qc = QuantumCircuit(num_qubits)
+
+        input_state1 = np.random.rand(2 ** 3)
+        input_state1 = input_state1 / np.linalg.norm(input_state1)
+        input_state2 = np.random.rand(2 ** 3)
+        input_state2 = input_state2 / np.linalg.norm(input_state2)
+
+        UCGInitialize.initialize(qc, input_state1, [0, 2, 3])
+        UCGInitialize.initialize(qc, input_state2, [1, 4, 5])
+
+        params = get_state(qc)
+
+        circuit = QuantumCircuit(6)
+        UCGInitialize.initialize(circuit, params.tolist())
+        params2 = get_state(circuit)
+
+        circuit_tranpiled = transpile(circuit, basis_gates=['u', 'cx'])
+        qc_transpiled = transpile(qc, basis_gates=['u', 'cx'])
+
+        self.assertTrue(np.allclose(params, params2))
+        self.assertTrue(circuit_tranpiled.depth() <= qc_transpiled.depth())
