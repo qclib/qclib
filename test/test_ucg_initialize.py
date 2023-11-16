@@ -98,7 +98,6 @@ class TestUCGInitialize(TestCase):
         initialize(circuit, state.tolist(), opt_params={"target_state": 10})
 
         output_state = get_state(circuit)
-
         self.assertTrue(np.allclose(output_state, state))
 
     def test_ucg_disentangled(self):

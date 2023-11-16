@@ -19,6 +19,7 @@
 """
 import numpy as np
 import numpy.linalg as la
+import math
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UCGate
 from qclib.gates.initialize import Initialize
@@ -74,7 +75,10 @@ class UCGInitialize(Initialize):
 
         bit_target = self.str_target[self.num_qubits - tree_level]
 
-        mult, mult_controls, target = self._define_mult(children, parent, tree_level)
+        old_mult, odl_mult_controls, target = self._define_mult(children, parent, tree_level)
+        simpl = self._simplify(old_mult, tree_level)[1]
+        mult = simpl[1]
+        mult_controls = simpl[0]
 
         if self.preserve:
             self._preserve_previous(mult, mult_controls, r_gate, target)
@@ -82,6 +86,59 @@ class UCGInitialize(Initialize):
         ucg = self._apply_ucg(mult, mult_controls, target)
 
         return bit_target, ucg
+
+    def _simplify(self, mux, level):
+
+        mux_cpy = mux.copy()
+        nc = []
+        c = []
+        for i in range(int(math.log2(len(mux)))):
+            c.append(self.num_qubits - 1 - i)
+
+        if len(mux) > 1:
+            n = self.num_qubits - level
+            nc = (self._repetition_search(mux, n, mux_cpy))
+
+        controls = [x for x in c if x not in nc]
+
+        new_mux = [i for i in mux_cpy if not np.allclose(i, np.array([[-999, -999], [-999, -999]]))]
+
+        return controls, new_mux
+
+    def _repetition_search(self, mux, n, mux_cpy):
+
+        nc = []
+        for i in range(1, len(mux)):
+            if i > len(mux) / 2:
+                return nc
+            d = i
+            entanglement = False
+            if np.allclose(mux[i], mux[0]) and (d & (d - 1)) == 0:
+                mux_org = mux_cpy[:]
+                repetitions = len(mux) / (2 * d)
+                base = 0
+                while repetitions:
+                    repetitions -= 1
+                    valid = self._repetition_verify(base, base + d, d, mux, mux_cpy)
+                    base += 2 * d
+                    if not valid:
+                        mux_cpy[:] = mux_org
+                        break
+                    if repetitions == 0:
+                        entanglement = True
+
+            if entanglement:
+                nc.append(n + int(math.log2(d)) + 1)
+        return nc
+
+    def _repetition_verify(self, a, b, d, mux, mux_cpy):
+        i = 0
+        while i < d:
+            if not np.allclose(mux[a], mux[b]):
+                return False
+            mux_cpy[b] = np.array([[-999, -999], [-999, -999]])
+            a, b, i = a + 1, b + 1, i + 1
+        return True
 
     def _define_mult(self, children: 'list[float]', parent: 'list[float]', tree_level: int):
 
@@ -97,7 +154,7 @@ class UCGInitialize(Initialize):
                    target: int):
         """ Creates and applies multiplexer """
 
-        ucg = UCGate(current_level_mux, up_to_diagonal=True)
+        ucg = UCGate(current_level_mux, up_to_diagonal=False)
         if len(current_level_mux) != 1:
             self.circuit.append(ucg, [target] + mult_controls)
         else:
