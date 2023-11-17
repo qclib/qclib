@@ -46,6 +46,28 @@ class TestEntanglement(TestCase):
         gme = geometric_entanglement(w6_state)
         self.assertTrue(np.abs(gme - 0.59) < 1e-3)
 
+    def test_schmidt_decomposition(self):
+        state = np.zeros(8)
+        state[0] = 1 / np.sqrt(2)
+        state[7] = 1 / np.sqrt(2)
+
+        u_matrix = np.array([[1.0, 0.0], [0.0, 1.0]])
+        singular_values = np.array([0.70710678, 0.70710678])
+        vh_matrix = np.array(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, -1.0, 0.0, 0.0],
+            ]
+        )
+
+        partition = [0, 1]
+
+        result = schmidt_decomposition(state, partition)
+        self.assertTrue(np.allclose(result[1], u_matrix))
+        self.assertTrue(np.allclose(result[2], singular_values))
+        self.assertTrue(np.allclose(result[3], vh_matrix[:result[0], :]))
 
     def test_schmidt_composition(self):
         state = np.random.rand(2**8) + np.random.rand(2**8) * 1.0j

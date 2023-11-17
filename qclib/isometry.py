@@ -22,9 +22,9 @@ import numpy as np
 import scipy
 import qiskit.quantum_info as qi
 from qiskit import QuantumCircuit, QuantumRegister, transpile
-from qiskit.extensions.quantum_initializer.diagonal import DiagonalGate
+from qiskit.circuit.library import DiagonalGate
 from qiskit.extensions import UnitaryGate
-from qiskit.extensions.quantum_initializer.uc import UCGate
+from qiskit.circuit.library import UCGate
 from qclib.unitary import unitary as decompose_unitary, cnot_count as unitary_cnot_count
 
 

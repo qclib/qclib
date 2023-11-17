@@ -177,10 +177,6 @@ class MergeInitialize(InitializeSparse):
                 dif_values.append("1")
                 temp_strings = t_1
 
-            # dif_qubits must have at least two values stored in it
-            if (len(temp_strings) - 1) == 1 and len(dif_qubits) == 1:
-                temp_strings = b_strings
-
         return temp_strings, dif_qubits, dif_values
 
     def _select_strings(self, state_dict):
