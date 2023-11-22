@@ -19,7 +19,7 @@ import numpy as np
 from qiskit import ClassicalRegister
 from qiskit_aer import AerSimulator
 from qclib.state_preparation import DcspInitialize
-import util
+from .util import measurement
 
 
 backend = AerSimulator()
@@ -38,7 +38,7 @@ class TestInitialize(TestCase):
         classical_register = ClassicalRegister(n_qubits)
         circuit.add_register(classical_register)
 
-        return util.measurement(circuit, n_qubits, classical_register, backend, SHOTS)
+        return measurement(circuit, n_qubits, classical_register, backend, SHOTS)
 
     def test_dcsp(self):
         """ Testing divide-and-conquer state preparation """
