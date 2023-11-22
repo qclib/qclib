@@ -22,6 +22,7 @@ from qiskit.circuit import Gate
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.gates.util import check_u2, apply_ctrl_state
 from qclib.gates.multitargetmcsu2 import MultiTargetMCSU2
+from qclib.gates.ldmcu import Ldmcu
 
 
 # pylint: disable=protected-access
@@ -31,7 +32,7 @@ class MCU(Gate):
     https://arxiv.org/abs/2310.14974
 
     -----------------------------------------
-    Implements gate decomposition of a munticontrolled operator in U(2)
+    Implements gate decomposition of a multi-controlled operator in U(2)
     """
 
     def __init__(self, unitary, num_controls, error=0, ctrl_state: str = None):
@@ -64,7 +65,7 @@ class MCU(Gate):
 
         self.ctrl_state = ctrl_state
 
-        super().__init__("LdmcuApprox", num_controls + 1, [], "LdmcuApprox")
+        super().__init__("McuApprox", num_controls + 1, [], "McuApprox")
 
     def _define(self):
         if len(self.control_qubits) > 0:
@@ -90,7 +91,8 @@ class MCU(Gate):
             self.definition = QuantumCircuit(self.target_qubit)
             self.definition.unitary(self.unitary, 0)
 
-    def _get_num_base_ctrl_qubits(self, unitary, error):
+    @staticmethod
+    def _get_num_base_ctrl_qubits(unitary, error):
         """
         Get the baseline number of control qubits for the approximation
         given an error
@@ -109,6 +111,9 @@ class MCU(Gate):
 
         quotient = angle / np.arccos(1 - error**2 / 2)
         return int(np.ceil(np.log2(quotient))) + 1
+
+    def get_n_base(self, unitary, error):
+        return self._get_num_base_ctrl_qubits(unitary, error)
 
     def _c1c2(self, n_qubits, gate_circ, first=True, step=1):
 
@@ -163,14 +168,16 @@ class MCU(Gate):
         extra_q = n_qubits - n_qubits_base
         return extra_q, n_qubits_base
 
-    def _compute_param(self, pair):
+    @staticmethod
+    def _compute_param(pair):
         exponent = pair.target - pair.control
         if pair.control == 0:
             exponent = exponent - 1
         param = 2**exponent
         return param
 
-    def _compute_rx_matrix(self, param, signal):
+    @staticmethod
+    def _compute_rx_matrix(param, signal):
         theta = signal * np.pi / param
         rx_matrix = np.array(
             [
@@ -226,10 +233,16 @@ class MCU(Gate):
         Approximated Multi-Controlled Unitary Gate
         https://arxiv.org/abs/2310.14974
         """
-        circuit.append(
-            MCU(unitary, len(controls), error, ctrl_state=ctrl_state),
-            [*controls, target],
-        )
+        if error == 0:
+            circuit.append(
+                Ldmcu(unitary, len(controls), ctrl_state=ctrl_state),
+                [*controls, target]
+            )
+        else:
+            circuit.append(
+                MCU(unitary, len(controls), error, ctrl_state=ctrl_state),
+                [*controls, target],
+            )
 
 
 MCU._apply_ctrl_state = apply_ctrl_state
