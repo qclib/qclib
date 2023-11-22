@@ -1,6 +1,7 @@
 """ auxiliary file """
 from qiskit import execute
 
+
 def measurement(circuit, n_qubits, classical_register, backend, shots):
     """ run circuit and return measurements """
     circuit.measure(list(range(n_qubits)), classical_register)

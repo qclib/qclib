@@ -19,10 +19,11 @@ import numpy as np
 from qiskit import ClassicalRegister
 from qiskit_aer import AerSimulator
 from qclib.state_preparation import BdspInitialize
-from .util import measurement
+from util import measurement
 
 backend = AerSimulator()
 SHOTS = 8192
+
 
 class TestBdsp(TestCase):
     """ Testing bdsp """
