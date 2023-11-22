@@ -170,7 +170,7 @@ def random_sparse(nbits, density):
     bin_data: [(binary_string_k, float_k)] k = 0 ... n
     """
 
-    data = sparse.random(2**nbits, 1, density, format="dok")
+    data = sparse.random(2 ** nbits, 1, density, format="dok")
 
     rows, _ = data.nonzero()
     bin_data = []
@@ -185,9 +185,8 @@ def random_sparse(nbits, density):
 
 
 def _double_sparse_binary(nbits, log_size, p_1, p_0):
-
     bin_data = []
-    while len(bin_data) < 2**log_size:
+    while len(bin_data) < 2 ** log_size:
         lst = np.random.choice(2, nbits, p=[p_1, p_0]).tolist()
 
         if lst not in bin_data:
@@ -209,17 +208,17 @@ def double_sparse(nbits, log_size, p_1, complex_amplitudes=True):
     \\sum_{k} x_k |p_k>, each bit of p_k is equal to 1 with probability p1
     """
     if complex_amplitudes:
-        data = np.random.rand(2**log_size) + np.random.rand(2**log_size) * 1j
+        data = np.random.rand(2 ** log_size) + np.random.rand(2 ** log_size) * 1j
     else:
-        data = np.random.rand(2**log_size)
+        data = np.random.rand(2 ** log_size)
     length = np.linalg.norm(data)
     data = (1 / length) * data
 
     binary = _double_sparse_binary(nbits, log_size, 1 - p_1, p_1)
-    bin_data = [(binary[i], data[i]) for i in range(2**log_size)]
+    bin_data = [(binary[i], data[i]) for i in range(2 ** log_size)]
     bin_data.sort(key=_count_ones)
 
-    return {''.join(map(str, b)):d for b, d in bin_data}
+    return {''.join(map(str, b)): d for b, d in bin_data}
 
 
 def _compute_matrix_angles(feature, norm):
@@ -273,6 +272,7 @@ def build_state_dict(state):
             binary_string = f"{value_idx:0{n_qubits}b}"[::-1]
             state_dict[binary_string] = value
     return state_dict
+
 
 def measurement(circuit, n_qubits, classical_register, backend, shots):
     """ run circuit and return measurements """
