@@ -139,7 +139,7 @@ class MCU(Gate):
                         qubits=[pair.control + extra_q, pair.target + extra_q],
                         inplace=True,
                     )
-            # For the controlled rotations, when control==0, apply a multicontrolled
+            # For the controlled rotations, when control==0, apply a multi-controlled
             # rotation with the extra control qubits
             else:
                 if pair.control == 0 and extra_q >= 1:
@@ -187,7 +187,8 @@ class MCU(Gate):
         )
         return rx_matrix
 
-    def _compute_qubit_pairs(self, n_qubits_base, step):
+    @staticmethod
+    def _compute_qubit_pairs(n_qubits_base, step):
         pairs = namedtuple("pairs", ["control", "target"])
         if step == 1:
             start = 0
@@ -204,10 +205,10 @@ class MCU(Gate):
         return qubit_pairs
 
     @staticmethod
-    def _gate_u(agate, coef, signal):
-        param = 1 / np.abs(coef)
+    def _gate_u(a_gate, coefficient, signal):
+        param = 1 / np.abs(coefficient)
 
-        values, vectors = np.linalg.eig(agate)
+        values, vectors = np.linalg.eig(a_gate)
         gate = (
             np.power(values[0] + 0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T
         )
@@ -221,11 +222,11 @@ class MCU(Gate):
         if signal < 0:
             gate = np.linalg.inv(gate)
 
-        sqgate = QuantumCircuit(1, name="U^1/" + str(coef))
-        sqgate.unitary(gate, 0)  # pylint: disable=maybe-no-member
-        csqgate = sqgate.control(1)
+        s_q_gate = QuantumCircuit(1, name="U^1/" + str(coefficient))
+        s_q_gate.unitary(gate, 0)  # pylint: disable=maybe-no-member
+        c_s_q_gate = s_q_gate.control(1)
 
-        return csqgate
+        return c_s_q_gate
 
     @staticmethod
     def mcu(circuit, unitary, controls, target, error, ctrl_state=None):
