@@ -19,7 +19,6 @@ import numpy as np
 from qiskit import ClassicalRegister
 from qiskit_aer import AerSimulator
 from qclib.state_preparation import DcspInitialize
-#from .util import measurement
 import util
 
 
