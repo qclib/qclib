@@ -10,12 +10,12 @@ def measurement(circuit, n_qubits, classical_register, backend, shots):
 
     counts = job.result().get_counts(circuit)
 
-    counts2 = {}
+    count_s2 = {}
     for k in range(2 ** n_qubits):
         pattern = f'{k:0{n_qubits}b}'
         if pattern in counts:
-            counts2[pattern] = counts[pattern]
+            count_s2[pattern] = counts[pattern]
         else:
-            counts2[pattern] = 0.0
+            count_s2[pattern] = 0.0
 
-    return [value / shots for (key, value) in counts2.items()]
+    return [value / shots for (key, value) in count_s2.items()]
