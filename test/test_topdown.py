@@ -18,7 +18,7 @@ Tests for the topdown.py module.
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister, execute
+from qiskit import ClassicalRegister
 from qiskit_aer import AerSimulator
 from qclib.state_preparation import TopDownInitialize
 from qclib.util import get_state, measurement
