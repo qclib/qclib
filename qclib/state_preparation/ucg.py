@@ -19,7 +19,6 @@
 """
 import numpy as np
 import numpy.linalg as la
-import math
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UCGate
 from qclib.gates.initialize import Initialize
@@ -75,10 +74,8 @@ class UCGInitialize(Initialize):
 
         bit_target = self.str_target[self.num_qubits - tree_level]
 
-        old_mult, odl_mult_controls, target = self._define_mult(children, parent, tree_level)
-        simpl = self._simplify(old_mult, tree_level)
-        mult = simpl[1]
-        mult_controls = simpl[0]
+        old_mult, _, target = self._define_mult(children, parent, tree_level)
+        mult_controls, mult = self._simplify(old_mult, tree_level)
         mult_controls.reverse()
 
         if self.preserve:
@@ -93,12 +90,12 @@ class UCGInitialize(Initialize):
         mux_cpy = mux.copy()
         nc = []
         c = []
-        for i in range(int(math.log2(len(mux)))):
+        for i in range(int(np.log2(len(mux)))):
             c.append(self.num_qubits - 1 - i)
 
         if len(mux) > 1:
             n = self.num_qubits - level
-            nc = (self._repetition_search(mux, n, mux_cpy))
+            nc = self._repetition_search(mux, n, mux_cpy)
 
         controls = [x for x in c if x not in nc]
 
@@ -129,7 +126,7 @@ class UCGInitialize(Initialize):
                         entanglement = True
 
             if entanglement:
-                nc.append(n + int(math.log2(d)) + 1)
+                nc.append(n + int(np.log2(d)) + 1)
         return nc
 
     def _repetition_verify(self, a, b, d, mux, mux_cpy):
@@ -232,8 +229,8 @@ class UCGInitialize(Initialize):
 
         for parent_idx, sibling_idx in zip(range(len_pnodes), range(0, len_snodes, 2)):
             if parent_amplitudes[parent_idx] != 0:
-                amp_ket0 = (children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx])
-                amp_ket1 = (children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx])
+                amp_ket0 = children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx]
+                amp_ket1 = children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx]
                 if amp_ket0 != 0:
                     gates += [self._get_branch_operator(amp_ket0, amp_ket1, bit_target)]
                 else:
