@@ -76,9 +76,10 @@ class UCGInitialize(Initialize):
         bit_target = self.str_target[self.num_qubits - tree_level]
 
         old_mult, odl_mult_controls, target = self._define_mult(children, parent, tree_level)
-        simpl = self._simplify(old_mult, tree_level)[1]
+        simpl = self._simplify(old_mult, tree_level)
         mult = simpl[1]
         mult_controls = simpl[0]
+        mult_controls.reverse()
 
         if self.preserve:
             self._preserve_previous(mult, mult_controls, r_gate, target)
@@ -194,11 +195,11 @@ class UCGInitialize(Initialize):
     def _apply_diagonal(bit_target: str, parent: 'list[float]', ucg: UCGate):
 
         children = parent
-        if bit_target == '1':
-            diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
-        else:
-            diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
-        children = children * diagonal
+        # if bit_target == '1':
+        #     diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
+        # else:
+        #     diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
+        # children = children * diagonal
 
         return children
 
