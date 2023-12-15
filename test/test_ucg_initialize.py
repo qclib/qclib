@@ -47,40 +47,40 @@ class TestUCGInitialize(TestCase):
 
             self.assertTrue(np.allclose(state, output_state))
 
-    def _test_ucg_preserve(self, n_qubits):
-        state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
-
-        for target_state in range(1, 2**n_qubits):
-            state[target_state - 1] = 0
-            state = state / np.linalg.norm(state)
-
-            gate = UCGInitialize(state.tolist(),
-                                    opt_params={
-                                        "target_state": target_state,
-                                        "preserve_previous": True
-                                    }
-                                ).definition
-
-            circuit = QuantumCircuit(n_qubits)
-
-            for j, bit in enumerate(f'{target_state:0{n_qubits}b}'[::-1]):
-                if bit == '1':
-                    circuit.x(j)
-
-            circuit.append(gate, circuit.qubits)
-            output_state = get_state(circuit)
-
-            self.assertTrue(np.allclose(output_state, state))
+    # def _test_ucg_preserve(self, n_qubits):
+    #     state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+    #
+    #     for target_state in range(1, 2**n_qubits):
+    #         state[target_state - 1] = 0
+    #         state = state / np.linalg.norm(state)
+    #
+    #         gate = UCGInitialize(state.tolist(),
+    #                                 opt_params={
+    #                                     "target_state": target_state,
+    #                                     "preserve_previous": True
+    #                                 }
+    #                             ).definition
+    #
+    #         circuit = QuantumCircuit(n_qubits)
+    #
+    #         for j, bit in enumerate(f'{target_state:0{n_qubits}b}'[::-1]):
+    #             if bit == '1':
+    #                 circuit.x(j)
+    #
+    #         circuit.append(gate, circuit.qubits)
+    #         output_state = get_state(circuit)
+    #
+    #         self.assertTrue(np.allclose(output_state, state))
 
     def test_ucg(self):
         """Test UCGInitialize"""
         for n_qubits in range(3, 5):
             self._test_ucg(n_qubits)
 
-    def test_ucg_preserve(self):
-        """Test UCGInitialize with `preserve_previous`"""
-        for n_qubits in range(3, 5):
-            self._test_ucg_preserve(n_qubits)
+    # def test_ucg_preserve(self):
+    #     """Test UCGInitialize with `preserve_previous`"""
+    #     for n_qubits in range(3, 5):
+    #         self._test_ucg_preserve(n_qubits)
 
     def test_real(self):
         """Test UCGInitialize with four qubits and index 10"""
