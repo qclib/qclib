@@ -279,16 +279,17 @@ class TestMcxVchainDirty(TestCase):
         for target_idx in range(6, 9):
             qiskit_circuit.mcx(controls_idx, [target_idx])
 
+
         mcx_v_chain_op = Operator(mcx_v_chain_circuit).data
         qiskit_mcx_op = Operator(qiskit_circuit).data
 
         tr_mcx_v_chain = transpile(mcx_v_chain_circuit, basis_gates=["u", "cx"])
 
-        np.allclose(mcx_v_chain_op, qiskit_mcx_op)
+        self.assertTrue(np.allclose(mcx_v_chain_op, qiskit_mcx_op))
 
         if num_controls > 3:
             self.assertTrue(
-                10 + (num_controls - 2) * 8 + (num_target_qubit - 1) * 12 - 8 * (num_target_qubit - 1)
+                10 + 8 * (num_controls - 2) + 2 * (num_target_qubit - 1)
                 == tr_mcx_v_chain.count_ops()["cx"]
             )
 
