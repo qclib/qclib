@@ -145,7 +145,7 @@ class McxVchainDirty(Gate):
                     targets = self.target_qubits
                     num_targets = len(targets)
                     self.definition.append(
-                        self.toffoli_multi_target(num_targets, ),
+                        self.toffoli_multi_target(num_targets, side),
                         [control_1, control_2, *targets],
                     )
 
@@ -193,7 +193,6 @@ class McxVchainDirty(Gate):
                         self.toffoli_multi_target(num_targets, side),
                         [control_1, control_2, *targets],
                     )
-
 
             else:
                 controls = [
