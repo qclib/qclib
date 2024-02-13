@@ -153,7 +153,7 @@ class TestLinearToffoli(TestCase):
         """ compare qiskit.mct and toffoli depth with 7 qubits """
         gate_x = np.array([[0, 1], [1, 0]])
         qcirc1 = qiskit.QuantumCircuit(6)
-        qcirc1.mct([0, 1, 2, 3, 4], 5)
+        qcirc1.mcx([0, 1, 2, 3, 4], 5)
         t_qcirc1 = qiskit.transpile(qcirc1, basis_gates=['u', 'cx'])
 
         controls = QuantumRegister(5)
