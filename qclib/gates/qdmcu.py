@@ -120,9 +120,9 @@ class Qdmcu(Gate):
                 self.target,
                 self.ctrl_state[1:]
             )
-    
+
     @staticmethod
-    def custom_sqrtm(unitary): 
+    def custom_sqrtm(unitary):
         eig_vals, eig_vecs = eig(unitary)
         first_eig = sqrt(eig_vals[0]) * outer(eig_vecs[:, 0], eig_vecs[:, 0].conj())
         second_eig = sqrt(eig_vals[1]) * outer(eig_vecs[:, 1], eig_vecs[:, 1].conj())

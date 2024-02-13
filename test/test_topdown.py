@@ -18,7 +18,7 @@ Tests for the topdown.py module.
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister, execute
+from qiskit import ClassicalRegister, transpile
 from qiskit_aer import AerSimulator
 from qclib.state_preparation import TopDownInitialize
 from qclib.util import get_state
@@ -34,7 +34,11 @@ class TestTopDown(TestCase):
     def measurement(circuit, n_qubits, classical_reg):
         circuit.measure(list(range(n_qubits)), classical_reg)
 
-        job = execute(circuit, backend, shots=SHOTS, optimization_level=3)
+        job = backend.run(
+            transpile(circuit, backend),
+            shots=SHOTS,
+            optimization_level=3
+        )
 
         counts = job.result().get_counts(circuit)
         sum_values = sum(counts.values())

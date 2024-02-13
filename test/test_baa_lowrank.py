@@ -18,7 +18,7 @@ Tests for the baa_lowrank.py module.
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister, execute
+from qiskit import ClassicalRegister, transpile
 from qiskit_aer import AerSimulator
 from qclib.util import get_state
 from qclib.state_preparation import BaaLowRankInitialize
@@ -42,7 +42,10 @@ class TestBaaLowRank(TestCase):
         circuit.measure(list(range(n_qubits)), classical_reg)
 
         backend = AerSimulator()
-        counts = execute(circuit, backend, shots=8192).result().get_counts()
+        counts = backend.run(
+            transpile(circuit, backend),
+            shots=8192
+        ).result().get_counts()
 
         counts_with_zeros = {}
         for i in range(2**n_qubits):
