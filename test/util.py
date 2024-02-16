@@ -1,11 +1,15 @@
 """ auxiliary file """
-from qiskit import execute
+from qiskit import transpile
 
 def measurement(circuit, n_qubits, classical_register, backend, shots):
     """ run circuit and return measurements """
     circuit.measure(list(range(n_qubits)), classical_register)
 
-    job = execute(circuit, backend, shots=shots, optimization_level=3)
+    job = backend.run(
+        transpile(circuit, backend),
+        shots=shots,
+        optimization_level=3
+    )
 
     counts = job.result().get_counts(circuit)
 

@@ -20,7 +20,7 @@ $ python
 ```python
 import numpy as np
 from qiskit import transpile
-from qiskit.providers.aer.backends import AerSimulator
+from qiskit_aer import AerSimulator
 from qclib.state_preparation import LowRankInitialize
 
 # Generate 3-qubit random input state vector
