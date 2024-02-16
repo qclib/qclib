@@ -123,3 +123,30 @@ class TestUCGInitialize(TestCase):
 
         self.assertTrue(np.allclose(params, params2))
         self.assertTrue(circuit_tranpiled.depth() <= qc_transpiled.depth())
+
+    def test_ucg_disentangled_complex(self):
+        num_qubits = 8
+        qc = QuantumCircuit(num_qubits)
+
+        real_part1 = np.random.rand(2 ** 4)
+        imag_part1 = np.random.rand(2 ** 4)
+        input_state1 = real_part1 + 1j * imag_part1
+
+        input_state1 = input_state1 / np.linalg.norm(input_state1)
+
+        real_part2 = np.random.rand(2 ** 4)
+        imag_part2 = np.random.rand(2 ** 4)
+        input_state2 = real_part2 + 1j * imag_part2
+
+        input_state2 = input_state2 / np.linalg.norm(input_state2)
+
+        UCGInitialize.initialize(qc, input_state1, [0, 2, 3, 7])
+        UCGInitialize.initialize(qc, input_state2, [1, 4, 5, 6])
+
+        params = get_state(qc)
+
+        circuit = QuantumCircuit(8)
+        UCGInitialize.initialize(circuit, params.tolist())
+        params2 = get_state(circuit)
+
+        self.assertTrue(np.allclose(params, params2))

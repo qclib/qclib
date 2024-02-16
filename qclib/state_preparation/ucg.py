@@ -19,9 +19,11 @@
 """
 import numpy as np
 import numpy.linalg as la
+import qiskit
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UCGate
 from qclib.gates.initialize import Initialize
+from qiskit.quantum_info import Operator
 
 
 class UCGInitialize(Initialize):
@@ -57,8 +59,8 @@ class UCGInitialize(Initialize):
 
         while tree_level > 0:
 
-            bit_target, ucg = self._disentangle_qubit(children, parent, r_gate, tree_level)
-            children = self._apply_diagonal(bit_target, parent, ucg)
+            bit_target, ucg, nc, controls = self._disentangle_qubit(children, parent, r_gate, tree_level)
+            children = self._apply_diagonal(self, bit_target, parent, ucg, nc, controls)
             parent = self._update_parent(children)
 
             # prepare next iteration
@@ -74,34 +76,29 @@ class UCGInitialize(Initialize):
 
         bit_target = self.str_target[self.num_qubits - tree_level]
 
-        old_mult, _, target = self._define_mult(children, parent, tree_level)
-        mult_controls, mult = self._simplify(old_mult, tree_level)
-        mult_controls.reverse()
+        old_mult, old_controls, target = self._define_mult(children, parent, tree_level)
+        nc, mult = self._simplify(old_mult, tree_level)
+        mult_controls = [x for x in old_controls if x not in nc]
 
         if self.preserve:
             self._preserve_previous(mult, mult_controls, r_gate, target)
 
         ucg = self._apply_ucg(mult, mult_controls, target)
 
-        return bit_target, ucg
+        return bit_target, ucg, nc, mult_controls
 
     def _simplify(self, mux, level):
 
         mux_cpy = mux.copy()
         nc = []
-        c = []
-        for i in range(int(np.log2(len(mux)))):
-            c.append(self.num_qubits - 1 - i)
 
         if len(mux) > 1:
             n = self.num_qubits - level
             nc = self._repetition_search(mux, n, mux_cpy)
 
-        controls = [x for x in c if x not in nc]
-
         new_mux = [i for i in mux_cpy if not np.allclose(i, np.array([[-999, -999], [-999, -999]]))]
 
-        return controls, new_mux
+        return nc, new_mux
 
     def _repetition_search(self, mux, n, mux_cpy):
 
@@ -152,7 +149,7 @@ class UCGInitialize(Initialize):
                    target: int):
         """ Creates and applies multiplexer """
 
-        ucg = UCGate(current_level_mux, up_to_diagonal=False)
+        ucg = UCGate(current_level_mux, up_to_diagonal=True)
         if len(current_level_mux) != 1:
             self.circuit.append(ucg, [target] + mult_controls)
         else:
@@ -189,14 +186,23 @@ class UCGInitialize(Initialize):
         return parent
 
     @staticmethod
-    def _apply_diagonal(bit_target: str, parent: 'list[float]', ucg: UCGate):
-
+    def _apply_diagonal(self, bit_target: str, parent: 'list[float]', ucg: UCGate, nc: 'list[int]', controls: 'list[int]'):
         children = parent
-        # if bit_target == '1':
-        #     diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
-        # else:
-        #     diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
-        # children = children * diagonal
+
+        if bit_target == '1':
+            diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
+        else:
+            diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
+        if nc:
+            controls.reverse()
+            size_required = len((nc + controls))
+            ctrl_qc = [self.num_qubits - 1 - x for x in controls]
+            unitary_diagonal = np.diag(diagonal)
+            qc = qiskit.QuantumCircuit(size_required)
+            qc.unitary(unitary_diagonal, ctrl_qc)
+            matrix = Operator(qc).to_matrix()
+            diagonal = np.diag(matrix)
+        children = children * diagonal
 
         return children
 
