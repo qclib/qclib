@@ -19,7 +19,7 @@ import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit.library import RXGate
 from qiskit.quantum_info import Operator
-from qiskit.extensions import UnitaryGate
+from qiskit.circuit.library import UnitaryGate
 from scipy.stats import unitary_group
 from qclib.gates.ldmcsu import LdMcSpecialUnitary, Ldmcsu
 from qclib.gates.util import u2_to_su2

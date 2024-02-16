@@ -12,20 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+"""
+Qclib Initialize base class
+"""
 from math import log2, isclose
 from qiskit.circuit.gate import Gate
 import numpy as np
 
 
 class Initialize(Gate):
+    """
+    Qclib Initialize base class
+    """
     @staticmethod
     def initialize(q_circuit, state, qubits=None):
-        pass
+        """
+        Inititialize.initialize base method
+        """
 
-    def inverse(self):
+    def inverse(self, annotated=False):
         inverse_gate = self.copy()
 
-        inverse_gate.definition = self.definition.inverse()
+        inverse_gate.definition = self.definition.inverse(annotated=annotated)
         inverse_gate.label += "_dg"
 
         return inverse_gate
@@ -35,20 +44,20 @@ class Initialize(Gate):
 
         # Check if param is a power of 2
         if self.num_qubits == 0 or not self.num_qubits.is_integer():
-            Exception("The length of the state vector is not a positive power of 2.")
+            raise ValueError("The length of the state vector is not a positive power of 2.")
 
         # Check if probabilities (amplitudes squared) sum to 1
         if not isclose(sum(np.absolute(params) ** 2), 1.0, abs_tol=1e-10):
-            Exception("Sum of amplitudes-squared does not equal one.")
+            raise ValueError("Sum of amplitudes-squared does not equal one.")
 
         self.num_qubits = int(self.num_qubits)
 
     def validate_parameter(self, parameter):
         if isinstance(parameter, (int, float, complex)):
             return complex(parameter)
-        elif isinstance(parameter, np.number):
+        if isinstance(parameter, np.number):
             return complex(parameter.item())
-        else:
-            raise Exception(
-                f"invalid param type {type(parameter)} for instruction {self.name}."
-            )
+
+        raise TypeError(
+            f"invalid param type {type(parameter)} for instruction {self.name}."
+        )

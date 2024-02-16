@@ -20,7 +20,7 @@ Linear-depth Multicontrolled Special Unitary
 from typing import Union, List
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
-from qiskit.extensions import UnitaryGate
+from qiskit.circuit.library import UnitaryGate
 from qiskit.circuit import Gate, Qubit
 from qclib.gates.ldmcsu import Ldmcsu
 from qclib.gates.mcx import McxVchainDirty

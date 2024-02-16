@@ -22,8 +22,8 @@ from typing import Union, List
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import RZGate, RYGate
-from qiskit.extensions import UnitaryGate
-from qiskit.quantum_info import OneQubitEulerDecomposer
+from qiskit.circuit.library import UnitaryGate
+from qiskit.synthesis import OneQubitEulerDecomposer
 from qiskit.circuit import Gate, Qubit
 
 from qclib.gates.mcx import LinearMcx, McxVchainDirty
@@ -291,7 +291,7 @@ class LdMcSpecialUnitary(Gate):
     def __init__(self, unitary, num_controls, ctrl_state=None):
 
         if not check_su2(unitary):
-            raise Exception("Operator must be in SU(2)")
+            raise ValueError("Operator must be in SU(2)")
 
         self.unitary = np.array(unitary, dtype=complex)
 

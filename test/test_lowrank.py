@@ -19,7 +19,7 @@ Tests for the lowrank.py module.
 from unittest import TestCase
 from itertools import combinations
 import numpy as np
-from qiskit import QuantumCircuit, ClassicalRegister, execute, transpile
+from qiskit import QuantumCircuit, ClassicalRegister, transpile
 from qiskit_aer import AerSimulator
 from qclib.state_preparation import LowRankInitialize
 from qclib.state_preparation.lowrank import cnot_count
@@ -46,7 +46,10 @@ class TestLowRank(TestCase):
         circuit.measure(list(range(n_qubits)), classical_reg)
 
         backend = AerSimulator()
-        counts = execute(circuit, backend, shots=8192).result().get_counts()
+        counts = backend.run(
+            transpile(circuit, backend),
+            shots=8192
+        ).result().get_counts()
 
         counts_with_zeros = {}
         for i in range(2**n_qubits):
