@@ -18,7 +18,6 @@
 from unittest import TestCase
 import numpy as np
 from qiskit import QuantumCircuit
-
 from qclib.state_preparation import UCGInitialize
 from qclib.util import get_state
 
@@ -26,7 +25,64 @@ from qclib.util import get_state
 class TestUCGInitialize(TestCase):
     """Test UCGInitialize"""
 
-    def test_three_qubit_state_real(self):
+    def _test_ucg(self, n_qubits):
+        state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state = state / np.linalg.norm(state)
+
+        for target_state in range(2**n_qubits):
+            gate = UCGInitialize(state.tolist(),
+                                    opt_params={
+                                        "target_state": target_state
+                                    }
+                                ).definition
+
+            circuit = QuantumCircuit(n_qubits)
+
+            for j, bit in enumerate(f'{target_state:0{n_qubits}b}'[::-1]):
+                if bit == '1':
+                    circuit.x(j)
+
+            circuit.append(gate, circuit.qubits)
+            output_state = get_state(circuit)
+
+            self.assertTrue(np.allclose(state, output_state))
+
+    def _test_ucg_preserve(self, n_qubits):
+        state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+
+        for target_state in range(1, 2**n_qubits):
+            state[target_state - 1] = 0
+            state = state / np.linalg.norm(state)
+
+            gate = UCGInitialize(state.tolist(),
+                                    opt_params={
+                                        "target_state": target_state,
+                                        "preserve_previous": True
+                                    }
+                                ).definition
+
+            circuit = QuantumCircuit(n_qubits)
+
+            for j, bit in enumerate(f'{target_state:0{n_qubits}b}'[::-1]):
+                if bit == '1':
+                    circuit.x(j)
+
+            circuit.append(gate, circuit.qubits)
+            output_state = get_state(circuit)
+
+            self.assertTrue(np.allclose(output_state, state))
+
+    def test_ucg(self):
+        """Test UCGInitialize"""
+        for n_qubits in range(3, 5):
+            self._test_ucg(n_qubits)
+
+    def test_ucg_preserve(self):
+        """Test UCGInitialize with `preserve_previous`"""
+        for n_qubits in range(3, 5):
+            self._test_ucg_preserve(n_qubits)
+
+    def test_real(self):
         """Test UCGInitialize with four qubits and index 10"""
         nqubits = 4
         state = np.random.rand(2 ** nqubits)
@@ -42,22 +98,5 @@ class TestUCGInitialize(TestCase):
         initialize(circuit, state.tolist(), opt_params={"target_state": 10})
 
         output_state = get_state(circuit)
-        print(output_state @ state.T)
-        self.assertTrue(np.allclose(output_state, state))
 
-    def test_three_qubit_state_complex(self):
-        """Test UCGInitialize with three qubits and index 7"""
-        state = np.random.rand(8) + np.random.rand(8) * 1j
-        state = state / np.linalg.norm(state)
-
-        initialize = UCGInitialize.initialize
-        circuit = QuantumCircuit(3)
-        circuit.x(0)
-        circuit.x(1)
-        circuit.x(2)
-
-        initialize(circuit, state.tolist(), opt_params={"target_state": 7})
-
-        output_state = get_state(circuit)
-        print(output_state @ state.T)
         self.assertTrue(np.allclose(output_state, state))

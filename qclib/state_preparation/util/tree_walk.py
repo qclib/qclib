@@ -28,8 +28,8 @@ def bottom_up(angle_tree, circuit, start_level):
 
         if angle_tree.angle_y != 0.0:
             circuit.ry(angle_tree.angle_y, angle_tree.qubit)
-            if angle_tree.angle_z != 0.0:
-                circuit.rz(angle_tree.angle_z, angle_tree.qubit)
+        if angle_tree.angle_z != 0.0:
+            circuit.rz(angle_tree.angle_z, angle_tree.qubit)
 
         bottom_up(angle_tree.left, circuit, start_level)
         bottom_up(angle_tree.right, circuit, start_level)

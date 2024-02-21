@@ -19,8 +19,8 @@ Tests for the lowrank.py module.
 from unittest import TestCase
 from itertools import combinations
 import numpy as np
-from qiskit import QuantumCircuit, ClassicalRegister, execute, transpile
-from qiskit.providers.aer.backends import AerSimulator
+from qiskit import QuantumCircuit, ClassicalRegister, transpile
+from qiskit_aer import AerSimulator
 from qclib.state_preparation import LowRankInitialize
 from qclib.state_preparation.lowrank import cnot_count
 
@@ -46,7 +46,10 @@ class TestLowRank(TestCase):
         circuit.measure(list(range(n_qubits)), classical_reg)
 
         backend = AerSimulator()
-        counts = execute(circuit, backend, shots=8192).result().get_counts()
+        counts = backend.run(
+            transpile(circuit, backend),
+            shots=8192
+        ).result().get_counts()
 
         counts_with_zeros = {}
         for i in range(2**n_qubits):
@@ -105,6 +108,22 @@ class TestLowRank(TestCase):
 
         self.assertTrue(np.allclose(state_vector, state))
 
+    def test_initialize_real(self):
+        n_qubits = 5
+        state_vector = np.random.rand(2**n_qubits)
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        qubits = list(range(n_qubits))
+        partitions = combinations(qubits, (n_qubits+1)//2)
+        for partition in partitions:
+            circuit = QuantumCircuit(n_qubits)
+            opt_params = {'partition': partition}
+            LowRankInitialize.initialize(circuit, state_vector, opt_params=opt_params)
+
+            state = get_state(circuit)
+
+            self.assertTrue(np.allclose(state_vector, state))
+
     def test_initialize_rank_4(self):
         self._test_initialize_mae(4, max_mae=10**-10)
 
@@ -158,3 +177,22 @@ class TestLowRank(TestCase):
 
         zero_state = [1]+[0]*(2**n_qubits-1)
         self.assertTrue(np.allclose(zero_state, state))
+
+    def test_large_state(self):
+        # Builds a separable state.
+        n_qubits = 16
+
+        state_vector1 = np.random.rand(2**(n_qubits//2)) + np.random.rand(2**(n_qubits//2)) * 1j
+        state_vector1 = state_vector1 / np.linalg.norm(state_vector1)
+
+        state_vector2 = np.random.rand(2**(n_qubits//2)) + np.random.rand(2**(n_qubits//2)) * 1j
+        state_vector2 = state_vector2 / np.linalg.norm(state_vector2)
+
+        state_vector = np.kron(state_vector1, state_vector2)
+
+        circuit = QuantumCircuit(n_qubits)
+        LowRankInitialize.initialize(circuit, state_vector, opt_params={'lr': 1, 'svd':'auto'})
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))

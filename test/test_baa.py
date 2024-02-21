@@ -15,12 +15,10 @@
 """
 Tests for the baa.py module.
 """
-import sys
 
 from test.test_baa_lowrank import TestBaaLowRank
 import datetime
 import os
-from multiprocessing import Pool
 from unittest import TestCase
 
 import numpy as np
