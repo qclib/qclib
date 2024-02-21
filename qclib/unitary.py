@@ -419,7 +419,7 @@ def _build_qr_circuit(gate_sequence, n_qubits):
     n_qubits: Number of qubits
 
     '''
-    #inverter e tirar o complex conjugado de gate_sequence
+    #invert and take the complex conjugate of gate_sequence
     dim_matrix = 2**n_qubits
     qubits = QuantumRegister(n_qubits)
     circuit = QuantumCircuit(qubits)
