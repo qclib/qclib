@@ -22,7 +22,7 @@ import numpy as np
 import scipy as sp
 from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.circuit.library import RYGate, CZGate
-from qiskit.circuit.library import UnitaryGate, UCRYGate, UCRZGate
+from qiskit.circuit.library import UnitaryGate, UCRYGate, UCRZGate, MCXGate, MCMT
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
 from qiskit.synthesis.unitary.qsd import _apply_a2
 from qiskit.circuit.library import UCGate
