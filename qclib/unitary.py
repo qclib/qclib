@@ -112,6 +112,9 @@ def _unitary(gate_list, n_qubits, decomposition="qsd"):
 
 
 def _csd(gate_list, n_qubits):
+    """
+    Cosine-sine decomposition
+    """
     left, mid, right = _multiplexed_csd(gate_list)
 
     gate_left = _unitary(left, n_qubits, decomposition="csd")
@@ -152,6 +155,12 @@ def _multiplexed_csd(gate_list):
 
 
 def _qsd(gate1, gate2):
+    """
+    Quantum Shannon Decomposition
+    Shende, V. V., S. S. Bullock, and I. L. Markov. "Synthesis of quantum-logic circuits.
+    " IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems 25.6
+    (2006): 1000-1010.
+    """
     n_qubits = int(log2(len(gate1))) + 1
     qubits = QuantumRegister(n_qubits)
     circuit = QuantumCircuit(qubits)
@@ -287,7 +296,9 @@ def _cnot_count_iso_qsd(n_qubits, apply_a2):
 
 
 def _qrd(gate: np.ndarray):
-    """"""
+    """
+    Nielsen and Chuang Section 4.5.2
+    """
 
     n_qubits = int(np.log2(len(gate)))
 
