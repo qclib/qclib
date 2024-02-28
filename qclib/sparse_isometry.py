@@ -1,7 +1,14 @@
+"""
+Malvetti, Emanuel, Raban Iten, and Roger Colbeck.
+"Quantum circuits for sparse isometries." Quantum 5 (2021): 412.
+TODO: fix number of cx gates
+"""
+
 import numpy as np
-from qclib.state_preparation.pivot import PivotInitialize
-from qiskit import *
+from qiskit import QuantumCircuit
 from qiskit.quantum_info import Operator
+from qclib.state_preparation.pivot import PivotInitialize
+
 
 
 def build_state_dict(state):
@@ -21,35 +28,13 @@ def build_state_dict(state):
     return state_dict
 
 
-# %% md
-
-
-from scipy.stats import unitary_group
-import numpy as np
-
-
-def householder_reflection_matrix(U):
-    """
-    U: 4 X 4 unitary matrix
-    """
-
-    a = U[:, [0]]
-    b = np.zeros((4, 1), complex)
-    b[0] = 1
-    z = a - b
-    M = (z @ z.conj().T) / (z.T @ z.conj())
-    y = -(z.conj().T @ b) / (z.conj().T @ a)
-    H = np.eye(4, dtype=complex) - (1 + y) * M
-    return H
-
-
 def householder_reflection_zero(num_qubits, phi=np.pi):
     """
-    Perform a Houlseholder reflection H_0^\phi
+    Perform a Houlseholder reflection H_0^ phi
     (https://arxiv.org/pdf/2006.00016.pdf section 3 )
 
     num_qubits: number of qubits
-    phi: phase \phi with respect to the vector v
+    phi: phase phi with respect to the vector v
     """
 
     qc = QuantumCircuit(1)
@@ -61,7 +46,7 @@ def householder_reflection_zero(num_qubits, phi=np.pi):
 
 def generalized_householder_reflection(data_list, x, y):
     """
-    Perform a Householder reflection H_v^\phi
+    Perform a Householder reflection H_v^ phi
     (https://arxiv.org/pdf/2006.00016.pdf section 3 )
     (https://ieeexplore.ieee.org/document/622959 section 1)
 
@@ -120,7 +105,7 @@ def householder_decomposition(isometry):
         ]
     ).astype(complex)
 
-    # We create a circuit to store all the H Householder operators
+    # We create a circuit to store all the h_reflection Householder operators
     circuit = QuantumCircuit(np.log2(num_isometry_rows))
 
     ii = 0
@@ -130,10 +115,9 @@ def householder_decomposition(isometry):
         v = y - x
         v = v / np.linalg.norm(v)
         v = list(v)
-        H = generalized_householder_reflection(v, x, y)
-        circuit.compose(H, inplace=True)
-        V = Operator(H).data @ isometry
-        isometry = V
+        h_reflection = generalized_householder_reflection(v, x, y)
+        circuit.compose(h_reflection, inplace=True)
+        isometry = Operator(h_reflection).data @ isometry
 
         if ii >= (num_isometry_columns - 1):
             break
