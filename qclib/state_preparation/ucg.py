@@ -19,11 +19,9 @@
 """
 import numpy as np
 import numpy.linalg as la
-import qiskit
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UCGate
 from qclib.gates.initialize import Initialize
-from qiskit.quantum_info import Operator
 
 
 class UCGInitialize(Initialize):
@@ -59,8 +57,8 @@ class UCGInitialize(Initialize):
 
         while tree_level > 0:
 
-            bit_target, ucg, nc, controls = self._disentangle_qubit(children, parent, r_gate, tree_level)
-            children = self._apply_diagonal(self, bit_target, parent, ucg, nc, controls)
+            bit_target, ucg = self._disentangle_qubit(children, parent, r_gate, tree_level)
+            children = self._apply_diagonal(bit_target, parent, ucg)
             parent = self._update_parent(children)
 
             # prepare next iteration
@@ -76,64 +74,14 @@ class UCGInitialize(Initialize):
 
         bit_target = self.str_target[self.num_qubits - tree_level]
 
-        old_mult, old_controls, target = self._define_mult(children, parent, tree_level)
-        nc, mult = self._simplify(old_mult, tree_level)
-        mult_controls = [x for x in old_controls if x not in nc]
+        mult, mult_controls, target = self._define_mult(children, parent, tree_level)
 
         if self.preserve:
             self._preserve_previous(mult, mult_controls, r_gate, target)
 
         ucg = self._apply_ucg(mult, mult_controls, target)
 
-        return bit_target, ucg, nc, mult_controls
-
-    def _simplify(self, mux, level):
-
-        mux_cpy = mux.copy()
-        nc = []
-
-        if len(mux) > 1:
-            n = self.num_qubits - level
-            nc = self._repetition_search(mux, n, mux_cpy)
-
-        new_mux = [i for i in mux_cpy if not np.allclose(i, np.array([[-999, -999], [-999, -999]]))]
-
-        return nc, new_mux
-
-    def _repetition_search(self, mux, n, mux_cpy):
-
-        nc = []
-        for i in range(1, len(mux)):
-            if i > len(mux) / 2:
-                return nc
-            d = i
-            entanglement = False
-            if np.allclose(mux[i], mux[0]) and (d & (d - 1)) == 0:
-                mux_org = mux_cpy[:]
-                repetitions = len(mux) / (2 * d)
-                base = 0
-                while repetitions:
-                    repetitions -= 1
-                    valid = self._repetition_verify(base, base + d, d, mux, mux_cpy)
-                    base += 2 * d
-                    if not valid:
-                        mux_cpy[:] = mux_org
-                        break
-                    if repetitions == 0:
-                        entanglement = True
-
-            if entanglement:
-                nc.append(n + int(np.log2(d)) + 1)
-        return nc
-
-    def _repetition_verify(self, a, b, d, mux, mux_cpy):
-        i = 0
-        while i < d:
-            if not np.allclose(mux[a], mux[b]):
-                return False
-            mux_cpy[b] = np.array([[-999, -999], [-999, -999]])
-            a, b, i = a + 1, b + 1, i + 1
-        return True
+        return bit_target, ucg
 
     def _define_mult(self, children: 'list[float]', parent: 'list[float]', tree_level: int):
 
@@ -186,22 +134,13 @@ class UCGInitialize(Initialize):
         return parent
 
     @staticmethod
-    def _apply_diagonal(self, bit_target: str, parent: 'list[float]', ucg: UCGate, nc: 'list[int]', controls: 'list[int]'):
-        children = parent
+    def _apply_diagonal(bit_target: str, parent: 'list[float]', ucg: UCGate):
 
+        children = parent
         if bit_target == '1':
             diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
         else:
             diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
-        if nc:
-            controls.reverse()
-            size_required = len((nc + controls))
-            ctrl_qc = [self.num_qubits - 1 - x for x in controls]
-            unitary_diagonal = np.diag(diagonal)
-            qc = qiskit.QuantumCircuit(size_required)
-            qc.unitary(unitary_diagonal, ctrl_qc)
-            matrix = Operator(qc).to_matrix()
-            diagonal = np.diag(matrix)
         children = children * diagonal
 
         return children
@@ -235,8 +174,8 @@ class UCGInitialize(Initialize):
 
         for parent_idx, sibling_idx in zip(range(len_pnodes), range(0, len_snodes, 2)):
             if parent_amplitudes[parent_idx] != 0:
-                amp_ket0 = children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx]
-                amp_ket1 = children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx]
+                amp_ket0 = (children_amplitudes[sibling_idx] / parent_amplitudes[parent_idx])
+                amp_ket1 = (children_amplitudes[sibling_idx + 1] / parent_amplitudes[parent_idx])
                 if amp_ket0 != 0:
                     gates += [self._get_branch_operator(amp_ket0, amp_ket1, bit_target)]
                 else:

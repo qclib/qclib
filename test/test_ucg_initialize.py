@@ -19,6 +19,7 @@ from unittest import TestCase
 import numpy as np
 from qiskit import QuantumCircuit, transpile
 from qclib.state_preparation import UCGInitialize
+from qclib.state_preparation.ucge import UCGEInitialize
 from qclib.util import get_state
 
 
@@ -77,10 +78,10 @@ class TestUCGInitialize(TestCase):
         for n_qubits in range(3, 5):
             self._test_ucg(n_qubits)
 
-    # def test_ucg_preserve(self):
-    #     """Test UCGInitialize with `preserve_previous`"""
-    #     for n_qubits in range(3, 5):
-    #         self._test_ucg_preserve(n_qubits)
+    def test_ucg_preserve(self):
+        """Test UCGInitialize with `preserve_previous`"""
+        for n_qubits in range(3, 5):
+            self._test_ucg_preserve(n_qubits)
 
     def test_real(self):
         """Test UCGInitialize with four qubits and index 10"""
@@ -115,7 +116,7 @@ class TestUCGInitialize(TestCase):
         params = get_state(qc)
 
         circuit = QuantumCircuit(6)
-        UCGInitialize.initialize(circuit, params.tolist())
+        UCGEInitialize.initialize(circuit, params.tolist())
         params2 = get_state(circuit)
 
         circuit_tranpiled = transpile(circuit, basis_gates=['u', 'cx'])
