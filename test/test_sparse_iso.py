@@ -2,9 +2,25 @@ from unittest import TestCase
 
 import numpy as np
 from scipy.stats import unitary_group, ortho_group
-from qclib.state_preparation.householder import householder_reflection_zero, householder_reflection_matrix, generalized_householder_reflection, householder_decomposition
+from qclib.sparse_isometry import householder_reflection_zero, generalized_householder_reflection, householder_decomposition
 from qiskit.quantum_info import Operator
 from qiskit import transpile
+
+
+def householder_reflection_matrix(U):
+    """
+    U: 4 X 4 unitary matrix
+    """
+
+    a = U[:, [0]]
+    b = np.zeros((4, 1), complex)
+    b[0] = 1
+    z = a - b
+    M = (z @ z.conj().T) / (z.T @ z.conj())
+    y = -(z.conj().T @ b) / (z.conj().T @ a)
+    H = np.eye(4, dtype=complex) - (1 + y) * M
+    return H
+
 
 class TestSparseIso(TestCase):
     def test_householder_reflection_zero_real(self):
@@ -23,7 +39,7 @@ class TestSparseIso(TestCase):
 
     def test_householder_reflection_real(self):
         """
-        Teste da função householder_reflection
+        Test householder_reflection
         """
         np.random.seed(1)
         matriz1 = ortho_group.rvs(4)
@@ -39,7 +55,7 @@ class TestSparseIso(TestCase):
 
     def test_householder_reflection_complex(self):
         """
-        Teste da função householder_reflection
+        Test householder_reflection
         """
         np.random.seed(1)
         matriz1 = unitary_group.rvs(4)
@@ -54,7 +70,7 @@ class TestSparseIso(TestCase):
 
     def test_householder_decomposition_real(self):
         """
-        Teste da função householder_decomposition
+        Test householder_decomposition
         """
         np.random.seed(1)
         matriz1 = ortho_group.rvs(4)
@@ -66,19 +82,19 @@ class TestSparseIso(TestCase):
 
     def test_householder_decomposition_complex(self):
         """
-        Teste da função householder_decomposition
+        Test householder_decomposition
         """
         np.random.seed(1)
-        matriz1 = unitary_group.rvs(4)
-        matriz1 = matriz1[:, [0, 1]]
+        matriz1 = unitary_group.rvs(16)
+        matriz1 = matriz1[:, [0, 1, 2]]
 
         circ = householder_decomposition(matriz1)
         mcirc = Operator(circ).data
-        self.assertTrue(np.allclose(matriz1, mcirc.conj().T[:, [0, 1]]))
+        self.assertTrue(np.allclose(matriz1, mcirc.conj().T[:, [0, 1, 2]]))
 
     def test_householder_decomposition_complex(self):
         """
-        Teste da função householder_decomposition
+        Test householder_decomposition
         """
         np.random.seed(1)
         matriz1 = unitary_group.rvs(4)
