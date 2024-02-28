@@ -147,7 +147,7 @@ class TestUCGInitialize(TestCase):
         params = get_state(qc)
 
         circuit = QuantumCircuit(8)
-        UCGInitialize.initialize(circuit, params.tolist())
+        UCGEInitialize.initialize(circuit, params.tolist())
         params2 = get_state(circuit)
 
         self.assertTrue(np.allclose(params, params2))
