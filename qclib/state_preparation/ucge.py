@@ -22,31 +22,30 @@ from qiskit.quantum_info import Operator
 from qclib.state_preparation.ucg import UCGInitialize
 
 
-def _repetition_verify(a, b, d, mux, mux_cpy):
+def _repetition_verify(base, d, mux, mux_cpy):
     i = 0
+    next_base = base + d
     while i < d:
-        if not np.allclose(mux[a], mux[b]):
+        if not np.allclose(mux[base], mux[next_base]):
             return False
-        mux_cpy[b] = np.array([[-999, -999], [-999, -999]])
-        a, b, i = a + 1, b + 1, i + 1
+        mux_cpy[next_base] = None
+        base, next_base, i = base + 1, next_base + 1, i + 1
     return True
 
 
 def _repetition_search(mux, n, mux_cpy):
 
-    nc = []
-    for i in range(1, len(mux)):
-        if i > len(mux) / 2:
-            return nc
+    dont_carry = []
+    for i in range(1, len(mux) // 2 + 1):
         d = i
         entanglement = False
-        if np.allclose(mux[i], mux[0]) and (d & (d - 1)) == 0:
+        if np.log2(d).is_integer() and np.allclose(mux[i], mux[0]):
             mux_org = mux_cpy[:]
-            repetitions = len(mux) / (2 * d)
+            repetitions = len(mux) // (2 * d)
             base = 0
             while repetitions:
                 repetitions -= 1
-                valid = _repetition_verify(base, base + d, d, mux, mux_cpy)
+                valid = _repetition_verify(base, d, mux, mux_cpy)
                 base += 2 * d
                 if not valid:
                     mux_cpy[:] = mux_org
@@ -55,8 +54,8 @@ def _repetition_search(mux, n, mux_cpy):
                     entanglement = True
 
         if entanglement:
-            nc.append(n + int(np.log2(d)) + 1)
-    return nc
+            dont_carry.append(n + int(np.log2(d)) + 1)
+    return dont_carry
 
 
 class UCGEInitialize(UCGInitialize):
@@ -111,19 +110,15 @@ class UCGEInitialize(UCGInitialize):
     def _simplify(self, mux, level):
 
         mux_cpy = mux.copy()
-        nc = []
+        dont_carry = []
 
         if len(mux) > 1:
             n = self.num_qubits - level
-            nc = _repetition_search(mux, n, mux_cpy)
+            dont_carry = _repetition_search(mux, n, mux_cpy)
 
-        new_mux = [
-            i
-            for i in mux_cpy
-            if not np.allclose(i, np.array([[-999, -999], [-999, -999]]))
-        ]
+        new_mux = [matrix for matrix in mux_cpy if matrix is not None]
 
-        return nc, new_mux
+        return dont_carry, new_mux
 
     def _apply_diagonal(
         self,

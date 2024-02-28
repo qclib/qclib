@@ -19,7 +19,7 @@ from unittest import TestCase
 import numpy as np
 from qiskit import QuantumCircuit, transpile
 from qclib.state_preparation import UCGInitialize
-from qclib.state_preparation.ucge import UCGEInitialize
+from qclib.state_preparation import UCGEInitialize
 from qclib.util import get_state
 
 
