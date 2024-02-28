@@ -18,8 +18,8 @@ Tests for the baa_lowrank.py module.
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister, execute
-from qiskit.providers.aer.backends import AerSimulator
+from qiskit import ClassicalRegister, transpile
+from qiskit_aer import AerSimulator
 from qclib.util import get_state
 from qclib.state_preparation import BaaLowRankInitialize
 
@@ -42,7 +42,10 @@ class TestBaaLowRank(TestCase):
         circuit.measure(list(range(n_qubits)), classical_reg)
 
         backend = AerSimulator()
-        counts = execute(circuit, backend, shots=8192).result().get_counts()
+        counts = backend.run(
+            transpile(circuit, backend),
+            shots=8192
+        ).result().get_counts()
 
         counts_with_zeros = {}
         for i in range(2**n_qubits):
@@ -183,3 +186,22 @@ class TestBaaLowRank(TestCase):
                 fidelities2.append(fidelity2)
 
         self.assertTrue(np.allclose(fidelities1, fidelities2, rtol=0.14, atol=0.0))
+
+    def test_large_state(self):
+        # Builds a separable state.
+        n_qubits = 16
+
+        state_vector1 = np.random.rand(2**(n_qubits//2)) + np.random.rand(2**(n_qubits//2)) * 1j
+        state_vector1 = state_vector1 / np.linalg.norm(state_vector1)
+
+        state_vector2 = np.random.rand(2**(n_qubits//2)) + np.random.rand(2**(n_qubits//2)) * 1j
+        state_vector2 = state_vector2 / np.linalg.norm(state_vector2)
+
+        state_vector = np.kron(state_vector1, state_vector2)
+
+        opt_params = {'max_fidelity_loss' : 0.1, 'strategy' : 'brute_force'}
+        circuit = BaaLowRankInitialize(state_vector, opt_params=opt_params).definition
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))

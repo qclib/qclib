@@ -17,11 +17,44 @@ Bounded Approximation version of Plesch's algorithm.
 https://arxiv.org/abs/2111.03132
 """
 
+from dataclasses import dataclass
 from qiskit import QuantumCircuit
-from qclib.state_preparation.initialize import Initialize
-from qclib.state_preparation import LowRankInitialize
+from qclib.gates.initialize import Initialize
 from qclib.state_preparation.util.baa import adaptive_approximation
+from .lowrank import LowRankInitialize
 
+
+@dataclass
+class _OptParams:
+    def __init__(self, opt_params):
+        if opt_params is None:
+            self.max_fidelity_loss = 0.0
+            self.isometry_scheme = "ccd"
+            self.unitary_scheme = "qsd"
+            self.strategy = "greedy"
+            self.max_combination_size = 0
+            self.use_low_rank = False
+        else:
+            self.max_fidelity_loss = 0.0 if opt_params.get("max_fidelity_loss") is None \
+                else opt_params.get("max_fidelity_loss")
+
+            self.isometry_scheme = "ccd" if opt_params.get("iso_scheme") is None else \
+                opt_params.get("iso_scheme")
+
+            self.unitary_scheme = "qsd" if opt_params.get("unitary_scheme") is None else \
+                opt_params.get("unitary_scheme")
+
+            self.strategy = "greedy" if opt_params.get("strategy") is None else \
+                opt_params.get("strategy")
+
+            self.max_combination_size = 0 if opt_params.get("max_combination_size") is None else \
+                opt_params.get("max_combination_size")
+
+            self.use_low_rank = False if opt_params.get("use_low_rank") is None else \
+                opt_params.get("use_low_rank")
+
+        if self.max_fidelity_loss < 0 or self.max_fidelity_loss > 1:
+            self.max_fidelity_loss = 0.0
 
 class BaaLowRankInitialize(Initialize):
     """
@@ -32,7 +65,7 @@ class BaaLowRankInitialize(Initialize):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         """
         Parameters
         ----------
@@ -80,56 +113,12 @@ class BaaLowRankInitialize(Initialize):
         self._name = "baa-lrsp"
         self._get_num_qubits(params)
         self.node = None
+        self.opt_params = _OptParams(opt_params)
 
-        if opt_params is None:
-            self.max_fidelity_loss = 0.0
-            self.isometry_scheme = "ccd"
-            self.unitary_scheme = "qsd"
-            self.strategy = "greedy"
-            self.max_combination_size = 0
-            self.use_low_rank = False
-        else:
-            if opt_params.get("max_fidelity_loss") is None:
-                self.max_fidelity_loss = 0.0
-            else:
-                self.max_fidelity_loss = opt_params.get("max_fidelity_loss")
-
-            if opt_params.get("iso_scheme") is None:
-                self.isometry_scheme = "ccd"
-            else:
-                self.isometry_scheme = opt_params.get("iso_scheme")
-
-            if opt_params.get("unitary_scheme") is None:
-                self.unitary_scheme = "qsd"
-            else:
-                self.unitary_scheme = opt_params.get("unitary_scheme")
-
-            if opt_params.get("strategy") is None:
-                self.strategy = "greedy"
-            else:
-                self.strategy = opt_params.get("strategy")
-
-            if opt_params.get("max_combination_size") is None:
-                self.max_combination_size = 0
-            else:
-                self.max_combination_size = opt_params.get("max_combination_size")
-
-            if opt_params.get("use_low_rank") is None:
-                self.use_low_rank = False
-            else:
-                self.use_low_rank = opt_params.get("use_low_rank")
-
-        if self.max_fidelity_loss < 0 or self.max_fidelity_loss > 1:
-            self.max_fidelity_loss = 0.0
-
-        self._label = label
         if label is None:
-            self._label = "SP"
+            self._label = "BAASP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()
@@ -137,10 +126,10 @@ class BaaLowRankInitialize(Initialize):
     def _define_initialize(self):
         self.node = adaptive_approximation(
             self.params,
-            self.max_fidelity_loss,
-            self.strategy,
-            self.max_combination_size,
-            self.use_low_rank,
+            self.opt_params.max_fidelity_loss,
+            self.opt_params.strategy,
+            self.opt_params.max_combination_size,
+            self.opt_params.use_low_rank,
         )
 
         circuit = QuantumCircuit(self.num_qubits)
@@ -150,8 +139,8 @@ class BaaLowRankInitialize(Initialize):
         ):
 
             opt_params = {
-                "iso_scheme": self.isometry_scheme,
-                "unitary_scheme": self.unitary_scheme,
+                "iso_scheme": self.opt_params.isometry_scheme,
+                "unitary_scheme": self.opt_params.unitary_scheme,
                 "partition": partition,
                 "lr": rank,
             }

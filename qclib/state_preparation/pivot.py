@@ -17,8 +17,8 @@
 import numpy as np
 import qiskit
 from qiskit import QuantumCircuit
-from qclib.state_preparation import LowRankInitialize
-from qclib.state_preparation.initialize_sparse import InitializeSparse
+from qclib.gates.initialize_sparse import InitializeSparse
+from .lowrank import LowRankInitialize
 
 # pylint: disable=maybe-no-member
 
@@ -26,8 +26,8 @@ from qclib.state_preparation.initialize_sparse import InitializeSparse
 class PivotInitialize(InitializeSparse):
     """Pivot State Preparation arXiv:2006.00016"""
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
-        self._name = "pivot"
+    def __init__(self, params, label=None, opt_params=None):
+
         self._get_num_qubits(params)
 
         default_aux = False
@@ -39,39 +39,35 @@ class PivotInitialize(InitializeSparse):
             else:
                 self.aux = opt_params.get("aux")
 
-        self._label = label
+        self.non_zero = len(params)
+
+        self.register = qiskit.QuantumRegister(self.num_qubits, name="q")
+        self.index_differ = None
+        self.ctrl_state = None
+
         if label is None:
-            self._label = "SP"
+            self.label = "PivotSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
+        super().__init__("PivotInitialize", self.num_qubits, params.items(), label=label)
 
     def _define(self):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        non_zero = len(self.params)
-        target_size = np.log2(non_zero)
+        target_size = np.log2(self.non_zero)
         target_size = np.ceil(target_size)
         target_size = int(target_size)
 
-        memory = qiskit.QuantumRegister(self.num_qubits, name="q")
         if self.aux:
-            remain = list(range(self.num_qubits - target_size, self.num_qubits))
-            n_anci = len(remain)
-
-            anc = qiskit.QuantumRegister(n_anci - 1, name="anc")
-            pivot_circuit = qiskit.QuantumCircuit(anc, memory)
+            anc, n_anci, pivot_circuit = self._circuit_with_ancilla(target_size)
 
         else:
-            pivot_circuit = qiskit.QuantumCircuit(memory)
+            pivot_circuit = qiskit.QuantumCircuit(self.register)
 
         next_state = self.params.copy()
         index_nonzero = self._get_index_nz(self.num_qubits - target_size, next_state)
         while index_nonzero is not None:
-            index_zero = self._get_index_zero(non_zero, next_state)
+            index_zero = self._get_index_zero(self.non_zero, next_state)
             circ, next_state = self._pivoting(
                 index_nonzero, target_size, index_zero, next_state
             )
@@ -80,11 +76,11 @@ class PivotInitialize(InitializeSparse):
                 self.num_qubits - target_size, next_state
             )
 
-        dense_state = np.zeros(2**target_size, dtype=complex)
+        dense_state = np.zeros(2 ** target_size, dtype=complex)
         for key, value in next_state:
             dense_state[int(key, 2)] = value
 
-        if non_zero <= 2:
+        if self.non_zero <= 2:
             initialize_circ = qiskit.QuantumCircuit(1)
             LowRankInitialize.initialize(initialize_circ, dense_state)
         else:
@@ -92,7 +88,7 @@ class PivotInitialize(InitializeSparse):
             LowRankInitialize.initialize(initialize_circ, dense_state)
 
         if self.aux:
-            circuit = qiskit.QuantumCircuit(anc, memory)
+            circuit = qiskit.QuantumCircuit(anc, self.register)
             nun_aux = n_anci - 1
             circuit.compose(
                 initialize_circ,
@@ -112,28 +108,34 @@ class PivotInitialize(InitializeSparse):
 
         return circuit
 
-    @staticmethod
+    def _circuit_with_ancilla(self, target_size):
+        remain = list(range(self.num_qubits - target_size, self.num_qubits))
+        n_anci = len(remain)
+        anc = qiskit.QuantumRegister(n_anci - 1, name="anc")
+        pivot_circuit = qiskit.QuantumCircuit(anc, self.register)
+        return anc, n_anci, pivot_circuit
+
     def _next_state(
-        ctrl_state, index_differ, remain, target_cx, index_zero, next_state
+        self, remain, target_cx, index_zero, next_state
     ):
         tab = {"0": "1", "1": "0"}
         new_state = {}
         for index, amp in next_state:
-            if index[index_differ] == ctrl_state:
+            if index[self.index_differ] == self.ctrl_state:
                 n_index = ""
-                for k, _ in enumerate(index):
+                for k, value in enumerate(index):
                     if k in target_cx:
-                        n_index = n_index + tab[index[k]]
+                        n_index = n_index + tab[value]
                     else:
-                        n_index = n_index + index[k]
+                        n_index = n_index + value
             else:
                 n_index = index
 
             if n_index[remain[0] :] == index_zero[remain[0] :]:
                 n_index = (
-                    n_index[:index_differ]
-                    + tab[index[index_differ]]
-                    + n_index[index_differ + 1 :]
+                    n_index[:self.index_differ]
+                    + tab[index[self.index_differ]]
+                    + n_index[self.index_differ + 1 :]
                 )
 
             new_state[n_index] = amp
@@ -150,23 +152,22 @@ class PivotInitialize(InitializeSparse):
 
         anc, circuit = self._initialize_circuit(memory, remain)
 
-        index_differ = 0
-
+        self.index_differ = 0
         for k in target:
             if index_nonzero[k] != index_zero[k]:
-                index_differ = k
-                ctrl_state = index_nonzero[k]
+                self.index_differ = k
                 break
 
         target_cx = []
+        self.ctrl_state = index_nonzero[self.index_differ]
         for k in target:
-            if index_differ != k and index_nonzero[k] != index_zero[k]:
-                circuit.cx(index_differ, k, ctrl_state=ctrl_state)
+            if self.index_differ != k and index_nonzero[k] != index_zero[k]:
+                circuit.cx(self.index_differ, k, ctrl_state=self.ctrl_state)
                 target_cx.append(k)
 
         for k in remain:
             if index_nonzero[k] != index_zero[k]:
-                circuit.cx(index_differ, k, ctrl_state=ctrl_state)
+                circuit.cx(self.index_differ, k, ctrl_state=self.ctrl_state)
                 target_cx.append(k)
 
         for k in remain:
@@ -175,16 +176,16 @@ class PivotInitialize(InitializeSparse):
 
         if self.aux:
             # apply mcx using mode v-chain
-            self._mcxvchain(circuit, memory, anc, remain, index_differ)
+            self._mcxvchain(circuit, memory, anc, remain, self.index_differ)
         else:
-            circuit.mcx(remain, index_differ)
+            circuit.mcx(remain, self.index_differ)
 
         for k in remain:
             if index_zero[k] == "0":
                 circuit.x(k)
 
         next_state = self._next_state(
-            ctrl_state, index_differ, remain, target_cx, index_zero, next_state
+            remain, target_cx, index_zero, next_state
         )
 
         return circuit, next_state
@@ -206,7 +207,7 @@ class PivotInitialize(InitializeSparse):
         for k in range(2**non_zero):
             index = f"{k:0{self.num_qubits}b}"
 
-            not_exists = sum([1 for v in state if v[0] == index]) == 0
+            not_exists = sum(1 for v in state if v[0] == index) == 0
             if not_exists:
                 index_zero = index
                 break

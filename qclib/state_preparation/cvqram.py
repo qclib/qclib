@@ -17,7 +17,7 @@
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.util import _compute_matrix_angles
-from qclib.state_preparation.initialize_sparse import InitializeSparse
+from qclib.gates.initialize_sparse import InitializeSparse
 
 # pylint: disable=maybe-no-member
 
@@ -30,7 +30,7 @@ class CvqramInitialize(InitializeSparse):
     This class implements a sparse state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         self._name = "cvqram"
         self._get_num_qubits(params)
         self.norm = 1
@@ -44,14 +44,10 @@ class CvqramInitialize(InitializeSparse):
             else:
                 self.mode = opt_params.get("mode")
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            label = "CVSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params.items(), label=self._label)
+        super().__init__(self._name, self.num_qubits, params.items(), label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

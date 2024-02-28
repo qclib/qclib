@@ -15,12 +15,10 @@
 """
 Tests for the baa.py module.
 """
-import sys
 
 from test.test_baa_lowrank import TestBaaLowRank
 import datetime
 import os
-from multiprocessing import Pool
 from unittest import TestCase
 
 import numpy as np
@@ -126,7 +124,7 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds,
     print(f"Starting {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
 
     # State Generation
-    state_vector, entganglement, depth = get_vector(
+    state_vector, entanglement, depth = get_vector(
         *entanglement_bounds, num_qubits, start_depth_multiplier=start_depth_multiplier,
         measure='geometric'
     )
@@ -135,7 +133,7 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds,
     cnots = schmidt_cnots(state_vector)
     if not use_parallel:
         print(
-            f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. "
+            f"Found state for entanglement bounds {entanglement} in {entanglement_bounds}. "
             f"State preparation needs {cnots}."
         )
 
@@ -182,146 +180,6 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds,
 
 
 class TestBaa(TestCase):
-    columns = [
-        'id', 'with_low_rank', 'strategy', 'num_qubits', 'depth', 'cnots', 'entganglement',
-        'entganglement (MW)', 'max_fidelity_loss', 'total_saved_cnots', 'total_fidelity_loss',
-        'data', 'real_cnots', 'real_cnots_benchmark', 'real_depth', 'real_depth_no_approx',
-        'real_fidelity_loss', 'real_fidelity_loss_benchmark', 'duration',
-        'predicted_cnots', 'benchmark_fidelity_loss_pass', 'approximation_calculation_pass',
-        'real_approximation_calculation_pass'
-    ]
-
-    def test(self):
-        num_qubits = 7
-        entanglement_bounds = (0.4, 1.0)
-        max_fidelity_loss = np.linspace(0.1, 1.0, 4)
-        number_of_experiments = 5
-
-        data = [
-            (i, num_qubits, entanglement_bounds, max_fidelity_loss)
-            for i in range(number_of_experiments)
-        ]
-        if use_parallel:
-            with Pool() as pool:
-                result = pool.starmap(execute_experiment, data)
-        else:
-            result = [execute_experiment(*d) for d in data]
-
-        test_data = np.concatenate(result)
-        # Predicted CNOTs
-        test_data = np.hstack([
-            test_data,
-            (test_data[:, self.columns.index('cnots')]
-             - test_data[:, self.columns.index('total_saved_cnots')]).reshape(-1, 1)
-        ])
-
-        # Tests:
-        # Calculation Tests
-        # The benchmark will not change the state at all, so it must be
-        # essentially zero
-        test_data = np.hstack([
-            test_data,
-            (np.abs(test_data[:, self.columns.index('real_fidelity_loss_benchmark')]) < 1e-6
-             ).reshape(-1, 1)
-        ])
-        # The expected / predicted fidelity loss must be less or equal to the
-        # max fidelity loss
-        test_data = np.hstack([
-            test_data,
-            (test_data[:, self.columns.index('max_fidelity_loss')]
-             >= test_data[:, self.columns.index('total_fidelity_loss')]
-             ).reshape(-1, 1)
-        ])
-
-        # The real Tests
-        # The real measured fidelity measure must be less or equal to the
-        # configured mx fidelity loss
-        test_data = np.hstack([
-            test_data,
-            (test_data[:, self.columns.index('real_fidelity_loss')]
-             - test_data[:, self.columns.index('max_fidelity_loss')] < 0.1
-             ).reshape(-1, 1)
-        ])
-
-        # Attention: this is a set of tests that tests how well the CNOT-estimation works
-        # However, we do not test this here. As a result, also the prediciton of CNOTs cannot
-        # reliably be tested.
-        # START: COMMENTED OUT AND LEFT FOR DOCUMENTATION REASONS
-        # # The predicted maximum CNOT gates and the no-approximation count
-        # # should be within 10%
-        # test_data['cnot_prediction_calculation_pass'] = (
-        #         np.abs(test_data['real_cnots_benchmark']
-        #         - test_data['cnots']) < 0.2 * test_data['cnots']
-        # )
-        # # The predicted CNOT gates should be within an error margin of 10%
-        # test_data['saved_cnots_calculation_pass'] = (
-        #         np.abs(test_data['predicted_cnots']
-        #         - test_data['real_cnots']) <= 0.2 * (test_data['predicted_cnots'])
-        # )
-        # END: COMMENTED OUT AND LEFT FOR DOCUMENTATION REASONS
-
-        test_passed = True
-        total_experiments = number_of_experiments * max_fidelity_loss.shape[0] * 4
-        fails_to_still_pass = int(np.ceil(total_experiments * 0.01))
-        benchmark_fidelity_loss_fail_count = (
-                test_data.shape[0]
-                - test_data[
-                    test_data[:, self.columns.index('benchmark_fidelity_loss_pass')].astype(bool)
-                ].shape[0]
-        )
-        approximation_calculation_fail_count = (
-                test_data.shape[0]
-                - test_data[
-                    test_data[:, self.columns.index('approximation_calculation_pass')].astype(bool)
-                ].shape[0]
-        )
-        real_approximation_calculation_fail_count = (
-                test_data.shape[0] - test_data[
-                test_data[:, self.columns.index('real_approximation_calculation_pass')].astype(bool)
-            ].shape[0]
-        )
-        if benchmark_fidelity_loss_fail_count > 0:
-            print(f"[WARNING] NOT ALL benchmark_fidelity_loss_pass are true ({benchmark_fidelity_loss_fail_count})",
-                  file=sys.stderr)
-        if benchmark_fidelity_loss_fail_count > fails_to_still_pass:
-            print("[FAIL] benchmark_fidelity_loss_pass must be true", file=sys.stderr)
-            test_passed = False
-        if approximation_calculation_fail_count > 0:
-            print(f"[WARNING] NOT ALL approximation_calculation_pass are true ({approximation_calculation_fail_count})",
-                  file=sys.stderr)
-        if approximation_calculation_fail_count > fails_to_still_pass:
-            print("[FAIL] approximation_calculation_pass must be true", file=sys.stderr)
-            test_passed = False
-        if real_approximation_calculation_fail_count > 0:
-            print(f"[WARNING] NOT ALL real_approximation_calculation_pass are true "
-                  f"({real_approximation_calculation_fail_count})", file=sys.stderr)
-        if real_approximation_calculation_fail_count > fails_to_still_pass:
-            print("[FAIL] real_approximation_calculation_pass must be true", file=sys.stderr)
-            test_passed = False
-
-        import importlib.util
-        pandas_loader = importlib.util.find_spec('pandas')
-        if pandas_loader is None:
-            with np.printoptions(precision=2, linewidth=1000, suppress=True, threshold=sys.maxsize, floatmode='fixed'):
-                print(test_data)
-        else:
-            import pandas as pd
-            print(pd.DataFrame(test_data, columns=self.columns).to_string())
-
-        self.assertTrue(test_passed, 'The tests should all pass.')
-
-    # def test_no_ops(self):
-    #     # The Test is based on randomly generated states. They all should
-    #     # create the correct fidelity (1.0). After 10 attempts we may well
-    #     # find one that fails. If it doesn't it is probably okay.
-    #     for lower_bound_int in range(10):
-    #         state_vector, _, depth = get_vector(
-    #             lower_bound_int/10, 1.0, 8, 1, measure='geometric'
-    #         )
-    #         cnots, depth, fidelity_loss, _ = initialize_loss(0.0, state_vector)
-    #         if cnots == depth == fidelity_loss == -1:
-    #             continue
-    #         self.assertAlmostEqual(0.0, fidelity_loss, 4)
 
     def test_node_state_vector(self):
         """

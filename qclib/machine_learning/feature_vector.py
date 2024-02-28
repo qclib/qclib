@@ -16,7 +16,7 @@ import numpy as np
 from qiskit.exceptions import QiskitError
 from qiskit.circuit import QuantumRegister, ParameterVector, Instruction
 from qiskit.circuit.library import BlueprintCircuit
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 
 # pylint: disable=relative-beyond-top-level
 

@@ -24,11 +24,12 @@ from math import log2, sqrt
 import numpy as np
 from tensorly.tenalg.core_tenalg import kronecker
 
-from qclib.entanglement import schmidt_composition, schmidt_decomposition
-from qclib.state_preparation.lowrank import (
-    cnot_count as schmidt_cnots,
-    low_rank_approximation,
+from qclib.entanglement import (
+    schmidt_composition,
+    schmidt_decomposition,
+    low_rank_approximation
 )
+from qclib.state_preparation.lowrank import cnot_count as schmidt_cnots
 
 # pylint: disable=missing-class-docstring
 
@@ -38,7 +39,7 @@ def adaptive_approximation(
     max_fidelity_loss,
     strategy="greedy",
     max_combination_size=0,
-    use_low_rank=False,
+    use_low_rank=False
 ):
     """
     It reduces the entanglement of the given state, producing an approximation
@@ -252,9 +253,9 @@ def _build_approximation_tree(
                         node.nodes.append(new_node)
 
     if len(node.nodes) > 0:  # If it is not the end of the recursion,
-        node.vectors.clear()  # clear vectors and qubits to save memory.
+        node.vectors.clear() # clear vectors and qubits to save memory.
         node.qubits.clear()  # This information is no longer needed from this point
-        # on (but may be needed in the future).
+                             # on (but may be needed in the future).
     if len(node.nodes) > 0 and strategy in ("greedy", "canonical"):
         # Locally optimal choice at each stage.
         node.nodes = [_search_best(node.nodes)]
@@ -325,7 +326,11 @@ def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
 
     local_partition = tuple(local_partition)
 
-    svd_u, svd_s, svd_v = schmidt_decomposition(state_vector, local_partition)
+    rank, svd_u, svd_s, svd_v = schmidt_decomposition(
+        state_vector,
+        local_partition,
+        rank=int(not use_low_rank) # `use_low_rank==True` means "no SVD truncation", so `rank=0`.
+    )                              # `use_low_rank==False` means "separate state", so `rank=1`.
 
     entanglement_info = []
 
@@ -337,7 +342,7 @@ def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
     for ebits in range(0, max_ebits + 1):
         low_rank = 2**ebits
 
-        rank, low_rank_u, low_rank_v, low_rank_s = low_rank_approximation(
+        rank, low_rank_u, low_rank_s, low_rank_v = low_rank_approximation(
             low_rank, svd_u, svd_v, svd_s
         )
 
@@ -358,6 +363,7 @@ def _reduce_entanglement(state_vector, register, partition, use_low_rank=False):
                 fidelity_loss,
             )
         )
+
     return entanglement_info
 
 
@@ -489,23 +495,20 @@ def _count_saved_cnots(
     original_rank=0,
     subsystem_rank=0,
 ):
-    method = "estimate"
 
     cnots_originally = schmidt_cnots(
         original_vector,
-        method=method,
         partition=original_partition,
         low_rank=original_rank,
     )
     cnots_phase_3 = schmidt_cnots(
         subsystem1_vector,
-        method=method,
         partition=subsystem_local_partition,
         low_rank=subsystem_rank,
     )
 
     cnots_phase_4 = 0
     if subsystem2_vector is not None:
-        cnots_phase_4 = schmidt_cnots(subsystem2_vector, method=method)
+        cnots_phase_4 = schmidt_cnots(subsystem2_vector)
 
     return cnots_originally - cnots_phase_3 - cnots_phase_4

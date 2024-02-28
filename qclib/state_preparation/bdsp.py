@@ -21,7 +21,7 @@ from math import ceil, log2
 import numpy as np
 from qiskit import QuantumCircuit
 
-from qclib.state_preparation.initialize import Initialize
+from qclib.gates.initialize import Initialize
 from qclib.state_preparation.util.state_tree_preparation import (
     Amplitude,
     state_decomposition,
@@ -39,7 +39,7 @@ class BdspInitialize(Initialize):
     This class implements a state preparation gate.
     """
 
-    def __init__(self, params, inverse=False, label=None, opt_params=None):
+    def __init__(self, params, label=None, opt_params=None):
         """
         Parameters
         ----------
@@ -64,14 +64,10 @@ class BdspInitialize(Initialize):
         self._name = "bdsp"
         self._get_num_qubits(params)
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            label = "BDSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

@@ -12,36 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from math import log2
+
+"""
+Qclib Initialize base class
+"""
+from math import log2, isclose
 from qiskit.circuit.gate import Gate
 import numpy as np
 
 
 class Initialize(Gate):
+    """
+    Qclib Initialize base class
+    """
     @staticmethod
     def initialize(q_circuit, state, qubits=None):
-        pass
+        """
+        Inititialize.initialize base method
+        """
 
-    def inverse(self):
+    def inverse(self, annotated=False):
         inverse_gate = self.copy()
 
-        inverse_gate.definition = self.definition.inverse()
+        inverse_gate.definition = self.definition.inverse(annotated=annotated)
         inverse_gate.label += "_dg"
 
         return inverse_gate
 
     def _get_num_qubits(self, params):
         self.num_qubits = log2(len(params))
-        if not self.num_qubits.is_integer():
-            Exception("The number of amplitudes is not a power of 2")
+
+        # Check if param is a power of 2
+        if self.num_qubits == 0 or not self.num_qubits.is_integer():
+            raise ValueError("The length of the state vector is not a positive power of 2.")
+
+        # Check if probabilities (amplitudes squared) sum to 1
+        if not isclose(sum(np.absolute(params) ** 2), 1.0, abs_tol=1e-10):
+            raise ValueError("Sum of amplitudes-squared does not equal one.")
+
         self.num_qubits = int(self.num_qubits)
 
     def validate_parameter(self, parameter):
         if isinstance(parameter, (int, float, complex)):
             return complex(parameter)
-        elif isinstance(parameter, np.number):
+        if isinstance(parameter, np.number):
             return complex(parameter.item())
-        else:
-            raise Exception(
-                f"invalid param type {type(parameter)} for instruction {self.name}"
-            )
+
+        raise TypeError(
+            f"invalid param type {type(parameter)} for instruction {self.name}."
+        )

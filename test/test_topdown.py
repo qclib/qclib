@@ -18,10 +18,11 @@ Tests for the topdown.py module.
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister, execute
-from qiskit.providers.aer.backends import AerSimulator
+
+from qiskit import ClassicalRegister, transpile
+from qiskit_aer import AerSimulator
 from qclib.state_preparation import TopDownInitialize
-from qclib.util import get_state
+from qclib.util import get_state, measurement
 
 # pylint: disable=missing-function-docstring
 # pylint: disable=missing-class-docstring
@@ -29,12 +30,18 @@ from qclib.util import get_state
 backend = AerSimulator()
 SHOTS = 8192
 
+
 class TestTopDown(TestCase):
+
     @staticmethod
     def measurement(circuit, n_qubits, classical_reg):
         circuit.measure(list(range(n_qubits)), classical_reg)
 
-        job = execute(circuit, backend, shots=SHOTS, optimization_level=3)
+        job = backend.run(
+            transpile(circuit, backend),
+            shots=SHOTS,
+            optimization_level=3
+        )
 
         counts = job.result().get_counts(circuit)
         sum_values = sum(counts.values())
@@ -57,7 +64,7 @@ class TestTopDown(TestCase):
         classical_reg = ClassicalRegister(n_qubits)
         circuit.add_register(classical_reg)
 
-        return TestTopDown.measurement(circuit, n_qubits, classical_reg)
+        return measurement(circuit, n_qubits, classical_reg, backend, SHOTS)
 
     def test_topdown_state_real(self):
         state_vector = np.random.rand(32)
@@ -85,5 +92,18 @@ class TestTopDown(TestCase):
 
         state = TestTopDown.topdown_experiment(state_vector)
 
-        self.assertTrue(np.allclose( np.power(np.abs(state_vector),2), state,
-                        rtol=1e-01, atol=0.005))
+        self.assertTrue(np.allclose(np.power(np.abs(state_vector), 2), state,
+                                    rtol=1e-01, atol=0.005))
+
+    def test_topdown_fixed_state(self):
+        state_vector = [
+            0, np.sqrt(2 / 8) * np.exp(-1.0j * np.pi / 7),
+               np.sqrt(3 / 8) * np.exp(-1.0j * np.pi / 3), 0,
+            0, 0, np.sqrt(3 / 8), 0
+        ]
+
+        circuit = TopDownInitialize(state_vector).definition
+
+        state = get_state(circuit)
+
+        self.assertTrue(np.allclose(state_vector, state))

@@ -22,10 +22,10 @@ import numpy as np
 import scipy
 import qiskit.quantum_info as qi
 from qiskit import QuantumCircuit, QuantumRegister, transpile
-from qiskit.extensions.quantum_initializer.diagonal import DiagonalGate
-from qiskit.extensions import UnitaryGate
+from qiskit.circuit.library import DiagonalGate
+from qiskit.circuit.library import UnitaryGate
+from qiskit.circuit.library import UCGate
 from qclib.unitary import unitary as decompose_unitary, cnot_count as unitary_cnot_count
-from qclib.gates.uc_gate import UCGate
 
 
 def decompose(isometry: np.ndarray, scheme="ccd"):
@@ -418,7 +418,7 @@ def _cnot_count_estimate_ccd(log_lines, log_cols):
 
             if _k_s(k, i) == 0 and _b(k, i + 1) != 0:
                 # MCG implemented as a UCG up to a diagonal
-                n_qubits = sum([k_bin[q] == "1" for q in control + ancilla]) + 1
+                n_qubits = sum(k_bin[q] == "1" for q in control + ancilla) + 1
                 cnots += 2 ** (n_qubits - 1) - 1
 
             # UCG up to a diagonal

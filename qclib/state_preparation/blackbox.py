@@ -20,11 +20,11 @@ Physical review letters 85.6 (2000): 1334.
 Gate U2 in PRL 85.6 (2000) is implemented with uniformly controlled rotations
 """
 
-from qclib.state_preparation.initialize import Initialize
 import numpy as np
 from qiskit import QuantumCircuit
-from qiskit.extensions import UCRYGate, UCRZGate
-from qiskit.extensions import UnitaryGate
+from qiskit.circuit.library import UCRYGate, UCRZGate
+from qiskit.circuit.library import UnitaryGate
+from qclib.gates.initialize import Initialize
 
 
 class BlackBoxInitialize(Initialize):
@@ -36,19 +36,15 @@ class BlackBoxInitialize(Initialize):
     Gate U2 in PRL 85.6 (2000) is implemented with uniformly controlled rotations
     """
 
-    def __init__(self, params, inverse=False, label=None):
+    def __init__(self, params, label=None):
         self._name = "blackbox"
         self._get_num_qubits(params)
         self.num_qubits += 1
 
-        self._label = label
         if label is None:
-            self._label = "SP"
+            label = "BBSP"
 
-            if inverse:
-                self._label = "SPdg"
-
-        super().__init__(self._name, self.num_qubits, params, label=self._label)
+        super().__init__(self._name, self.num_qubits, params, label=label)
 
     def _define(self):
         self.definition = self._define_initialize()

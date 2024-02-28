@@ -20,7 +20,7 @@ $ python
 ```python
 import numpy as np
 from qiskit import transpile
-from qiskit.providers.aer.backends import AerSimulator
+from qiskit_aer import AerSimulator
 from qclib.state_preparation import LowRankInitialize
 
 # Generate 3-qubit random input state vector
@@ -48,9 +48,10 @@ The following table shows the depth, number of qubits, and CNOTs of circuits pro
 
 | method | lib | qubits | cnots | depth |
 | --- | --- |:---:|:---:|:---:|
-| low-rank | qclib | 15 | 30999 | 53645 |
-| svd | qclib | 15 | 38813 | 71581 |
-| isometry | qiskit | 15 | 32752 | 131011 |
+| low-rank | qclib | 15 | 30998 | 53643 |
+| svd | qclib | 15 | 38814 | 71580 |
+| ucg | qclib | 15 | 32752 | 65505 |
+| isometry | qiskit | 15 | 32752 | 65505 |
 | multiplexor | qiskit | 15 | 65504 | 131025 |
 | bdsp | qclib | 1151 | 72320 | 1603 |
 | dcsp | qclib | 32767 | 262016 | 899 |
