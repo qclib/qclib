@@ -73,10 +73,10 @@ class UCGEInitialize(UCGInitialize):
 
         while tree_level > 0:
 
-            bit_target, ucg, nc, controls = self._disentangle_qubit(
+            bit_target, ucg = self._disentangle_qubit(
                 children, parent, r_gate, tree_level
             )
-            children = self._apply_diagonal(bit_target, parent, ucg, nc, controls)
+            children = self._apply_diagonal(bit_target, parent, ucg)
             parent = self._update_parent(children)
 
             # prepare next iteration
@@ -104,8 +104,10 @@ class UCGEInitialize(UCGInitialize):
             self._preserve_previous(mult, mult_controls, r_gate, target)
 
         ucg = self._apply_ucg(mult, mult_controls, target)
+        ucg.dont_carry = nc
+        ucg.controls = mult_controls
 
-        return bit_target, ucg, nc, mult_controls
+        return bit_target, ucg
 
     def _simplify(self, mux, level):
 
@@ -124,9 +126,7 @@ class UCGEInitialize(UCGInitialize):
         self,
         bit_target: str,
         parent: "list[float]",
-        ucg: UCGate,
-        nc: "list[int]",
-        controls: "list[int]",
+        ucg: UCGate
     ):
         children = parent
 
@@ -138,10 +138,10 @@ class UCGEInitialize(UCGInitialize):
             diagonal = np.conj(ucg._get_diagonal())[
                 ::2
             ]  # pylint: disable=protected-access
-        if nc:
-            controls.reverse()
-            size_required = len((nc + controls))
-            ctrl_qc = [self.num_qubits - 1 - x for x in controls]
+        if ucg.dont_carry:
+            ucg.controls.reverse()
+            size_required = len(ucg.dont_carry) + len(ucg.controls)
+            ctrl_qc = [self.num_qubits - 1 - x for x in ucg.controls]
             unitary_diagonal = np.diag(diagonal)
             qc = qiskit.QuantumCircuit(size_required)
             qc.unitary(unitary_diagonal, ctrl_qc)
