@@ -20,11 +20,12 @@ Linear-depth Multicontrolled Special Unitary
 from typing import Union, List
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister
-from qiskit.extensions import UnitaryGate
+from qiskit.circuit.library import UnitaryGate
 from qiskit.circuit import Gate, Qubit
 from qclib.gates.ldmcsu import Ldmcsu
 from qclib.gates.mcx import McxVchainDirty
 from qclib.gates.util import check_su2, isclose
+
 
 # pylint: disable=protected-access
 
@@ -118,7 +119,7 @@ class MultiTargetMCSU2(Gate):
             ).definition
             self.definition.append(
                 mcx_1,
-                self.controls[:k_1] + self.controls[k_1 : 2 * k_1 - 2] + [*self.target],
+                self.controls[:k_1] + self.controls[k_1: 2 * k_1 - 2] + [*self.target],
             )
 
         for idx, gate_a in enumerate(gates_a):
@@ -133,7 +134,7 @@ class MultiTargetMCSU2(Gate):
 
         self.definition.append(
             mcx_2.inverse(),
-            self.controls[k_1:] + self.controls[k_1 - k_2 + 2 : k_1] + [*self.target],
+            self.controls[k_1:] + self.controls[k_1 - k_2 + 2: k_1] + [*self.target],
         )
 
         for idx, gate_a in enumerate(gates_a):
@@ -145,7 +146,7 @@ class MultiTargetMCSU2(Gate):
 
         self.definition.append(
             mcx_3,
-            self.controls[:k_1] + self.controls[k_1 : 2 * k_1 - 2] + [*self.target],
+            self.controls[:k_1] + self.controls[k_1: 2 * k_1 - 2] + [*self.target],
         )
 
         for idx, gate_a in enumerate(gates_a):
@@ -157,7 +158,7 @@ class MultiTargetMCSU2(Gate):
 
         self.definition.append(
             mcx_4,
-            self.controls[k_1:] + self.controls[k_1 - k_2 + 2 : k_1] + [*self.target],
+            self.controls[k_1:] + self.controls[k_1 - k_2 + 2: k_1] + [*self.target],
         )
 
         for idx, gate_a in enumerate(gates_a):
@@ -173,11 +174,11 @@ class MultiTargetMCSU2(Gate):
 
     @staticmethod
     def multi_target_mcsu2(
-        circuit,
-        unitary,
-        controls: Union[QuantumRegister, List[Qubit]],
-        target: Qubit,
-        ctrl_state: str = None,
+            circuit,
+            unitary,
+            controls: Union[QuantumRegister, List[Qubit]],
+            target: Qubit,
+            ctrl_state: str = None,
     ):
         """
         Multi-target version of multi-controlled SU(2)

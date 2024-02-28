@@ -18,7 +18,8 @@ Tests for the topdown.py module.
 
 from unittest import TestCase
 import numpy as np
-from qiskit import ClassicalRegister
+
+from qiskit import ClassicalRegister, transpile
 from qiskit_aer import AerSimulator
 from qclib.state_preparation import TopDownInitialize
 from qclib.util import get_state, measurement
@@ -31,6 +32,29 @@ SHOTS = 8192
 
 
 class TestTopDown(TestCase):
+
+    @staticmethod
+    def measurement(circuit, n_qubits, classical_reg):
+        circuit.measure(list(range(n_qubits)), classical_reg)
+
+        job = backend.run(
+            transpile(circuit, backend),
+            shots=SHOTS,
+            optimization_level=3
+        )
+
+        counts = job.result().get_counts(circuit)
+        sum_values = sum(counts.values())
+
+        counts2 = {}
+        for i in range(2**n_qubits):
+            pattern = f'{i:0{n_qubits}b}'
+            if pattern in counts:
+                counts2[pattern] = counts[pattern]
+            else:
+                counts2[pattern] = 0.0
+
+        return [ value/sum_values for (key, value) in counts2.items() ]
 
     @staticmethod
     def topdown_experiment(state):
@@ -60,8 +84,7 @@ class TestTopDown(TestCase):
 
         state = get_state(circuit)
 
-        self.assertTrue(np.allclose(np.imag(state_vector), np.imag(state)))
-        self.assertTrue(np.allclose(np.real(state_vector), np.real(state)))
+        self.assertTrue(np.allclose(state_vector, state))
 
     def test_topdown_measure(self):
         state_vector = np.random.rand(32) + np.random.rand(32) * 1j
@@ -83,5 +106,4 @@ class TestTopDown(TestCase):
 
         state = get_state(circuit)
 
-        self.assertTrue(np.allclose(np.imag(state_vector), np.imag(state)))
-        self.assertTrue(np.allclose(np.real(state_vector), np.real(state)))
+        self.assertTrue(np.allclose(state_vector, state))

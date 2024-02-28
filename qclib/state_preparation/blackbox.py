@@ -22,8 +22,8 @@ Gate U2 in PRL 85.6 (2000) is implemented with uniformly controlled rotations
 
 import numpy as np
 from qiskit import QuantumCircuit
-from qiskit.extensions import UCRYGate, UCRZGate
-from qiskit.extensions import UnitaryGate
+from qiskit.circuit.library import UCRYGate, UCRZGate
+from qiskit.circuit.library import UnitaryGate
 from qclib.gates.initialize import Initialize
 
 

@@ -22,7 +22,7 @@ import numpy as np
 from numpy.random import default_rng
 import tensorly as tl
 from tensorly.decomposition import tucker
-from tensorly.tucker_tensor import tucker_to_vec
+from tensorly.tucker_tensor import tucker_to_vec, TuckerTensor
 
 _rng = default_rng()
 
@@ -100,8 +100,8 @@ def meyer_wallach_entanglement(vector: np.ndarray) -> float:
 
 
 def geometric_entanglement(
-    state_vector: List[complex], return_product_state=False
-) -> Union[float, Tuple[float, List[np.ndarray]]]:
+    state_vector: List[complex], return_product_state=False, product_state_with_factors=False
+) -> Union[float, Tuple[float, np.ndarray], Tuple[float, np.ndarray, List[np.ndarray]]]:
     """
 
     Computes the geometric entanglement (1,2) of a quantum state.
@@ -116,7 +116,11 @@ def geometric_entanglement(
             The vector of the quantum state (in computational basis)
 
         return_product_state (bool):
-            If True, return the list of product states too.
+            If True, return the product state too.
+
+        product_state_with_factors (bool):
+             If True AND return_product_state == True, return the list of factors of the product states too.
+             The factors generate a unity product state vector when used Kronecker iteratively.
 
     Returns:
         float or Tuple[float, List[array-like]]: #
@@ -129,19 +133,27 @@ def geometric_entanglement(
     tensor = tl.tensor(state_vector).reshape(shape)
     results = {}
     # The Tucker decomposition is actually a randomized algorithm.
-    # We take four shots and take the min of it.
+    # We take four shots and take the min of it
+    # (sampling as the algorithm is random).
 
     for _ in range(4):
-        decomp_tensor = tucker(tensor, rank=[1] * n_qubits, init="random")
+        decomp_tensor: TuckerTensor = tucker(tensor, rank=[1] * n_qubits, init="random")
         fidelity_loss = 1 - np.abs(decomp_tensor.core.flatten()[0]) ** 2
         results[fidelity_loss] = decomp_tensor
 
     min_fidelity_loss = min(results)
 
     if return_product_state:
+        # Extract the minimal result from above ampling
+        decomp_tensor = results[min_fidelity_loss]
         product_state = tucker_to_vec(decomp_tensor)
-
-        return min_fidelity_loss, product_state
+        # The product state by not be unity, so we need to enforce that.
+        product_state = product_state / np.linalg.norm(product_state)
+        if product_state_with_factors:
+            product_state_factors = [f.reshape(1, -1) for f in decomp_tensor.factors]
+            return min_fidelity_loss, product_state, product_state_factors
+        else:
+            return min_fidelity_loss, product_state
 
     return min_fidelity_loss
 

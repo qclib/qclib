@@ -19,3 +19,4 @@
 #             count_s2[pattern] = 0.0
 #
 #     return [value / shots for (key, value) in count_s2.items()]
+

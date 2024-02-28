@@ -20,12 +20,11 @@ implement generic quantum computations.
 from math import ceil, log2
 import numpy as np
 import scipy as sp
-from qiskit import QuantumCircuit, QuantumRegister
-from qiskit import transpile
+from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.circuit.library import RYGate, CZGate
-from qiskit.extensions import UnitaryGate, UCRYGate, UCRZGate
+from qiskit.circuit.library import UnitaryGate, UCRYGate, UCRZGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
-from qiskit.quantum_info.synthesis.qsd import _apply_a2
+from qiskit.synthesis.unitary.qsd import _apply_a2
 from qiskit.circuit.library import UCGate
 from qclib.gates.ucr import ucr
 
