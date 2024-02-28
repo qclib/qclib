@@ -17,8 +17,9 @@
 """
 from unittest import TestCase
 import numpy as np
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, transpile
 from qclib.state_preparation import UCGInitialize
+from qclib.state_preparation import UCGEInitialize
 from qclib.util import get_state
 
 
@@ -98,5 +99,55 @@ class TestUCGInitialize(TestCase):
         initialize(circuit, state.tolist(), opt_params={"target_state": 10})
 
         output_state = get_state(circuit)
-
         self.assertTrue(np.allclose(output_state, state))
+
+    def test_ucg_disentangled(self):
+        num_qubits = 6
+        qc = QuantumCircuit(num_qubits)
+
+        input_state1 = np.random.rand(2 ** 3)
+        input_state1 = input_state1 / np.linalg.norm(input_state1)
+        input_state2 = np.random.rand(2 ** 3)
+        input_state2 = input_state2 / np.linalg.norm(input_state2)
+
+        UCGInitialize.initialize(qc, input_state1, [0, 2, 3])
+        UCGInitialize.initialize(qc, input_state2, [1, 4, 5])
+
+        params = get_state(qc)
+
+        circuit = QuantumCircuit(6)
+        UCGEInitialize.initialize(circuit, params.tolist())
+        params2 = get_state(circuit)
+
+        circuit_tranpiled = transpile(circuit, basis_gates=['u', 'cx'])
+        qc_transpiled = transpile(qc, basis_gates=['u', 'cx'])
+
+        self.assertTrue(np.allclose(params, params2))
+        self.assertTrue(circuit_tranpiled.depth() <= qc_transpiled.depth())
+
+    def test_ucg_disentangled_complex(self):
+        num_qubits = 8
+        qc = QuantumCircuit(num_qubits)
+
+        real_part1 = np.random.rand(2 ** 4)
+        imag_part1 = np.random.rand(2 ** 4)
+        input_state1 = real_part1 + 1j * imag_part1
+
+        input_state1 = input_state1 / np.linalg.norm(input_state1)
+
+        real_part2 = np.random.rand(2 ** 4)
+        imag_part2 = np.random.rand(2 ** 4)
+        input_state2 = real_part2 + 1j * imag_part2
+
+        input_state2 = input_state2 / np.linalg.norm(input_state2)
+
+        UCGInitialize.initialize(qc, input_state1, [0, 2, 3, 7])
+        UCGInitialize.initialize(qc, input_state2, [1, 4, 5, 6])
+
+        params = get_state(qc)
+
+        circuit = QuantumCircuit(8)
+        UCGEInitialize.initialize(circuit, params.tolist())
+        params2 = get_state(circuit)
+
+        self.assertTrue(np.allclose(params, params2))

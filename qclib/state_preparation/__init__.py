@@ -13,4 +13,5 @@ from .pivot import PivotInitialize
 from .isometry import IsometryInitialize
 from .svd import SVDInitialize
 from .ucg import UCGInitialize
+from .ucge import UCGEInitialize
 from .mixed import MixedInitialize
