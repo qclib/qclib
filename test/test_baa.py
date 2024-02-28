@@ -124,7 +124,7 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds,
     print(f"Starting {exp_idx,  num_qubits, entanglement_bounds, max_fidelity_losses}")
 
     # State Generation
-    state_vector, entganglement, depth = get_vector(
+    state_vector, entanglement, depth = get_vector(
         *entanglement_bounds, num_qubits, start_depth_multiplier=start_depth_multiplier,
         measure='geometric'
     )
@@ -133,7 +133,7 @@ def execute_experiment(exp_idx,  num_qubits, entanglement_bounds,
     cnots = schmidt_cnots(state_vector)
     if not use_parallel:
         print(
-            f"Found state for entanglement bounds {entganglement} in {entanglement_bounds}. "
+            f"Found state for entanglement bounds {entanglement} in {entanglement_bounds}. "
             f"State preparation needs {cnots}."
         )
 

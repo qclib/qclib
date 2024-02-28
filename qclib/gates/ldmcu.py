@@ -22,6 +22,7 @@ from qiskit.circuit import Gate
 from qiskit import QuantumCircuit, QuantumRegister
 from .util import check_u2, apply_ctrl_state
 
+
 # pylint: disable=maybe-no-member
 # pylint: disable=protected-access
 class Ldmcu(Gate):
@@ -29,7 +30,7 @@ class Ldmcu(Gate):
     Linear Depth Multi-Controlled Unitary
     -----------------------------------------
 
-    Implements gate decomposition of a munticontrolled operator in U(2) according to
+    Implements gate decomposition of a multi-controlled operator in U(2) according to
     https://arxiv.org/abs/2203.11882
     https://journals.aps.org/pra/abstract/10.1103/PhysRevA.106.042602.
     """
@@ -51,7 +52,7 @@ class Ldmcu(Gate):
 
         self.ctrl_state = ctrl_state
 
-        super().__init__("ldmcu", self.num_qubits, [], "ldmcu")
+        super().__init__("Ldmcu", self.num_qubits, [], "Ldmcu")
 
     def _define(self):
 
@@ -100,7 +101,7 @@ class Ldmcu(Gate):
             exponent = pair.target - pair.control
             if pair.control == 0:
                 exponent = exponent - 1
-            param = 2**exponent
+            param = 2 ** exponent
             signal = -1 if (pair.control == 0 and not first) else 1
             signal = step * signal
             if pair.target == n_qubits - 1 and first:
@@ -118,8 +119,8 @@ class Ldmcu(Gate):
         values, vectors = np.linalg.eig(agate)
         gate = np.power(values[0] + 0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T
         gate = (
-            gate
-            + np.power(values[1] + 0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
+                gate
+                + np.power(values[1] + 0j, param) * vectors[:, [1]] @ vectors[:, [1]].conj().T
         )
 
         if signal < 0:
@@ -137,5 +138,6 @@ class Ldmcu(Gate):
             Ldmcu(unitary, len(controls), ctrl_state=ctrl_state),
             [*controls, target]
         )
+
 
 Ldmcu._apply_ctrl_state = apply_ctrl_state
