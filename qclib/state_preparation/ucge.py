@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """
-
+todo
 """
 import numpy as np
 import qiskit
@@ -60,9 +60,7 @@ def _repetition_search(mux, n, mux_cpy):
 
 
 class UCGEInitialize(UCGInitialize):
-    """
-
-    """
+    """ todo """
 
     def __init__(self, params, label=None, opt_params=None):
         super().__init__(params, label=label, opt_params=opt_params)
@@ -76,8 +74,10 @@ class UCGEInitialize(UCGInitialize):
 
         while tree_level > 0:
 
-            bit_target, ucg, nc, controls = self._disentangle_qubit(children, parent, r_gate, tree_level)
-            children = self._apply_diagonal(self, bit_target, parent, ucg, nc, controls)
+            bit_target, ucg, nc, controls = self._disentangle_qubit(
+                children, parent, r_gate, tree_level
+            )
+            children = self._apply_diagonal(bit_target, parent, ucg, nc, controls)
             parent = self._update_parent(children)
 
             # prepare next iteration
@@ -86,10 +86,14 @@ class UCGEInitialize(UCGInitialize):
 
         return self.circuit.inverse()
 
-    def _disentangle_qubit(self, children: 'list[float]',
-                           parent: 'list[float]',
-                           r_gate: int, tree_level: int):
-        """ Apply UCGate to disentangle qubit target"""
+    def _disentangle_qubit(
+        self,
+        children: "list[float]",
+        parent: "list[float]",
+        r_gate: int,
+        tree_level: int,
+    ):
+        """Apply UCGate to disentangle qubit target"""
 
         bit_target = self.str_target[self.num_qubits - tree_level]
 
@@ -113,18 +117,32 @@ class UCGEInitialize(UCGInitialize):
             n = self.num_qubits - level
             nc = _repetition_search(mux, n, mux_cpy)
 
-        new_mux = [i for i in mux_cpy if not np.allclose(i, np.array([[-999, -999], [-999, -999]]))]
+        new_mux = [
+            i
+            for i in mux_cpy
+            if not np.allclose(i, np.array([[-999, -999], [-999, -999]]))
+        ]
 
         return nc, new_mux
 
-    @staticmethod
-    def _apply_diagonal(self, bit_target: str, parent: 'list[float]', ucg: UCGate, nc: 'list[int]', controls: 'list[int]'):
+    def _apply_diagonal(
+        self,
+        bit_target: str,
+        parent: "list[float]",
+        ucg: UCGate,
+        nc: "list[int]",
+        controls: "list[int]",
+    ):
         children = parent
 
-        if bit_target == '1':
-            diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
+        if bit_target == "1":
+            diagonal = np.conj(ucg._get_diagonal())[
+                1::2
+            ]  # pylint: disable=protected-access
         else:
-            diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
+            diagonal = np.conj(ucg._get_diagonal())[
+                ::2
+            ]  # pylint: disable=protected-access
         if nc:
             controls.reverse()
             size_required = len((nc + controls))
