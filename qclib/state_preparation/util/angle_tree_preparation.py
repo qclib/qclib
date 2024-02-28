@@ -35,12 +35,12 @@ class NodeAngleTree:
     right: "NodeAngleTree"
 
     def __str__(self):
-        return (
-            f"{self.level}_"
-            f"{self.index}\n"
-            f"{self.angle_y:.2f}_"
-            f"{self.angle_z:.2f}"
-        )
+        space = '\t' * self.level
+        txt = f"{space * self.level} y {self.angle_y:.2f} z{self.angle_z:.2f}\n"
+        if self.left is not None:
+            txt += self.left.__str__()
+            txt += self.right.__str__()
+        return txt
 
 
 def create_angles_tree(state_tree):

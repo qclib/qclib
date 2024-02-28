@@ -27,15 +27,15 @@ class TestUCGInitialize(TestCase):
     """Test UCGInitialize"""
 
     def _test_ucg(self, n_qubits):
-        state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state = np.random.rand(2 ** n_qubits) + np.random.rand(2 ** n_qubits) * 1j
         state = state / np.linalg.norm(state)
 
-        for target_state in range(2**n_qubits):
+        for target_state in range(2 ** n_qubits):
             gate = UCGInitialize(state.tolist(),
-                                    opt_params={
-                                        "target_state": target_state
-                                    }
-                                ).definition
+                                 opt_params={
+                                     "target_state": target_state
+                                 }
+                                 ).definition
 
             circuit = QuantumCircuit(n_qubits)
 
@@ -49,18 +49,18 @@ class TestUCGInitialize(TestCase):
             self.assertTrue(np.allclose(state, output_state))
 
     def _test_ucg_preserve(self, n_qubits):
-        state = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
+        state = np.random.rand(2 ** n_qubits) + np.random.rand(2 ** n_qubits) * 1j
 
-        for target_state in range(1, 2**n_qubits):
+        for target_state in range(1, 2 ** n_qubits):
             state[target_state - 1] = 0
             state = state / np.linalg.norm(state)
 
             gate = UCGInitialize(state.tolist(),
-                                    opt_params={
-                                        "target_state": target_state,
-                                        "preserve_previous": True
-                                    }
-                                ).definition
+                                 opt_params={
+                                     "target_state": target_state,
+                                     "preserve_previous": True
+                                 }
+                                 ).definition
 
             circuit = QuantumCircuit(n_qubits)
 
@@ -85,14 +85,14 @@ class TestUCGInitialize(TestCase):
 
     def test_real(self):
         """Test UCGInitialize with four qubits and index 10"""
-        nqubits = 4
-        state = np.random.rand(2 ** nqubits)
+        n_qubits = 4
+        state = np.random.rand(2 ** n_qubits)
         state[0] = 0
         state[1] = 0
         state = state / np.linalg.norm(state)
 
         initialize = UCGInitialize.initialize
-        circuit = QuantumCircuit(nqubits)
+        circuit = QuantumCircuit(n_qubits)
         circuit.x(1)
         circuit.x(3)
 

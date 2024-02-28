@@ -22,6 +22,7 @@ from qiskit.circuit import Gate
 from qiskit import QuantumCircuit, QuantumRegister
 from qclib.gates.util import check_u2, apply_ctrl_state
 from qclib.gates.multitargetmcsu2 import MultiTargetMCSU2
+from qclib.gates.ldmcu import Ldmcu
 
 
 # pylint: disable=protected-access
@@ -31,7 +32,7 @@ class MCU(Gate):
     https://arxiv.org/abs/2310.14974
 
     -----------------------------------------
-    Implements gate decomposition of a munticontrolled operator in U(2)
+    Implements gate decomposition of a multi-controlled operator in U(2)
     """
 
     def __init__(self, unitary, num_controls, error=0, ctrl_state: str = None):
@@ -64,7 +65,7 @@ class MCU(Gate):
 
         self.ctrl_state = ctrl_state
 
-        super().__init__("LdmcuApprox", num_controls + 1, [], "LdmcuApprox")
+        super().__init__("McuApprox", num_controls + 1, [], "McuApprox")
 
     def _define(self):
         if len(self.control_qubits) > 0:
@@ -90,7 +91,8 @@ class MCU(Gate):
             self.definition = QuantumCircuit(self.target_qubit)
             self.definition.unitary(self.unitary, 0)
 
-    def _get_num_base_ctrl_qubits(self, unitary, error):
+    @staticmethod
+    def _get_num_base_ctrl_qubits(unitary, error):
         """
         Get the baseline number of control qubits for the approximation
         given an error
@@ -109,6 +111,9 @@ class MCU(Gate):
 
         quotient = angle / np.arccos(1 - error**2 / 2)
         return int(np.ceil(np.log2(quotient))) + 1
+
+    def get_n_base(self, unitary, error):
+        return self._get_num_base_ctrl_qubits(unitary, error)
 
     def _c1c2(self, n_qubits, gate_circ, first=True, step=1):
 
@@ -134,7 +139,7 @@ class MCU(Gate):
                         qubits=[pair.control + extra_q, pair.target + extra_q],
                         inplace=True,
                     )
-            # For the controlled rotations, when control==0, apply a multicontrolled
+            # For the controlled rotations, when control==0, apply a multi-controlled
             # rotation with the extra control qubits
             else:
                 if pair.control == 0 and extra_q >= 1:
@@ -163,14 +168,16 @@ class MCU(Gate):
         extra_q = n_qubits - n_qubits_base
         return extra_q, n_qubits_base
 
-    def _compute_param(self, pair):
+    @staticmethod
+    def _compute_param(pair):
         exponent = pair.target - pair.control
         if pair.control == 0:
             exponent = exponent - 1
         param = 2**exponent
         return param
 
-    def _compute_rx_matrix(self, param, signal):
+    @staticmethod
+    def _compute_rx_matrix(param, signal):
         theta = signal * np.pi / param
         rx_matrix = np.array(
             [
@@ -180,7 +187,8 @@ class MCU(Gate):
         )
         return rx_matrix
 
-    def _compute_qubit_pairs(self, n_qubits_base, step):
+    @staticmethod
+    def _compute_qubit_pairs(n_qubits_base, step):
         pairs = namedtuple("pairs", ["control", "target"])
         if step == 1:
             start = 0
@@ -197,10 +205,10 @@ class MCU(Gate):
         return qubit_pairs
 
     @staticmethod
-    def _gate_u(agate, coef, signal):
-        param = 1 / np.abs(coef)
+    def _gate_u(a_gate, coefficient, signal):
+        param = 1 / np.abs(coefficient)
 
-        values, vectors = np.linalg.eig(agate)
+        values, vectors = np.linalg.eig(a_gate)
         gate = (
             np.power(values[0] + 0j, param) * vectors[:, [0]] @ vectors[:, [0]].conj().T
         )
@@ -214,11 +222,11 @@ class MCU(Gate):
         if signal < 0:
             gate = np.linalg.inv(gate)
 
-        sqgate = QuantumCircuit(1, name="U^1/" + str(coef))
-        sqgate.unitary(gate, 0)  # pylint: disable=maybe-no-member
-        csqgate = sqgate.control(1)
+        s_q_gate = QuantumCircuit(1, name="U^1/" + str(coefficient))
+        s_q_gate.unitary(gate, 0)  # pylint: disable=maybe-no-member
+        c_s_q_gate = s_q_gate.control(1)
 
-        return csqgate
+        return c_s_q_gate
 
     @staticmethod
     def mcu(circuit, unitary, controls, target, error, ctrl_state=None):
@@ -226,10 +234,16 @@ class MCU(Gate):
         Approximated Multi-Controlled Unitary Gate
         https://arxiv.org/abs/2310.14974
         """
-        circuit.append(
-            MCU(unitary, len(controls), error, ctrl_state=ctrl_state),
-            [*controls, target],
-        )
+        if error == 0:
+            circuit.append(
+                Ldmcu(unitary, len(controls), ctrl_state=ctrl_state),
+                [*controls, target]
+            )
+        else:
+            circuit.append(
+                MCU(unitary, len(controls), error, ctrl_state=ctrl_state),
+                [*controls, target],
+            )
 
 
 MCU._apply_ctrl_state = apply_ctrl_state
