@@ -20,16 +20,15 @@ implement generic quantum computations.
 from math import ceil, log2
 import numpy as np
 import scipy as sp
-from qiskit import QuantumCircuit, QuantumRegister
-from qiskit import transpile
+
+from qiskit import QuantumCircuit, QuantumRegister, transpile
 from qiskit.circuit.library import RYGate, CZGate, MCMT, MCXGate
-from qiskit.extensions import UnitaryGate, UCRYGate, UCRZGate
+from qiskit.circuit.library import UnitaryGate, UCRYGate, UCRZGate
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
-from qiskit.quantum_info.synthesis import two_qubit_decompose
-from qiskit.quantum_info import Operator
+from qiskit.synthesis.unitary.qsd import _apply_a2
+from qiskit.circuit.library import UCGate
 from qclib.gates.ucr import ucr
-from qclib.gates.uc_gate import UCGate
-from qclib.decompose2q import TwoQubitDecomposeUpToDiagonal
+
 
 
 def unitary(gate, decomposition="qsd", iso=0, apply_a2=True):
@@ -230,7 +229,7 @@ def _cnot_count_estimate(gate, decomposition="qsd", iso=0, apply_a2=True):
         return int(ceil(4**n_qubits - 2 * 2**n_qubits)) - 1
 
     if iso:
-        # TODO: Replace this recursion with a mathematical expression.
+        # Replace this recursion with a mathematical expression.
         last_2q_gate_cnot = 1 if apply_a2 else 0
         return _cnot_count_iso(n_qubits, iso, apply_a2) + last_2q_gate_cnot
 
@@ -285,57 +284,6 @@ def _cnot_count_iso_qsd(n_qubits, apply_a2):
     right_gate = _cnot_count_iso(n_qubits - 1, 0, apply_a2)
 
     return left_gate + middle_gate + right_gate
-
-
-def _apply_a2(circ):
-    # This code is part of Qiskit.
-    #
-    # (C) Copyright IBM 2017, 2019.
-    #
-    # This code is licensed under the Apache License, Version 2.0. You may
-    # obtain a copy of this license in the LICENSE.txt file in the root directory
-    # of this source tree or at http://www.apache.org/licenses/LICENSE-2.0.
-    #
-    # Any modifications or derivative works of this code must retain this
-    # copyright notice, and modified files need to carry a notice indicating
-    # that they have been altered from the originals.
-
-    # from qiskit import transpile
-    # from qiskit.quantum_info import Operator
-
-    # from qiskit.extensions.unitary import UnitaryGate
-    # import qiskit.extensions.unitary
-
-    decomposer = TwoQubitDecomposeUpToDiagonal()
-    ccirc = transpile(circ, basis_gates=["u", "cx", "qsd2q"], optimization_level=0)
-    ind2q = []
-    # collect 2q instrs
-    for i, instr_context in enumerate(ccirc.data):
-        instr, _, _ = instr_context
-        if instr.name == "qsd2q":
-            ind2q.append(i)
-    # rolling over diagonals
-    ind2 = None  # lint
-    mat2 = None
-    qargs = None
-    cargs = None
-
-    for ind1, ind2 in zip(ind2q[0:-1:], ind2q[1::]):
-        # get neigboring 2q gates separated by controls
-        instr1, qargs, cargs = ccirc.data[ind1]
-        mat1 = Operator(instr1).data
-        instr2, _, _ = ccirc.data[ind2]
-        mat2 = Operator(instr2).data
-        # rollover
-        dmat, qc2cx = decomposer(mat1)
-        ccirc.data[ind1] = (qc2cx.to_gate(), qargs, cargs)
-        mat2 = mat2 @ dmat
-        # ccirc.data[ind2] = (qiskit.extensions.unitary.UnitaryGate(mat2), qargs, cargs)
-        ccirc.data[ind2] = (UnitaryGate(mat2), qargs, cargs)
-    if mat2 is not None:
-        qc3 = two_qubit_decompose.two_qubit_cnot_decompose(mat2)
-        ccirc.data[ind2] = (qc3.to_gate(), qargs, cargs)
-    return ccirc
 
 # QR decomposition
 
@@ -533,4 +481,3 @@ def _build_qr_circuit(gate_sequence, n_qubits):
         
 
     return circuit
-    

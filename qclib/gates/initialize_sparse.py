@@ -12,7 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy as np
 from re import match
+from math import isclose
 from qclib.gates.initialize import Initialize
 
 
@@ -30,6 +32,10 @@ class InitializeSparse(Initialize):
         """
         bit_string = list(params.keys())[0]
         self.num_qubits = len(bit_string)
+
+        # Check if probabilities (amplitudes squared) sum to 1
+        if not isclose(sum(np.absolute(list(params.values())) ** 2), 1.0, abs_tol=1e-10):
+            Exception("Sum of amplitudes-squared does not equal one.")
 
     def validate_parameter(self, parameter):
         """

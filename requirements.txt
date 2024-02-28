@@ -1,5 +1,6 @@
 qiskit
-graphviz
+qiskit_aer
 deprecation
 numpy
 tensorly
+graphviz

@@ -12,4 +12,5 @@ from .cvoqram import CvoqramInitialize
 from .pivot import PivotInitialize
 from .isometry import IsometryInitialize
 from .svd import SVDInitialize
-from .ucg_initialize import UCGInitialize
+from .ucg import UCGInitialize
+from .mixed import MixedInitialize
