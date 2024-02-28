@@ -20,10 +20,10 @@ implement generic quantum computations.
 from math import ceil, log2
 import numpy as np
 import scipy as sp
-
 from qiskit import QuantumCircuit, QuantumRegister, transpile
-from qiskit.circuit.library import RYGate, CZGate, MCMT, MCXGate
-from qiskit.circuit.library import UnitaryGate, UCRYGate, UCRZGate
+from qiskit.circuit.library import RYGate, CZGate
+from qiskit.circuit.library import UnitaryGate, UCRYGate, UCRZGate, MCXGate, MCMT
+
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
 from qiskit.synthesis.unitary.qsd import _apply_a2
 from qiskit.circuit.library import UCGate
@@ -282,7 +282,6 @@ def _cnot_count_iso_qsd(n_qubits, apply_a2):
 
     return left_gate + middle_gate + right_gate
 
-
 # QR decomposition
 
 
@@ -423,7 +422,9 @@ def _build_qr_circuit(gate_sequence, n_qubits):
     the diagonal. Since they are unitary, the position of the two b's outside the diagonal are
     related n_qubits: Number of qubits
 
+
     """
+    dim_matrix = 2**n_qubits
     # inverter e tirar o complex conjugado de gate_sequence
     qubits = QuantumRegister(n_qubits)
     circuit = QuantumCircuit(qubits)
