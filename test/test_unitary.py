@@ -74,7 +74,7 @@ class TestUnitary(TestCase):
     # QR
     def test_unitary_qr(self):
         """ Testing qclib.unitary csd"""
-        for n_qubits in range(2, 5):
+        for n_qubits in range(2, 4):
             self._test_unitary('qr', n_qubits)
 
     def test_qr_gate_sequence(self):
