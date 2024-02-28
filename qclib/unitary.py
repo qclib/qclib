@@ -282,6 +282,7 @@ def _cnot_count_iso_qsd(n_qubits, apply_a2):
 
     return left_gate + middle_gate + right_gate
 
+
 # QR decomposition
 
 
@@ -327,12 +328,13 @@ def _build_qr_gate_sequence(gate, n_qubits):
     return np.array(gate_sequence)
 
 
-def _get_row_col(matrix_rotation, dim_matrix):
+def _get_row_col(matrix_rotation, n_qubits):
     a, b, c, d = 1.0, 0.0, 0.0, 1.0
-    for row_idx in range(dim_matrix):
+    for row_idx in range(2 ** n_qubits):
         for col_idx in range(row_idx):
-            if (matrix_rotation[row_idx][col_idx] != 0 and
-                    np.not_equal(matrix_rotation[row_idx][col_idx], 1)):
+            if matrix_rotation[row_idx][col_idx] != 0 and np.not_equal(
+                matrix_rotation[row_idx][col_idx], 1
+            ):
 
                 a = matrix_rotation[col_idx][col_idx]
                 b = matrix_rotation[row_idx][col_idx]
@@ -340,7 +342,9 @@ def _get_row_col(matrix_rotation, dim_matrix):
                 d = matrix_rotation[row_idx][row_idx]
                 col = col_idx
                 row = row_idx
-    return a, b, c, d, row, col
+
+    col_qubits, n_diff, row_qubits = _row_and_col_qubits(col, n_qubits, row)
+    return np.array([[a, c], [b, d]]), row_qubits, col_qubits, n_diff
 
 
 def _apply_mcxs(n_qubits, row_qubits_new, col_qubits_new):
@@ -361,9 +365,7 @@ def _apply_mcxs(n_qubits, row_qubits_new, col_qubits_new):
             memory[m] = 2
             circuit.append(MCXGate(n_qubits - 1), qubits_list)
             row_qubits_new[m] = 1
-            for n in range(n_qubits):
-                if n != m and row_qubits_new[n] == 0:
-                    circuit.x(n)
+            _apply_cx(circuit, m, n_qubits, row_qubits_new)
             break
         if row_qubits_new[m] == 1 and col_qubits_new[m] == 0:
             qubits_list = []
@@ -380,18 +382,22 @@ def _apply_mcxs(n_qubits, row_qubits_new, col_qubits_new):
             memory[m] = 2
             circuit.append(MCXGate(n_qubits - 1), qubits_list)
             col_qubits_new[m] = 1
-            for n in range(n_qubits):
-                if n != m and col_qubits_new[n] == 0:
-                    circuit.x(n)
+            _apply_cx(circuit, m, n_qubits, col_qubits_new)
 
             break
     return circuit, memory, row_qubits_new, col_qubits_new
 
 
-def _undo_mcxs(prep_gates, n_qubits):
+def _apply_cx(circuit, m, n_qubits, row_qubits_new):
+    for n in range(n_qubits):
+        if n != m and row_qubits_new[n] == 0:
+            circuit.x(n)
+
+
+def _undo_mcxs(prep_gates, n_qubits, circuit):
     sz = len(prep_gates)
     qubits = QuantumRegister(n_qubits)
-    circuit = QuantumCircuit(qubits)
+    diff_circuit = QuantumCircuit(qubits)
     for i in range(sz):
         qubits_list = []
         # We are going through the list backwards
@@ -399,18 +405,19 @@ def _undo_mcxs(prep_gates, n_qubits):
         for m in range(n_qubits):
             if aux[m] == 0:
                 qubits_list.append(m)
-                circuit.x(m)
+                diff_circuit.x(m)
             if aux[m] == 1:
                 qubits_list.append(m)
             if aux[m] == 2:
                 target = m
         qubits_list.append(target)
-        circuit.append(MCXGate(n_qubits - 1), qubits_list)
+        diff_circuit.append(MCXGate(n_qubits - 1), qubits_list)
         # Don't forget the X/NOT at the end
         for m in range(n_qubits):
             if aux[m] == 0:
-                circuit.x(m)
-    return circuit
+                diff_circuit.x(m)
+    qubits_list = range(n_qubits)
+    circuit.append(diff_circuit, qubits_list)
 
 
 def _build_qr_circuit(gate_sequence, n_qubits):
@@ -424,33 +431,17 @@ def _build_qr_circuit(gate_sequence, n_qubits):
 
 
     """
-    dim_matrix = 2**n_qubits
-    # inverter e tirar o complex conjugado de gate_sequence
-    qubits = QuantumRegister(n_qubits)
-    circuit = QuantumCircuit(qubits)
+
+    # invert and take the complex conjugate of gate_sequence
+    circuit = QuantumCircuit(n_qubits)
     for matrix_rotation in gate_sequence:
 
-        a, b, c, d, row, col = _get_row_col(matrix_rotation, 2**n_qubits)
+        unitary_matrix, row_qubits, col_qubits, n_diff = _get_row_col(matrix_rotation, n_qubits)
 
-        col_qubits = []
-        row_qubits = []
-        diff_qubits = np.zeros(n_qubits)
-        n_diff = 0
-        for m in range(n_qubits):
-            base = 2**m
-            if col & base == 0:
-                col_qubits.append(0)
-            else:
-                col_qubits.append(1)
-            if row & base == 0:
-                row_qubits.append(0)
-            else:
-                row_qubits.append(1)
-            if row_qubits[m] != col_qubits[m]:
-                n_diff += 1
-                diff_qubits[m] = 1
+        # col_qubits, n_diff, row_qubits = _row_and_col_qubits(col, n_qubits, row)
         row_qubits_new = row_qubits
         col_qubits_new = col_qubits
+
         # Apply MCXs to only have one qubit different
         # prep_gates and memory saves information about the gates we used,
         # so we can use them again later
@@ -460,30 +451,53 @@ def _build_qr_circuit(gate_sequence, n_qubits):
             diff_circ, memory, row_qubits_new, col_qubits_new = _apply_mcxs(
                 n_qubits, row_qubits_new, col_qubits_new
             )
-            qubits_list = range(n_qubits)
-            circuit.append(diff_circ, qubits_list)
+            circuit.append(diff_circ, range(n_qubits))
             prep_gates.append(memory)
             n_diff -= 1
-        unitary_matrix = np.array([[a, c], [b, d]])
-        gate = UnitaryGate(unitary_matrix)
-        qubits_list = []
-        for m in range(n_qubits):
-            if col_qubits_new[m] == row_qubits_new[m]:
-                if row_qubits_new[m] == 0:
-                    circuit.x(m)
-                qubits_list.append(m)
-            else:
-                diffqubit = m
-        qubits_list.append(diffqubit)
-        circuit.append(MCMT(gate, n_qubits - 1, 1), qubits_list)
+
+        _append_mcmt_gate(circuit, col_qubits_new, n_qubits, row_qubits_new, unitary_matrix)
         for m in range(n_qubits):
             if col_qubits_new[m] == row_qubits_new[m]:
                 if row_qubits[m] == 0:
                     circuit.x(m)
 
         # Do all the MCXs again
-        diff_circ = _undo_mcxs(prep_gates, n_qubits)
-        qubits_list = range(n_qubits)
-        circuit.append(diff_circ, qubits_list)
+        _undo_mcxs(prep_gates, n_qubits, circuit)
+
 
     return circuit
+
+
+def _append_mcmt_gate(circuit, col_qubits_new, n_qubits, row_qubits_new, unitary_matrix):
+    gate = UnitaryGate(unitary_matrix)
+    qubits_list = []
+    for m in range(n_qubits):
+        if col_qubits_new[m] == row_qubits_new[m]:
+            if row_qubits_new[m] == 0:
+                circuit.x(m)
+            qubits_list.append(m)
+        else:
+            diffqubit = m
+    qubits_list.append(diffqubit)
+    circuit.append(MCMT(gate, n_qubits - 1, 1), qubits_list)
+
+
+def _row_and_col_qubits(col, n_qubits, row):
+    col_qubits = []
+    row_qubits = []
+    diff_qubits = np.zeros(n_qubits)
+    n_diff = 0
+    for m in range(n_qubits):
+        base = 2 ** m
+        if col & base == 0:
+            col_qubits.append(0)
+        else:
+            col_qubits.append(1)
+        if row & base == 0:
+            row_qubits.append(0)
+        else:
+            row_qubits.append(1)
+        if row_qubits[m] != col_qubits[m]:
+            n_diff += 1
+            diff_qubits[m] = 1
+    return col_qubits, n_diff, row_qubits
