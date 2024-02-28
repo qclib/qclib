@@ -20,7 +20,6 @@ from qiskit import ClassicalRegister
 from qiskit_aer import AerSimulator
 from qclib.state_preparation import DcspInitialize
 from qclib.util import measurement
-# from .util import measurement
 
 
 backend = AerSimulator()
