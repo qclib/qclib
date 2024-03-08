@@ -122,6 +122,26 @@ class UCGEInitialize(UCGInitialize):
 
         return dont_carry, new_mux
 
+    def _tensor_product_diagonal(self, diagonal, diagonal_qubits, n_qubits_total):
+        # Calculate the number of qubits the diagonal acts on
+        n_qubits_diag = len(diagonal_qubits)
+        diag_start = min([*diagonal_qubits, n_qubits_total])
+
+        # Create the operator for the qubits before the control qubits
+        operator_before = np.eye(2**diag_start)
+
+        # Create the operator for the qubits after the control qubits and the diagonal
+        operator_after = np.eye(2**(n_qubits_total - diag_start - n_qubits_diag))
+
+        # Create the full operator by calculating the tensor product in reverse order
+        full_operator = operator_before
+        if n_qubits_diag > 0:
+            full_operator = np.kron(full_operator, np.diag(diagonal))
+            full_operator = np.kron(full_operator, operator_after)
+
+        # Extract and return the complete diagonal
+        return np.diag(full_operator)
+
     def _apply_diagonal(
         self,
         bit_target: str,
@@ -139,14 +159,9 @@ class UCGEInitialize(UCGInitialize):
                 ::2
             ]  # pylint: disable=protected-access
         if ucg.dont_carry:
-            ucg.controls.reverse()
             size_required = len(ucg.dont_carry) + len(ucg.controls)
             ctrl_qc = [self.num_qubits - 1 - x for x in ucg.controls]
-            unitary_diagonal = np.diag(diagonal)
-            qc = qiskit.QuantumCircuit(size_required)
-            qc.unitary(unitary_diagonal, ctrl_qc)
-            matrix = Operator(qc).to_matrix()
-            diagonal = np.diag(matrix)
+            diagonal = self._tensor_product_diagonal(diagonal, ctrl_qc, size_required)
         children = children * diagonal
 
         return children
