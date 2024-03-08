@@ -13,13 +13,11 @@
 # limitations under the License.
 
 """
-todo
+TODO
 """
 import numpy as np
-import qiskit
 from qiskit.circuit.library import UCGate
-from qiskit.quantum_info import Operator
-from qclib.state_preparation.ucg import UCGInitialize
+from qclib.state_preparation import UCGInitialize
 
 
 def _repetition_verify(base, d, mux, mux_cpy):
@@ -59,7 +57,7 @@ def _repetition_search(mux, n, mux_cpy):
 
 
 class UCGEInitialize(UCGInitialize):
-    """ todo """
+    """ TODO """
 
     def __init__(self, params, label=None, opt_params=None):
         super().__init__(params, label=label, opt_params=opt_params)
@@ -142,7 +140,7 @@ class UCGEInitialize(UCGInitialize):
         # Extract and return the complete diagonal
         return np.diag(full_operator)
 
-    def _apply_diagonal(
+    def _apply_diagonal( # pylint: disable=arguments-differ
         self,
         bit_target: str,
         parent: "list[float]",
@@ -151,13 +149,13 @@ class UCGEInitialize(UCGInitialize):
         children = parent
 
         if bit_target == "1":
-            diagonal = np.conj(ucg._get_diagonal())[
+            diagonal = np.conj(ucg._get_diagonal())[ # pylint: disable=protected-access
                 1::2
-            ]  # pylint: disable=protected-access
+            ]
         else:
-            diagonal = np.conj(ucg._get_diagonal())[
+            diagonal = np.conj(ucg._get_diagonal())[ # pylint: disable=protected-access
                 ::2
-            ]  # pylint: disable=protected-access
+            ]
         if ucg.dont_carry:
             size_required = len(ucg.dont_carry) + len(ucg.controls)
             ctrl_qc = [self.num_qubits - 1 - x for x in ucg.controls]
