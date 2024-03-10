@@ -126,19 +126,19 @@ class UCGEInitialize(UCGInitialize):
         diag_start = min([*diagonal_qubits, n_qubits_total])
 
         # Create the operator for the qubits before the control qubits
-        operator_before = np.eye(2**diag_start)
+        operator_before = [1] * 2**diag_start
 
         # Create the operator for the qubits after the control qubits and the diagonal
-        operator_after = np.eye(2**(n_qubits_total - diag_start - n_qubits_diag))
+        operator_after = [1] * 2**(n_qubits_total - diag_start - n_qubits_diag)
 
         # Create the full operator by calculating the tensor product in reverse order
-        full_operator = operator_before
+        full_operator = np.array(operator_before)
         if n_qubits_diag > 0:
-            full_operator = np.kron(full_operator, np.diag(diagonal))
+            full_operator = np.kron(full_operator, diagonal)
             full_operator = np.kron(full_operator, operator_after)
 
         # Extract and return the complete diagonal
-        return np.diag(full_operator)
+        return full_operator
 
     def _apply_diagonal( # pylint: disable=arguments-differ
         self,
