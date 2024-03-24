@@ -13,13 +13,11 @@
 # limitations under the License.
 
 """
-todo
+TODO
 """
 import numpy as np
-import qiskit
 from qiskit.circuit.library import UCGate
-from qiskit.quantum_info import Operator
-from qclib.state_preparation.ucg import UCGInitialize
+from qclib.state_preparation import UCGInitialize
 
 
 def _repetition_verify(base, d, mux, mux_cpy):
@@ -59,7 +57,7 @@ def _repetition_search(mux, n, mux_cpy):
 
 
 class UCGEInitialize(UCGInitialize):
-    """ todo """
+    """ TODO """
 
     def __init__(self, params, label=None, opt_params=None):
         super().__init__(params, label=label, opt_params=opt_params)
@@ -122,7 +120,27 @@ class UCGEInitialize(UCGInitialize):
 
         return dont_carry, new_mux
 
-    def _apply_diagonal(
+    def _tensor_product_diagonal(self, diagonal, diagonal_qubits, n_qubits_total):
+        # Calculate the number of qubits the diagonal acts on
+        n_qubits_diag = len(diagonal_qubits)
+        diag_start = min([*diagonal_qubits, n_qubits_total])
+
+        # Create the operator for the qubits before the control qubits
+        operator_before = [1] * 2**diag_start
+
+        # Create the operator for the qubits after the control qubits and the diagonal
+        operator_after = [1] * 2**(n_qubits_total - diag_start - n_qubits_diag)
+
+        # Create the full operator by calculating the tensor product in reverse order
+        full_operator = np.array(operator_before)
+        if n_qubits_diag > 0:
+            full_operator = np.kron(full_operator, diagonal)
+            full_operator = np.kron(full_operator, operator_after)
+
+        # Extract and return the complete diagonal
+        return full_operator
+
+    def _apply_diagonal( # pylint: disable=arguments-differ
         self,
         bit_target: str,
         parent: "list[float]",
@@ -131,22 +149,17 @@ class UCGEInitialize(UCGInitialize):
         children = parent
 
         if bit_target == "1":
-            diagonal = np.conj(ucg._get_diagonal())[
+            diagonal = np.conj(ucg._get_diagonal())[ # pylint: disable=protected-access
                 1::2
-            ]  # pylint: disable=protected-access
+            ]
         else:
-            diagonal = np.conj(ucg._get_diagonal())[
+            diagonal = np.conj(ucg._get_diagonal())[ # pylint: disable=protected-access
                 ::2
-            ]  # pylint: disable=protected-access
+            ]
         if ucg.dont_carry:
-            ucg.controls.reverse()
             size_required = len(ucg.dont_carry) + len(ucg.controls)
             ctrl_qc = [self.num_qubits - 1 - x for x in ucg.controls]
-            unitary_diagonal = np.diag(diagonal)
-            qc = qiskit.QuantumCircuit(size_required)
-            qc.unitary(unitary_diagonal, ctrl_qc)
-            matrix = Operator(qc).to_matrix()
-            diagonal = np.diag(matrix)
+            diagonal = self._tensor_product_diagonal(diagonal, ctrl_qc, size_required)
         children = children * diagonal
 
         return children
