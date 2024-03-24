@@ -3,7 +3,7 @@ Qclib is a quantum computing library implemented using qiskit.
 
 The focus of qclib is on preparing quantum states, but it is not limited to that.
 
-## Instalation
+## Installation
 The easiest way of installing qclib is by using pip:
 
 ```python
