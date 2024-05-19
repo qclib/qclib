@@ -93,6 +93,22 @@ def children(nodes):
 
     return child
 
+def level_nodes(tree, level):
+    """
+    List the tree nodes in the level.
+    :param tree: a tree node
+    :param level: a tree level
+    :return: a list with the nodes in the subtree level
+    """
+    if tree:
+        if tree.level < level:
+            nodes_level = level_nodes(tree.left, level)
+            nodes_level.extend(level_nodes(tree.right, level))
+            return nodes_level
+
+        return [tree]
+
+    return []
 
 def length(tree):
     """
