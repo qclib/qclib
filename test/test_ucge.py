@@ -53,6 +53,7 @@ class TestUCGEInitialize(TestCase):
         circuit1_tranpiled = transpile(circuit1, basis_gates=['u', 'cx'])
         circuit2_transpiled = transpile(circuit2, basis_gates=['u', 'cx'])
 
+        self.assertTrue(np.allclose(input_vector, state2))
         self.assertTrue(np.allclose(state1, state2))
         self.assertTrue(circuit1_tranpiled.depth() >= circuit2_transpiled.depth())
 
@@ -81,3 +82,20 @@ class TestUCGEInitialize(TestCase):
         input_vector2 = input_vector2 / np.linalg.norm(input_vector2)
 
         self._test_compare_ucg_bipartition(num_qubits, input_vector1, input_vector2)
+
+    def test_minimal_complex(self):
+        np.random.seed(1)
+        n_qubits = 2
+
+        # Creates a product state
+        state = [1]
+        for _ in range(n_qubits):
+            state_one_qubit = np.random.rand(2) + np.random.rand(2) * 1j
+            state_one_qubit = state_one_qubit / np.linalg.norm(state_one_qubit)
+            state = np.kron(state, state_one_qubit)
+
+        ucge_circ = UCGEInitialize(state).definition
+        transpiled_ucge_circ = transpile(ucge_circ, basis_gates=['u', 'cx'])
+        ucge_depth = transpiled_ucge_circ.depth()
+
+        self.assertTrue(ucge_depth == 1)
