@@ -16,9 +16,7 @@
 todo
 """
 import numpy as np
-import qiskit
 from qiskit.circuit.library import UCGate
-from qiskit.quantum_info import Operator
 from qclib.state_preparation.ucg import UCGInitialize
 
 
@@ -73,15 +71,17 @@ class UCGEInitialize(UCGInitialize):
 
         while tree_level > 0:
 
-            bit_target, ucg = self._disentangle_qubit(
+            self._disentangle_qubit(
                 children, parent, r_gate, tree_level
             )
-            children = self._apply_diagonal(bit_target, parent, ucg)
+            children = parent
             parent = self._update_parent(children)
 
             # prepare next iteration
             r_gate = r_gate // 2
             tree_level -= 1
+
+        self.circuit.global_phase -= sum(np.angle(self.params)) / len(self.params)
 
         return self.circuit.inverse()
 
@@ -109,6 +109,37 @@ class UCGEInitialize(UCGInitialize):
 
         return bit_target, ucg
 
+    def _apply_ucg(self, current_level_mux: 'list[np.ndarray]',
+                   mult_controls: 'list[int]',
+                   target: int):
+        """ Creates and applies multiplexer """
+
+        ucg = UCGate(current_level_mux, up_to_diagonal=False)
+        if len(current_level_mux) != 1:
+            self.circuit.append(ucg, [target] + mult_controls)
+        else:
+            self.circuit.unitary(current_level_mux[0], target) # pylint: disable=maybe-no-member
+        return ucg
+
+    @staticmethod
+    def _update_parent(children):
+
+        size = len(children) // 2
+        # Calculates norms.
+        parent = [
+            np.linalg.norm(
+                [children[2 * k], children[2 * k + 1]]
+            ) for k in range(size)
+        ]
+        # Calculates phases.
+        parent = [
+            parent[k] * np.exp(
+                1j * np.sum(np.angle([children[2 * k], children[2 * k + 1]])) / 2
+            ) for k in range(size)
+        ]
+
+        return parent
+
     def _simplify(self, mux, level):
 
         mux_cpy = mux.copy()
@@ -121,35 +152,6 @@ class UCGEInitialize(UCGInitialize):
         new_mux = [matrix for matrix in mux_cpy if matrix is not None]
 
         return dont_carry, new_mux
-
-    def _apply_diagonal(
-        self,
-        bit_target: str,
-        parent: "list[float]",
-        ucg: UCGate
-    ):
-        children = parent
-
-        if bit_target == "1":
-            diagonal = np.conj(ucg._get_diagonal())[
-                1::2
-            ]  # pylint: disable=protected-access
-        else:
-            diagonal = np.conj(ucg._get_diagonal())[
-                ::2
-            ]  # pylint: disable=protected-access
-        if ucg.dont_carry:
-            ucg.controls.reverse()
-            size_required = len(ucg.dont_carry) + len(ucg.controls)
-            ctrl_qc = [self.num_qubits - 1 - x for x in ucg.controls]
-            unitary_diagonal = np.diag(diagonal)
-            qc = qiskit.QuantumCircuit(size_required)
-            qc.unitary(unitary_diagonal, ctrl_qc)
-            matrix = Operator(qc).to_matrix()
-            diagonal = np.diag(matrix)
-        children = children * diagonal
-
-        return children
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):
