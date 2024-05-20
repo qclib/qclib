@@ -16,8 +16,11 @@
 todo
 """
 import numpy as np
-from qiskit.circuit.library import UCGate
+from qiskit.circuit.library import UCGate, DiagonalGate, UnitaryGate
 from qclib.state_preparation.ucg import UCGInitialize
+import qiskit
+from qiskit.quantum_info import Operator
+
 
 
 def _repetition_verify(base, d, mux, mux_cpy):
@@ -71,10 +74,10 @@ class UCGEInitialize(UCGInitialize):
 
         while tree_level > 0:
 
-            self._disentangle_qubit(
+            bit_target, ucg = self._disentangle_qubit(
                 children, parent, r_gate, tree_level
             )
-            children = parent
+            children = self._apply_diagonal(bit_target, parent, ucg) # parent
             parent = self._update_parent(children)
 
             # prepare next iteration
@@ -84,6 +87,40 @@ class UCGEInitialize(UCGInitialize):
         self.circuit.global_phase -= sum(np.angle(self.params)) / len(self.params)
 
         return self.circuit.inverse()
+
+    def _apply_diagonal(
+        self,
+        bit_target: str,
+        parent: "list[float]",
+        ucg: UCGate
+    ):
+        children = parent
+
+        if bit_target == "1":
+            diagonal = np.conj(ucg._get_diagonal())[
+                1::2
+            ]  # pylint: disable=protected-access
+        else:
+            diagonal = np.conj(ucg._get_diagonal())[
+                ::2
+            ]  # pylint: disable=protected-access
+        if ucg.dont_carry:
+            if diagonal.shape[0] > 1:
+                gate = DiagonalGate(diagonal)
+            else:
+                gate = UnitaryGate(np.diag(diagonal))
+
+            size_required = len(ucg.dont_carry) + len(ucg.controls)
+            min_qubit = min([*ucg.dont_carry, *ucg.controls])
+            ctrl_qc = [x-min_qubit for x in ucg.controls]
+            qc = qiskit.QuantumCircuit(size_required)
+            qc.append(gate, ctrl_qc)
+            matrix = Operator(qc).to_matrix()
+            diagonal = np.diag(matrix)
+
+        children = children * diagonal
+
+        return children
 
     def _disentangle_qubit(
         self,
@@ -114,7 +151,7 @@ class UCGEInitialize(UCGInitialize):
                    target: int):
         """ Creates and applies multiplexer """
 
-        ucg = UCGate(current_level_mux, up_to_diagonal=False)
+        ucg = UCGate(current_level_mux, up_to_diagonal=True)
         if len(current_level_mux) != 1:
             self.circuit.append(ucg, [target] + mult_controls)
         else:
