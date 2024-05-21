@@ -58,26 +58,30 @@ class TestUCGEInitialize(TestCase):
         self.assertTrue(circuit1_tranpiled.depth() >= circuit2_transpiled.depth())
 
     def test_compare_ucg_bipartition_real(self):
-        num_qubits = 8
+        num_qubits1 = 3
+        num_qubits2 = 4
+        num_qubits = num_qubits1 + num_qubits2
 
-        input_vector1 = np.random.rand(2 ** (num_qubits//2))
+        input_vector1 = np.random.rand(2 ** num_qubits1)
         input_vector1 = input_vector1 / np.linalg.norm(input_vector1)
 
-        input_vector2 = np.random.rand(2 ** (num_qubits//2))
+        input_vector2 = np.random.rand(2 ** num_qubits2)
         input_vector2 = input_vector2 / np.linalg.norm(input_vector2)
 
         self._test_compare_ucg_bipartition(num_qubits, input_vector1, input_vector2)
 
     def test_compare_ucg_bipartition_complex(self):
-        num_qubits = 8
+        num_qubits1 = 3
+        num_qubits2 = 4
+        num_qubits = num_qubits1 + num_qubits2
 
-        real_part = np.random.rand(2 ** (num_qubits//2))
-        imag_part = np.random.rand(2 ** (num_qubits//2))
+        real_part = np.random.rand(2 ** num_qubits1)
+        imag_part = np.random.rand(2 ** num_qubits1)
         input_vector1 = real_part + 1j * imag_part
         input_vector1 = input_vector1 / np.linalg.norm(input_vector1)
 
-        real_part = np.random.rand(2 ** (num_qubits//2))
-        imag_part = np.random.rand(2 ** (num_qubits//2))
+        real_part = np.random.rand(2 ** num_qubits2)
+        imag_part = np.random.rand(2 ** num_qubits2)
         input_vector2 = real_part + 1j * imag_part
         input_vector2 = input_vector2 / np.linalg.norm(input_vector2)
 
