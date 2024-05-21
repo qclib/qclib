@@ -104,11 +104,10 @@ class UCGEInitialize(UCGInitialize):
             diagonal = np.conj(ucg._get_diagonal())[
                 ::2
             ]  # pylint: disable=protected-access
-        if ucg.dont_carry:
-            if diagonal.shape[0] > 1:
-                gate = DiagonalGate(diagonal)
-            else:
-                gate = UnitaryGate(np.diag(diagonal))
+        if ucg.dont_carry and diagonal.shape[0] > 1:
+            # If `diagonal.shape[0] == 1` then diagonal == [1.].
+            # Therefore, `diagonal` has no effect on `children`.
+            gate = DiagonalGate(diagonal)
 
             size_required = len(ucg.dont_carry) + len(ucg.controls)
             min_qubit = min([*ucg.dont_carry, *ucg.controls])
