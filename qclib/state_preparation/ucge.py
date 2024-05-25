@@ -38,16 +38,15 @@ def _repetition_search(mux, n, mux_cpy):
 
     dont_carry = []
     for i in range(1, len(mux) // 2 + 1):
-        d = i
         entanglement = False
-        if np.log2(d).is_integer() and np.allclose(mux[i], mux[0]):
+        if np.log2(i).is_integer() and np.allclose(mux[i], mux[0]):
             mux_org = mux_cpy[:]
-            repetitions = len(mux) // (2 * d)
+            repetitions = len(mux) // (2 * i)
             base = 0
             while repetitions:
                 repetitions -= 1
-                valid = _repetition_verify(base, d, mux, mux_cpy)
-                base += 2 * d
+                valid = _repetition_verify(base, i, mux, mux_cpy)
+                base += 2 * i
                 if not valid:
                     mux_cpy[:] = mux_org
                     break
@@ -55,7 +54,7 @@ def _repetition_search(mux, n, mux_cpy):
                     entanglement = True
 
         if entanglement:
-            dont_carry.append(n + int(np.log2(d)) + 1)
+            dont_carry.append(n + int(np.log2(i)) + 1)
     return dont_carry
 
 
@@ -112,10 +111,17 @@ class UCGEInitialize(UCGInitialize):
             size_required = len(ucg.dont_carry) + len(ucg.controls)
             min_qubit = min([*ucg.dont_carry, *ucg.controls])
             ctrl_qc = [x-min_qubit for x in ucg.controls]
-            qc = qiskit.QuantumCircuit(size_required)
-            qc.append(gate, ctrl_qc)
-            matrix = Operator(qc).to_matrix()
-            diagonal = np.diag(matrix)
+
+            for i in range(size_required):
+                if i not in ctrl_qc:
+                    d = 2**i
+                    new_diagonal = []
+                    n = len(diagonal)
+                    for j in range(n):
+                        new_diagonal.append(diagonal[j])
+                        if (j + 1) % d == 0:
+                            new_diagonal.extend(diagonal[j + 1 - d:j + 1])
+                    diagonal = np.array(new_diagonal)
 
         children = children * diagonal
 
