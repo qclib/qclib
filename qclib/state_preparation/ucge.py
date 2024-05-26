@@ -146,18 +146,6 @@ class UCGEInitialize(UCGInitialize):
 
         return bit_target, ucg
 
-    def _apply_ucg(self, current_level_mux: 'list[np.ndarray]',
-                   mult_controls: 'list[int]',
-                   target: int):
-        """ Creates and applies multiplexer """
-
-        ucg = UCGate(current_level_mux, up_to_diagonal=True)
-        if len(current_level_mux) != 1:
-            self.circuit.append(ucg, [target] + mult_controls)
-        else:
-            self.circuit.unitary(current_level_mux[0], target) # pylint: disable=maybe-no-member
-        return ucg
-
     @staticmethod
     def _update_parent(children):
 
