@@ -103,8 +103,6 @@ class UCGEInitialize(UCGInitialize):
         if ucg.dont_carry and diagonal.shape[0] > 1:
             # If `diagonal.shape[0] == 1` then diagonal == [1.].
             # Therefore, `diagonal` has no effect on `children`.
-            gate = DiagonalGate(diagonal)
-
             size_required = len(ucg.dont_carry) + len(ucg.controls)
             min_qubit = min([*ucg.dont_carry, *ucg.controls])
             ctrl_qc = [x-min_qubit for x in ucg.controls]
