@@ -16,11 +16,8 @@
 todo
 """
 import numpy as np
-from qiskit.circuit.library import UCGate, DiagonalGate, UnitaryGate
+from qiskit.circuit.library import UCGate
 from qclib.state_preparation.ucg import UCGInitialize
-import qiskit
-from qiskit.quantum_info import Operator
-
 
 
 def _repetition_verify(base, d, mux, mux_cpy):
