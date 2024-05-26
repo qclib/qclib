@@ -73,7 +73,7 @@ class UCGEInitialize(UCGInitialize):
             bit_target, ucg = self._disentangle_qubit(
                 children, parent, r_gate, tree_level
             )
-            children = self._apply_diagonal(bit_target, parent, ucg) # parent
+            children = self._apply_diagonal(bit_target, parent, ucg)
             parent = self._update_parent(children)
 
             # prepare next iteration
