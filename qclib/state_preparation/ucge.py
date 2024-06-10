@@ -13,14 +13,19 @@
 # limitations under the License.
 
 """
-todo
+Efficient version of the UCG approach for separable states
 """
 import numpy as np
 from qiskit.circuit.library import UCGate
 from qclib.state_preparation.ucg import UCGInitialize
 
 
-def _repetition_verify(base, d, mux, mux_cpy):
+def _repetition_verify(base: int, d: int, mux: 'list[np.ndarray]', mux_cpy: 'list[np.ndarray]'):
+    """
+    Checks whether a possible repeating pattern is valid by checking whether all elements repeat
+    in a period d and marks operators to be removed
+    """
+
     i = 0
     next_base = base + d
     while i < d:
@@ -31,7 +36,11 @@ def _repetition_verify(base, d, mux, mux_cpy):
     return True
 
 
-def _repetition_search(mux, n, mux_cpy):
+def _repetition_search(mux: 'list[np.ndarray]', n: int, mux_cpy: 'list[np.ndarray]'):
+    """
+    Search for possible repetitions by searching for equal operators in indices that are powers of two
+    When found, it calculates the position of the controls to be eliminated
+    """
 
     dont_carry = []
     for i in range(1, len(mux) // 2 + 1):
@@ -56,7 +65,10 @@ def _repetition_search(mux, n, mux_cpy):
 
 
 class UCGEInitialize(UCGInitialize):
-    """ todo """
+    """
+    This class implements an efficient state preparation for separable states
+    Based on the UCG approach
+    """
 
     def __init__(self, params, label=None, opt_params=None):
         super().__init__(params, label=label, opt_params=opt_params)
@@ -107,15 +119,21 @@ class UCGEInitialize(UCGInitialize):
             min_qubit = min([*ucg.dont_carry, *ucg.controls])
             ctrl_qc = [x-min_qubit for x in ucg.controls]
 
+            # Adjusts the diagonal to the right size
+            # Necessary when a simplification occurs
             for i in range(size_required):
                 if i not in ctrl_qc:
                     d = 2**i
                     new_diagonal = []
                     n = len(diagonal)
+
+                    # Extends the operator to the total number of qubits in the circuit
+                    # This acts as identity on non-target qubits
                     for j in range(n):
                         new_diagonal.append(diagonal[j])
                         if (j + 1) % d == 0:
                             new_diagonal.extend(diagonal[j + 1 - d:j + 1])
+
                     diagonal = np.array(new_diagonal)
 
         children = children * diagonal
@@ -156,16 +174,21 @@ class UCGEInitialize(UCGInitialize):
                 [children[2 * k], children[2 * k + 1]]
             ) for k in range(size)
         ]
+
         # Calculates phases.
         parent = [
             parent[k] * np.exp(
                 1j * np.sum(np.angle([children[2 * k], children[2 * k + 1]])) / 2
             ) for k in range(size)
         ]
+        print("PARENT: ", np.imag(parent))
 
         return parent
 
-    def _simplify(self, mux, level):
+    def _simplify(self, mux: 'list[np.ndarray]', level: int):
+        """
+        Returns the position of controls that can be eliminated and the simplified multiplexer
+        """
 
         mux_cpy = mux.copy()
         dont_carry = []
