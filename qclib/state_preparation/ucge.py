@@ -181,7 +181,6 @@ class UCGEInitialize(UCGInitialize):
                 1j * np.sum(np.angle([children[2 * k], children[2 * k + 1]])) / 2
             ) for k in range(size)
         ]
-        print("PARENT: ", np.imag(parent))
 
         return parent
 
