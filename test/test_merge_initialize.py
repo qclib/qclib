@@ -111,7 +111,7 @@ class TestMergeInitialize(unittest.TestCase):
 
     def test_several_qubit_sizes(self):
         for n_qubits in range(4, 12):
-            state_vector = random(1, 2 ** n_qubits, density=0.1, random_state=42).A.reshape(-1)
+            state_vector = random(1, 2 ** n_qubits, density=0.1, random_state=42).toarray().reshape(-1)
             state_vector = state_vector / np.linalg.norm(state_vector)
             state_dict = build_state_dict(state_vector)
 
