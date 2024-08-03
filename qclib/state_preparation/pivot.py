@@ -85,6 +85,7 @@ class PivotInitialize(InitializeSparse):
             LowRankInitialize.initialize(initialize_circ, dense_state)
         else:
             initialize_circ = QuantumCircuit(target_size)
+            dense_state = dense_state / np.linalg.norm(dense_state)
             LowRankInitialize.initialize(initialize_circ, dense_state)
 
         if self.aux:
