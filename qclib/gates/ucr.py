@@ -46,13 +46,13 @@ def ucr(
 
     if n_qubits == 1:
         if abs(angles[0]) > 10**-8:
-            circuit.append(r_gate(angles[0]), [target])
+            circuit.compose(r_gate(angles[0]), [target], inplace=True)
         return circuit
 
     angle_multiplexor = np.kron(
         [[0.5, 0.5], [0.5, -0.5]], np.identity(2 ** (n_qubits - 2))
     )
-    multiplexed_angles = angle_multiplexor.dot(angles)
+    multiplexed_angles = angle_multiplexor @ angles
 
     # Figure 2 from Synthesis of Quantum Logic Circuits:
     #   The recursive decomposition of a multiplexed Rz gate.
@@ -60,12 +60,12 @@ def ucr(
     # This is why "last_cnot=False" in both calls of "rotation_multiplexor()" and
     # also why the multiplexer in the second "circuit.append()" is reversed.
     mult = ucr(r_gate, multiplexed_angles[: size // 2], c_gate, False)
-    circuit.append(mult.to_instruction(), reg[0:-1])
+    circuit.compose(mult, reg[0:-1], inplace=True)
 
-    circuit.append(c_gate(), [control, target])
+    circuit.compose(c_gate(), [control, target], inplace=True)
 
     mult = ucr(r_gate, multiplexed_angles[size // 2 :], c_gate, False)
-    circuit.append(mult.reverse_ops().to_instruction(), reg[0:-1])
+    circuit.compose(mult.reverse_ops(), reg[0:-1], inplace=True)
 
     # The following condition allows saving CNOTs when two multiplexors are used
     # in sequence. Any multiplexor can have its operation reversed. Therefore, if
@@ -73,6 +73,6 @@ def ucr(
     # last CNOT of the first multiplexer. In this condition, both last CNOTs are
     # unnecessary.
     if last_control:
-        circuit.append(c_gate(), [control, target])
+        circuit.compose(c_gate(), [control, target], inplace=True)
 
     return circuit
