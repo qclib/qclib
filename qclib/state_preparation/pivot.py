@@ -181,14 +181,14 @@ class PivotInitialize(InitializeSparse):
         else:
             control_size = len(remain)
             num_qubits = circuit.num_qubits
-            control_limit = int(np.ceil(circuit.num_qubits/2))
-            if num_qubits >= 5 and control_size <= control_limit:
+            control_limit = control_size - 2
+            if num_qubits >= 5 and control_size > control_limit:
                 """Lemma 8 of Iten et al. (2016) arXiv:1501.06911"""
                 vchain_dirty = McxVchainDirty(control_size).definition
 
                 dirty_anc = target.copy()
                 dirty_anc.remove(self.index_differ)
-                dirty_anc = dirty_anc[:control_size-2]
+                dirty_anc = dirty_anc[:control_limit]
 
                 circuit.compose(vchain_dirty, [*remain, *dirty_anc, self.index_differ], inplace=True)
             else: 
