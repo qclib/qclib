@@ -195,7 +195,6 @@ class PivotInitialize(InitializeSparse):
                 X = np.array([[0, 1], [1, 0]])
                 mcg = Mcg(X, num_controls=len(remain)).definition
                 circuit.compose(mcg, [*remain , self.index_differ], inplace=True)
-                #circuit.mcx(remain, self.index_differ)
 
         for k in remain:
             if index_zero[k] == "0":
