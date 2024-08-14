@@ -18,7 +18,7 @@ import numpy as np
 import qiskit
 from qiskit import QuantumCircuit
 from qclib.gates.initialize_sparse import InitializeSparse
-from qclib.gates import McxVchainDirty, Mcg
+from qclib.gates import Mcg
 from .lowrank import LowRankInitialize
 
 # pylint: disable=maybe-no-member
@@ -184,13 +184,12 @@ class PivotInitialize(InitializeSparse):
             control_limit = int(np.ceil(num_qubits/2))
             if num_qubits >= 5 and  control_size <= control_limit:
                 """Lemma 8 of Iten et al. (2016) arXiv:1501.06911"""
-                vchain_dirty = McxVchainDirty(control_size).definition
 
                 dirty_anc = target.copy()
                 dirty_anc.remove(self.index_differ)
                 dirty_anc = dirty_anc[:control_size-2]
 
-                circuit.compose(vchain_dirty, [*remain, *dirty_anc, self.index_differ], inplace=True)
+                circuit.mcx(remain, self.index_differ, ancilla_qubits=dirty_anc, mode='v-chain-dirty')
 
             else: 
                 X = np.array([[0, 1], [1, 0]])
