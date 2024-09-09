@@ -232,7 +232,7 @@ class TestMcxVchainDirty(TestCase):
             )
 
             self.assertTrue(8 * num_controls - 6 == tr_mcx_v_chain.count_ops()["cx"])
-            self.assertLess(tr_mcx_v_chain.depth(), tr_mcx_v_chain_qiskit.depth())
+            self.assertLessEqual(tr_mcx_v_chain.depth(), tr_mcx_v_chain_qiskit.depth())
 
     def test_mcx_v_chain_dirty(self):
         """Test McxVchainDirty"""

@@ -113,6 +113,18 @@ class TestPivotingSP(TestCase):
         for pattern, amp in data.items():
             self.assertTrue(np.isclose(state[int(pattern, 2)], amp))
 
+    def test_pivot_sp_random_7_qubits(self):
+        """ Testing pivot state preparation with 4 amplitudes on a 7-qubit system"""
+        n_qubits = 7
+        log_n_patterns = 4
+        prob = 0.2
+        data = double_sparse(n_qubits, log_n_patterns, prob)
+
+        circuit = PivotInitialize(data).definition
+        state = get_state(circuit)
+        for pattern, amp in data.items():
+            self.assertTrue(np.isclose(state[int(pattern, 2)], amp))
+
     def test_pivot_sp_random_aux(self):
         """ Testing pivot state preparation with 4 amplitudes and auxiliary qubits"""
         n_qubits = 4
