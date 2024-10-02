@@ -21,7 +21,7 @@ https://doi.org/10.3390/fractalfract7100743
 from numpy import pi
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit import Gate
-from qiskit.circuit.library import QFT, UnitaryGate
+from qiskit.circuit.library import QFT
 
 class Qfrft(Gate):
     '''
@@ -35,22 +35,19 @@ class Qfrft(Gate):
         super().__init__('qfrft', num_targets+2, [], "Qfrft")
 
     def _define(self):
-        if len(self.num_qubits) > 0:
-            self.definition = QuantumCircuit(self.controls, self.targets)
+        
+        self.definition = QuantumCircuit(self.controls, self.targets)
 
+        if len(self.targets) > 0:
             num_targets = len(self.targets)
 
-            qft_controls = QFT(2)
-            qft_targets = QFT(num_targets)
-
-            qft_targets_2 = UnitaryGate(qft_targets @ qft_targets)
+            qft_controls = QFT(2).to_gate()
+            qft_targets = QFT(num_targets).to_gate()
 
             qft_controls_inv = qft_controls.inverse()
             qft_targets_inv = qft_targets.inverse()
 
-            qft_targets_2_inv = qft_targets_2.inverse()
-
-            gate = QuantumCircuit(self.num_qubits, name="Qfrft")
+            gate = QuantumCircuit(self.controls, self.targets, name="Qfrft")
 
             gate.h(self.controls[0])
             gate.h(self.controls[1])
@@ -60,7 +57,11 @@ class Qfrft(Gate):
                 [self.controls[1], *self.targets]
             )
             gate.append(
-                qft_targets_2.control(1),
+                qft_targets.control(1),
+                [self.controls[0], *self.targets]
+            )
+            gate.append(
+                qft_targets.control(1),
                 [self.controls[0], *self.targets]
             )
 
@@ -77,11 +78,15 @@ class Qfrft(Gate):
 
             gate.append(
                 qft_targets_inv.control(1),
-                [self.controls[1], *self.targets]
+                [self.controls[0], *self.targets]
             )
             gate.append(
-                qft_targets_2_inv.control(1),
+                qft_targets_inv.control(1),
                 [self.controls[0], *self.targets]
+            )
+            gate.append(
+                qft_targets_inv.control(1),
+                [self.controls[1], *self.targets]
             )
 
             gate.h(self.controls[0])
@@ -91,9 +96,6 @@ class Qfrft(Gate):
                 gate,
                 [*self.controls, *self.targets]
             )
-
-        else:
-            self.definition = QuantumCircuit(self.num_qubits)
 
     @staticmethod
     def qfrft(
