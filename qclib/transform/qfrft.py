@@ -35,14 +35,15 @@ class Qfrft(Gate):
         super().__init__('qfrft', num_targets+2, [], "Qfrft")
 
     def _define(self):
-        
+
         self.definition = QuantumCircuit(self.controls, self.targets)
 
         if len(self.targets) > 0:
             num_targets = len(self.targets)
 
-            qft_controls = QFT(2).to_gate()
-            qft_targets = QFT(num_targets).to_gate()
+            # Qiskit follows an inverse QFT compared
+            # to the one specified in the article.
+            # But that doesn't cause any problems.
 
             qft_controls_inv = qft_controls.inverse()
             qft_targets_inv = qft_targets.inverse()
