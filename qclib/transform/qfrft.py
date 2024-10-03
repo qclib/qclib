@@ -70,13 +70,13 @@ class Qfrft(Gate):
 
             gate.append(
                 qft_controls_inv,
-                self.controls
+                self.controls[::-1] # Qiskit little-endian.
             )
-            gate.rz(-pi * self.alpha, self.controls[0])
-            gate.rz(-pi * self.alpha / 2, self.controls[1])
+            gate.p(-pi * self.alpha, self.controls[0])
+            gate.p(-pi * self.alpha / 2, self.controls[1])
             gate.append(
                 qft_controls,
-                self.controls
+                self.controls[::-1] # Qiskit little-endian.
             )
 
             gate.append(
