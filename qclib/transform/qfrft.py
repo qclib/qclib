@@ -44,9 +44,11 @@ class Qfrft(Gate):
             # Qiskit follows an inverse QFT compared
             # to the one specified in the article.
             # But that doesn't cause any problems.
+            qft_controls = QFT(2, inverse=False).to_gate()
+            qft_targets = QFT(num_targets, inverse=False).to_gate()
 
-            qft_controls_inv = qft_controls.inverse()
-            qft_targets_inv = qft_targets.inverse()
+            qft_controls_inv = QFT(2, inverse=True).to_gate()
+            qft_targets_inv = QFT(num_targets, inverse=True).to_gate()
 
             gate = QuantumCircuit(self.controls, self.targets, name="Qfrft")
 
