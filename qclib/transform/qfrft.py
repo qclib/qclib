@@ -44,11 +44,11 @@ class Qfrft(Gate):
             # Qiskit follows an inverse QFT compared
             # to the one specified in the article.
             # But that doesn't cause any problems.
-            qft_controls = QFT(2, inverse=False).to_gate()
-            qft_targets = QFT(num_targets, inverse=False).to_gate()
+            qft_controls = QFT(2, inverse=True).to_gate()
+            qft_targets = QFT(num_targets, inverse=True).to_gate()
 
-            qft_controls_inv = QFT(2, inverse=True).to_gate()
-            qft_targets_inv = QFT(num_targets, inverse=True).to_gate()
+            qft_controls_inv = QFT(2, inverse=False).to_gate()
+            qft_targets_inv = QFT(num_targets, inverse=False).to_gate()
 
             gate = QuantumCircuit(self.controls, self.targets, name="Qfrft")
 
@@ -57,39 +57,39 @@ class Qfrft(Gate):
 
             gate.append(
                 qft_targets.control(1),
+                [self.controls[0], *self.targets]
+            )
+            gate.append(
+                qft_targets.control(1),
                 [self.controls[1], *self.targets]
             )
             gate.append(
                 qft_targets.control(1),
-                [self.controls[0], *self.targets]
-            )
-            gate.append(
-                qft_targets.control(1),
-                [self.controls[0], *self.targets]
+                [self.controls[1], *self.targets]
             )
 
             gate.append(
                 qft_controls_inv,
-                self.controls[::-1] # Qiskit little-endian.
+                self.controls
             )
-            gate.p(-pi * self.alpha, self.controls[0])
-            gate.p(-pi * self.alpha / 2, self.controls[1])
+            gate.p(-pi * self.alpha / 2, self.controls[0])
+            gate.p(-pi * self.alpha, self.controls[1])
             gate.append(
                 qft_controls,
-                self.controls[::-1] # Qiskit little-endian.
+                self.controls
             )
 
             gate.append(
                 qft_targets_inv.control(1),
-                [self.controls[0], *self.targets]
-            )
-            gate.append(
-                qft_targets_inv.control(1),
-                [self.controls[0], *self.targets]
+                [self.controls[1], *self.targets]
             )
             gate.append(
                 qft_targets_inv.control(1),
                 [self.controls[1], *self.targets]
+            )
+            gate.append(
+                qft_targets_inv.control(1),
+                [self.controls[0], *self.targets]
             )
 
             gate.h(self.controls[0])
