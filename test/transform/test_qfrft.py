@@ -16,12 +16,14 @@
 
 from unittest import TestCase
 
-import numpy as np
-from qiskit import QuantumCircuit
-from qiskit.quantum_info import Statevector, DensityMatrix, partial_trace
-from qclib.util import get_cnot_count, get_depth
-from qclib.transform import Qfrft
+from random import randint, random
 
+import numpy as np
+
+from qiskit import QuantumCircuit
+from qiskit.quantum_info import Statevector, Operator
+from qiskit.circuit.library import QFT
+from qclib.transform import Qfrft
 
 # pylint: disable=maybe-no-member
 # pylint: disable=missing-function-docstring
@@ -30,6 +32,51 @@ from qclib.transform import Qfrft
 
 class TestQfrft(TestCase):
     """ Testing qclib.transform.qfrft """
+
+    def test_transformation(self):
+        '''
+        Verifies if the circuit produces the expected state by using a
+        randomly chosen eigenvector of the Quantum Fourier Transform (QFT).
+        In the context of the article, any state |u> is defined in terms
+        of the eigenvectors |u_i> of the QFT.
+        '''
+
+        n_qubits = randint(4, 8)          # Size of the quantum state |u>.
+        alpha = random()                  # F^alpha.
+        index = randint(0, 2**n_qubits-1) # Eigenvector index.
+
+        # Select an eigenvector as the quantum state |u>.
+        qft_matrix = Operator(
+            QFT(num_qubits=n_qubits, inverse=True)
+        ).data
+
+        e_vals, e_vecs = np.linalg.eig(qft_matrix)
+        state_vector = e_vecs[:,index]
+
+        # Creates the quantum circuit.
+        init = QuantumCircuit(n_qubits)
+        qfrft = Qfrft(n_qubits, alpha)
+
+        init.initialize(state_vector)
+
+        circuit = QuantumCircuit(n_qubits + 2)
+        circuit.append(init, range(2, n_qubits+2))
+        circuit.append(qfrft, range(n_qubits+2))
+
+        # Obtains the state |u⟩ from the quantum circuit.
+        full_state = Statevector(circuit)
+        quantum_state = [
+            v for k, v in full_state.to_dict().items() if k[-2:]=="00"
+        ]
+
+        # Calculates the expected state for comparison.
+        phi = {1.0: 0, -1.0j: 1, -1.0: 2, 1.0j: 3} # See phi def. after eq. (25).
+        expected_state = np.exp(                   # See eq. (29).
+            -np.pi*1j*alpha*phi[np.round(e_vals[index])]/2
+        ) * state_vector
+
+        # Compares the obtained state with the expected state.
+        self.assertTrue(np.allclose(quantum_state, expected_state))
 
     def test_aux_state(self):
         '''
