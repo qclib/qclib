@@ -84,13 +84,14 @@ class TestQfrft(TestCase):
         states other than |00⟩ are zero (null).
         '''
 
-        n_qubits = 6
+        n_qubits = randint(4, 8)
+        alpha = random()
         state_vector = np.random.rand(2**n_qubits) + \
                        np.random.rand(2**n_qubits) * 1j
         state_vector = state_vector / np.linalg.norm(state_vector)
 
         init = QuantumCircuit(n_qubits)
-        qfrft = Qfrft(n_qubits, 0.5)
+        qfrft = Qfrft(n_qubits, alpha)
 
         init.initialize(state_vector)
 
