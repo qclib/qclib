@@ -33,7 +33,7 @@ from qclib.transform import Qfrft
 class TestQfrft(TestCase):
     """ Testing qclib.transform.qfrft """
 
-    def test_transformation(self):
+    def _test_transformation(self, reset_ancillae=False):
         '''
         Verifies if the circuit produces the expected state by using a
         randomly chosen eigenvector of the Quantum Fourier Transform (QFT).
@@ -55,7 +55,7 @@ class TestQfrft(TestCase):
 
         # Creates the quantum circuit.
         init = QuantumCircuit(n_qubits)
-        qfrft = Qfrft(n_qubits, alpha)
+        qfrft = Qfrft(n_qubits, alpha, reset_ancillae=reset_ancillae)
 
         init.initialize(state_vector)
 
@@ -63,7 +63,13 @@ class TestQfrft(TestCase):
         circuit.append(init, range(2, n_qubits+2))
         circuit.append(qfrft, range(n_qubits+2))
 
-        # Obtains the state |u⟩ from the quantum circuit.
+        # Obtains the state |u> from the quantum circuit.
+        # It is necessary to filter by the auxiliary state |00>
+        # because of numerical error.
+        # If `reset_ancillae==False`, amplitudes from other
+        # groups - |01>, |10>, |11> - remain present because
+        # they are very close to zero, but not equal.
+        # Function `test_ancillae_state` exemplifies this.
         full_state = Statevector(circuit)
         quantum_state = [
             v for k, v in full_state.to_dict().items() if k[-2:]=="00"
@@ -78,9 +84,15 @@ class TestQfrft(TestCase):
         # Compares the obtained state with the expected state.
         self.assertTrue(np.allclose(quantum_state, expected_state))
 
-    def test_aux_state(self):
+    def test_transformation_reset_ancillae(self):
+        self._test_transformation(True)
+
+    def test_transformation_revert_ancillae(self):
+        self._test_transformation(False)
+
+    def test_aancillae_state(self):
         '''
-        Checks if the probability amplitudes for control (auxiliary) qubit
+        Checks if the probability amplitudes for control (ancillae) qubit
         states other than |00⟩ are zero (null).
         '''
 
