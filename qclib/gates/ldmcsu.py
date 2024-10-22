@@ -70,33 +70,28 @@ class Ldmcsu(Gate):
             # of V is real-valued.
             eig_vals, eig_vecs = np.linalg.eig(self.unitary)
 
-            x_vecs, z_vecs = self._get_x_z(eig_vecs)
+            v = UnitaryGate(eig_vecs)
 
-            self.half_linear_depth_mcv(
-                x_vecs,
-                z_vecs,
-                self.controls,
-                self.target,
-                self.ctrl_state,
-                inverse=True,
-            )
+            self.definition.append(v.inverse(), [self.target])
             self.linear_depth_mcv(
                 np.diag(eig_vals),
                 self.controls,
                 self.target,
-                self.ctrl_state,
-                general_su2_optimization=True,
+                self.ctrl_state
             )
-            self.half_linear_depth_mcv(
-                x_vecs, z_vecs, self.controls, self.target, self.ctrl_state
-            )
+            self.definition.append(v, [self.target])
 
         else:
 
             if not is_secondary_diag_real:
                 self.definition.h(self.target)
 
-            self.linear_depth_mcv(self.unitary, self.controls, self.target, self.ctrl_state)
+            self.linear_depth_mcv(
+                self.unitary,
+                self.controls,
+                self.target,
+                self.ctrl_state
+            )
 
             if not is_secondary_diag_real:
                 self.definition.h(self.target)
@@ -140,8 +135,7 @@ class Ldmcsu(Gate):
         su2_unitary,
         controls: Union[QuantumRegister, List[Qubit]],
         target: Qubit,
-        ctrl_state: str = None,
-        general_su2_optimization=False,
+        ctrl_state: str = None
     ):
         """
         Theorem 1 - https://arxiv.org/pdf/2302.06377.pdf
@@ -164,16 +158,14 @@ class Ldmcsu(Gate):
             ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
             ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
 
-        if not general_su2_optimization:
-            mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
-            self.definition.append(
-                mcx_1, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
-            )
+
+        mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
+        self.definition.append(
+            mcx_1, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
+        )
         self.definition.append(gate_a, [target])
 
-        mcx_2 = McxVchainDirty(
-            k_2, ctrl_state=ctrl_state_k_2, action_only=general_su2_optimization
-        ).definition
+        mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
         self.definition.append(
             mcx_2.inverse(), controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
         )
@@ -190,76 +182,6 @@ class Ldmcsu(Gate):
             mcx_4, controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
         )
         self.definition.append(gate_a.inverse(), [target])
-
-    def half_linear_depth_mcv(
-        self,
-        x_value,
-        z_value,
-        controls: Union[QuantumRegister, List[Qubit]],
-        target: Qubit,
-        ctrl_state: str = None,
-        inverse: bool = False,
-    ):
-        """
-        Theorem 4 - https://arxiv.org/pdf/2302.06377.pdf
-        """
-
-        alpha_r = np.sqrt((z_value.real + 1.0) / 2.0)
-        alpha_i = z_value.imag / np.sqrt(2 * (z_value.real + 1.0))
-        alpha = alpha_r + 1.0j * alpha_i
-
-        beta = x_value / np.sqrt(2 * (z_value.real + 1.0))
-
-        s_op = np.array([[alpha, -np.conj(beta)], [beta, np.conj(alpha)]])
-
-        # S gate definition
-        s_gate = UnitaryGate(s_op)
-
-        # Hadamard equivalent definition
-        h_gate = UnitaryGate(np.array([[-1, 1], [1, 1]]) * 1 / np.sqrt(2))
-
-        num_ctrl = len(controls)
-        k_1 = int(np.ceil(num_ctrl / 2.0))
-        k_2 = int(np.floor(num_ctrl / 2.0))
-
-        ctrl_state_k_1 = None
-        ctrl_state_k_2 = None
-
-        if ctrl_state is not None:
-            ctrl_state_k_1 = ctrl_state[::-1][:k_1][::-1]
-            ctrl_state_k_2 = ctrl_state[::-1][k_1:][::-1]
-
-        if inverse:
-            self.definition.h(target)
-
-            self.definition.append(s_gate, [target])
-            mcx_2 = McxVchainDirty(
-                k_2, ctrl_state=ctrl_state_k_2, action_only=True
-            ).definition
-            self.definition.append(
-                mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
-            )
-
-            self.definition.append(s_gate.inverse(), [target])
-
-            self.definition.append(h_gate, [target])
-
-        else:
-            mcx_1 = McxVchainDirty(k_1, ctrl_state=ctrl_state_k_1).definition
-            self.definition.append(
-                mcx_1, controls[:k_1] + controls[k_1 : 2 * k_1 - 2] + [target]
-            )
-            self.definition.append(h_gate, [target])
-
-            self.definition.append(s_gate, [target])
-
-            mcx_2 = McxVchainDirty(k_2, ctrl_state=ctrl_state_k_2).definition
-            self.definition.append(
-                mcx_2, controls[k_1:] + controls[k_1 - k_2 + 2 : k_1] + [target]
-            )
-            self.definition.append(s_gate.inverse(), [target])
-
-            self.definition.h(target)
 
     @staticmethod
     def ldmcsu(
