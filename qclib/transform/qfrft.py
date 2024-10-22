@@ -27,11 +27,10 @@ class Qfrft(Gate):
     '''
     Quantum Fractional Fourier Transform (QFrFT)
     '''
-    def __init__(self, num_targets, alpha, reset_ancillae=False):
+    def __init__(self, num_targets, alpha):
         self.alpha = alpha
         self.controls = QuantumRegister(2)
         self.targets = QuantumRegister(num_targets)
-        self.reset_ancillae = reset_ancillae
 
         super().__init__('qfrft', num_targets+2, [], "Qfrft")
 
@@ -76,29 +75,26 @@ class Qfrft(Gate):
             gate.p(-pi * self.alpha / 2, self.controls[0])
             gate.p(-pi * self.alpha, self.controls[1])
 
-            if self.reset_ancillae:
-                gate.reset(self.controls)
-            else:
-                gate.append(
-                    qft_controls,
-                    self.controls
-                )
+            gate.append(
+                qft_controls,
+                self.controls
+            )
 
-                gate.append(
-                    qft_targets_inv.control(1),
-                    [self.controls[1], *self.targets]
-                )
-                gate.append(
-                    qft_targets_inv.control(1),
-                    [self.controls[1], *self.targets]
-                )
-                gate.append(
-                    qft_targets_inv.control(1),
-                    [self.controls[0], *self.targets]
-                )
+            gate.append(
+                qft_targets_inv.control(1),
+                [self.controls[1], *self.targets]
+            )
+            gate.append(
+                qft_targets_inv.control(1),
+                [self.controls[1], *self.targets]
+            )
+            gate.append(
+                qft_targets_inv.control(1),
+                [self.controls[0], *self.targets]
+            )
 
-                gate.h(self.controls[0])
-                gate.h(self.controls[1])
+            gate.h(self.controls[0])
+            gate.h(self.controls[1])
 
             self.definition.append(
                 gate,

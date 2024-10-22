@@ -33,7 +33,7 @@ from qclib.transform import Qfrft
 class TestQfrft(TestCase):
     """ Testing qclib.transform.qfrft """
 
-    def _test_transformation(self, reset_ancillae=False):
+    def test_transformation(self):
         '''
         Verifies if the circuit produces the expected state by using a
         randomly chosen eigenvector of the Quantum Fourier Transform (QFT).
@@ -55,7 +55,7 @@ class TestQfrft(TestCase):
 
         # Creates the quantum circuit.
         init = QuantumCircuit(n_qubits)
-        qfrft = Qfrft(n_qubits, alpha, reset_ancillae=reset_ancillae)
+        qfrft = Qfrft(n_qubits, alpha)
 
         init.initialize(state_vector)
 
@@ -65,9 +65,8 @@ class TestQfrft(TestCase):
 
         # Obtains the state |u> from the quantum circuit.
         # It is necessary to filter by the auxiliary state |00>
-        # because of numerical error.
-        # If `reset_ancillae==False`, amplitudes from other
-        # groups - |01>, |10>, |11> - remain present because
+        # because of numerical error. Amplitudes from other
+        # groups - |01>, |10>, |11> - may remain present because
         # they are very close to zero, but not equal.
         # Function `test_ancillae_state` exemplifies this.
         full_state = Statevector(circuit)
@@ -83,12 +82,6 @@ class TestQfrft(TestCase):
 
         # Compares the obtained state with the expected state.
         self.assertTrue(np.allclose(quantum_state, expected_state))
-
-    def test_transformation_reset_ancillae(self):
-        self._test_transformation(True)
-
-    def test_transformation_revert_ancillae(self):
-        self._test_transformation(False)
 
     def test_aancillae_state(self):
         '''
