@@ -159,16 +159,16 @@ class FrqiInitialize(Initialize):
         return circuit
 
     @staticmethod
-    def initialize(circuit, state, qubits=None, opt_params=None):
+    def initialize(q_circuit, state, qubits=None, opt_params=None):
         """
         Appends a FrqiInitialize gate into the circuit
         """
         if qubits is None:
-            circuit.append(
-                FrqiInitialize(state, opt_params=opt_params), circuit.qubits
+            q_circuit.append(
+                FrqiInitialize(state, opt_params=opt_params), q_circuit.qubits
             )
         else:
-            circuit.append(
+            q_circuit.append(
                 FrqiInitialize(state, opt_params=opt_params), qubits
             )
 
