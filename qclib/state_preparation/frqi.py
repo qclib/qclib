@@ -117,7 +117,7 @@ class FrqiInitialize(Initialize):
         circuit.h(circuit.qubits[:-1])
 
         simplified = {}
-        if self.method == 'mcg' or 'auto':
+        if self.method in ('mcg', 'auto'):
             groups = self._group_binary_strings(self.params)
             for k, v in groups.items():
                 simplified[k] = self._simplify_logic(v)
