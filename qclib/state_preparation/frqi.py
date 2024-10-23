@@ -56,19 +56,19 @@ class FrqiInitialize(Initialize):
                 Default is ``rescale=False``.
             method: method
                 Scheme used to decompose uniformed controlled rotations.
-                Possible values are ``'ucr'`` (multiplexer) and ``'mcr'``
-                (multicontrolled rotations).
-                Default is ``method='ucr'``.
+                Possible values are ``'ucr'`` (multiplexer), ``'mcr'``
+                (multicontrolled rotations), and ``'auto'``.
+                Default is ``method='auto'``.
         """
         self._name = "frqi"
 
         if opt_params is None:
             self.rescale = False
-            self.method = 'ucr'
+            self.method = 'auto'
         else:
             self.rescale = False if opt_params.get("rescale") is None \
                                     else opt_params.get("rescale")
-            self.method = 'ucr' if opt_params.get("method") is None \
+            self.method = 'auto' if opt_params.get("method") is None \
                                     else opt_params.get("method")
 
         scaled_params = params
@@ -116,18 +116,35 @@ class FrqiInitialize(Initialize):
         circuit = QuantumCircuit(self.num_qubits)
         circuit.h(circuit.qubits[:-1])
 
-        if self.method == 'ucr':
+        simplified = {}
+        if self.method == 'mcg' or 'auto':
+            groups = self._group_binary_strings(self.params)
+            for k, v in groups.items():
+                simplified[k] = self._simplify_logic(v)
+
+        mcg_cnot_count = 0
+        if self.method == 'auto':
+            for k, v in groups.items():
+                for binary_string in simplified[k]:
+                    indexes, ctrl_state = self._ctrl_state(binary_string)
+                    n = len(indexes)
+                    if n == 2:
+                        mcg_cnot_count += 2
+                    elif n == 3:
+                        mcg_cnot_count += 4
+                    else:
+                        mcg_cnot_count += 16*n-40
+
+        if self.method == 'ucr' or 2**self.num_qubits-1 < mcg_cnot_count:
             circuit.compose(
                 ucr(RYGate, self.params),
                 circuit.qubits[::-1],
                 inplace=True
             )
         else:
-            groups = self._group_binary_strings(self.params)
             for k, v in groups.items():
-                simplified = self._simplify_logic(v)
                 gate_matrix = Operator(RYGate(k)).data
-                for binary_string in simplified:
+                for binary_string in simplified[k]:
                     indexes, ctrl_state = self._ctrl_state(binary_string)
                     mcg = Mcg(
                         gate_matrix,
