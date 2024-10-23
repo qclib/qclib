@@ -54,7 +54,7 @@ class TestFrqi(TestCase):
 
         self.assertTrue(np.allclose(state1, state2))
 
-    def test_cnot_count(self):
+    def test_cnot_count_fixed(self):
         n_qubits = 6
 
         state_vector = [0.0] * 2**n_qubits
@@ -76,7 +76,42 @@ class TestFrqi(TestCase):
         FrqiInitialize.initialize(
             circuit2,
             state_vector,
-            opt_params={'rescale':True, 'method': 'mcg'}
+            opt_params={'rescale':True, 'method': 'auto'}
+        )
+
+        t_circuit1 = transpile(
+            circuit1.decompose(),
+            basis_gates=['u', 'cx'],
+            optimization_level=0
+        )
+        t_circuit2 = transpile(
+            circuit2.decompose(),
+            basis_gates=['u', 'cx'],
+            optimization_level=0
+        )
+        n_cx1 = t_circuit1.count_ops()['cx']
+        n_cx2 = t_circuit2.count_ops()['cx']
+
+        self.assertTrue(n_cx1 > n_cx2)
+
+    def test_cnot_count_random(self):
+        n_qubits = 6
+
+        state_vector = np.random.rand(2**n_qubits)
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit1 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit1,
+            state_vector,
+            opt_params={'rescale':True, 'method': 'ucr'}
+        )
+
+        circuit2 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit2,
+            state_vector,
+            opt_params={'rescale':True, 'method': 'auto'}
         )
 
         t_circuit1 = transpile(
