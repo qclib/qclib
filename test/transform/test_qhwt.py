@@ -16,12 +16,12 @@
 
 from unittest import TestCase
 
-from random import randint, random
+from random import randint
 
 import numpy as np
 
 from qiskit import QuantumCircuit
-from qiskit.quantum_info import Statevector, Operator
+from qiskit.quantum_info import Statevector
 from qclib.transform import Qhwt
 
 # pylint: disable=maybe-no-member
