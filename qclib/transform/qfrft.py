@@ -114,8 +114,8 @@ class Qfrft(Gate):
         '''
         circuit.append(
             Qfrft(
-                alpha,
-                len(targets)
+                len(targets),
+                alpha
             ),
             [*controls, *targets]
         )
