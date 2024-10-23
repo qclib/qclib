@@ -76,7 +76,13 @@ class Mcg(Gate):
                     su_2, _ = u2_to_su2(self.unitary)
                     self.mcg(su_2, self.controls, self.target, self.ctrl_state)
                 else:
-                    Ldmcu.ldmcu(self.definition, self.unitary, self.controls[:], self.target[0], self.ctrl_state)
+                    Ldmcu.ldmcu(
+                        self.definition,
+                        self.unitary,
+                        self.controls[:],
+                        self.target[0],
+                        self.ctrl_state
+                    )
 
     @staticmethod
     def mcg(
@@ -87,6 +93,6 @@ class Mcg(Gate):
         ctrl_state: str = None
     ):
         circuit.append(
-            Mcg(unitary, len(controls), ctrl_state=ctrl_state), 
+            Mcg(unitary, len(controls), ctrl_state=ctrl_state),
             [*controls, target]
         )
