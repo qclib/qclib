@@ -20,9 +20,10 @@ from random import randint
 
 import numpy as np
 
-from qiskit import QuantumCircuit
 from qiskit.quantum_info import Statevector
 from qclib.transform import Qhwt
+from qclib.state_preparation import FrqiInitialize
+
 
 # pylint: disable=maybe-no-member
 # pylint: disable=missing-function-docstring
@@ -32,26 +33,59 @@ from qclib.transform import Qhwt
 class TestQhwt(TestCase):
     """ Testing qclib.transform.qhwt """
 
-    def test_simple(self):
-        '''
-        It only tests whether the execution causes a run-time error.
-        '''
+    def test_watermark(self):
         n_qubits = randint(4, 8)
-        levels = randint(1, n_qubits)
+        levels = 1
 
-        state_vector = np.random.rand(2**n_qubits) + np.random.rand(2**n_qubits) * 1j
-        state_vector = state_vector / np.linalg.norm(state_vector)
+        state_vector1 = np.random.rand(2**(n_qubits-1))
+        state_vector1 = state_vector1 / np.linalg.norm(state_vector1)
 
         # Creates the quantum circuit.
-        circuit = QuantumCircuit(n_qubits)
-        circuit.initialize(state_vector)
+        circuit = FrqiInitialize(
+            state_vector1,
+            opt_params={'rescale': True}
+        ).definition
 
+        state1 = Statevector(circuit)
+
+        # Transforms the initial state.
         qhwt = Qhwt(n_qubits, levels)
         circuit.append(qhwt, range(n_qubits))
 
+        # Generates the watermark data.
+        state_vector2 = np.random.rand(2**(n_qubits-1))
+        state_vector2 = state_vector2 / np.linalg.norm(state_vector2)
+        # Lists patterns with bit=0 at `positions`.
+        def patterns_with_bit_0(n, positions):
+            return [
+                i for i in range(2 ** n) if all(
+                    not (i & (1 << p))
+                    for p in positions
+                )
+            ]
+        # The area of the diagonal detail can be
+        # selected by restricting the highest
+        # qubits to |y_{n−1}>=1 and |x_{n−1}>=1.
+        positions = [(n_qubits-1)//2-1, n_qubits-2]
+        patterns = patterns_with_bit_0(n_qubits-1, positions)
+        for pattern in patterns:
+            state_vector2[pattern] = 0.0
+
+        # Initializes the watermark.
+        opt_params = {'init_index_register': False, 'rescale': True}
+        watermark = FrqiInitialize(
+            state_vector2,
+            opt_params=opt_params
+        )
+        circuit.append(watermark, range(n_qubits))
+
+        # Reverts the transform.
         circuit.append(qhwt.inverse(), range(n_qubits))
 
-        state = Statevector(circuit)
+        state2 = Statevector(circuit)
 
         # Compares the obtained state with the expected state.
-        self.assertTrue(np.allclose(state_vector, state))
+        # Despite the watermark, the vectors should be very similar,
+        # but not equal.
+        self.assertFalse(np.array_equal(state1, state2))
+        self.assertTrue(np.allclose(state1, state2))
