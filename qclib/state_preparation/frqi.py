@@ -22,7 +22,7 @@ from math import log2, pi
 import numpy as np
 from sympy import symbols, Or, And, Not
 from sympy.logic.boolalg import simplify_logic
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import RYGate
 from qiskit.quantum_info import Operator
 from qclib.gates.initialize import Initialize
@@ -80,6 +80,9 @@ class FrqiInitialize(Initialize):
 
         self._get_num_qubits(scaled_params)
 
+        self.controls = QuantumRegister(self.num_qubits-1)
+        self.target = QuantumRegister(1)
+
         if label is None:
             label = "FRQI"
 
@@ -113,8 +116,8 @@ class FrqiInitialize(Initialize):
 
     def _define_initialize(self):
 
-        circuit = QuantumCircuit(self.num_qubits)
-        circuit.h(circuit.qubits[:-1])
+        circuit = QuantumCircuit(self.controls, self.target)
+
 
         simplified = {}
         if self.method in ('mcg', 'auto'):
@@ -135,10 +138,11 @@ class FrqiInitialize(Initialize):
                     else:
                         mcg_cnot_count += 16*n-40
 
-        if self.method == 'ucr' or 2**self.num_qubits-1 < mcg_cnot_count:
+        if self.method == 'ucr' or 2**len(self.controls) < mcg_cnot_count:
+            # `ucr` qubit index 0 is the target.
             circuit.compose(
                 ucr(RYGate, self.params),
-                circuit.qubits[::-1],
+                [*self.target, *self.controls],
                 inplace=True
             )
         else:
@@ -153,7 +157,7 @@ class FrqiInitialize(Initialize):
                     )
                     circuit.compose(
                         mcg,
-                        [*indexes, self.num_qubits-1],
+                        [*self.controls[indexes], *self.target],
                         inplace=True
                     )
         return circuit
@@ -191,7 +195,7 @@ class FrqiInitialize(Initialize):
         n = int(log2(len(values)))
 
         for i, value in enumerate(values):
-            binary_string = f'{i:{n}b}'[::-1]
+            binary_string = f'{i:{n}b}'
 
             key = None
             for k in groups:
