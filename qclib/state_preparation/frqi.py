@@ -22,7 +22,7 @@ from math import log2, pi
 import numpy as np
 from sympy import symbols, Or, And, Not
 from sympy.logic.boolalg import simplify_logic
-from qiskit import QuantumCircuit
+from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import RYGate
 from qiskit.quantum_info import Operator
 from qclib.gates.initialize import Initialize
@@ -54,22 +54,33 @@ class FrqiInitialize(Initialize):
                 If `True`, it rescales the values of the `params`
                 vector to the range between 0 and pi.
                 Default is ``rescale=False``.
-            method: method
+            method: str
                 Scheme used to decompose uniformed controlled rotations.
                 Possible values are ``'ucr'`` (multiplexer), ``'mcr'``
                 (multicontrolled rotations), and ``'auto'``.
                 Default is ``method='auto'``.
+            init_index_register: bool
+                Specifies whether the index register should be
+                initialized. This is achieved by applying a layer of
+                Hadamard gates to the control qubits.
+                Default is ``init_index_register=True``.
         """
         self._name = "frqi"
 
         if opt_params is None:
             self.rescale = False
             self.method = 'auto'
+            self.init_index_register = True
         else:
-            self.rescale = False if opt_params.get("rescale") is None \
-                                    else opt_params.get("rescale")
-            self.method = 'auto' if opt_params.get("method") is None \
-                                    else opt_params.get("method")
+            self.rescale = False \
+                if opt_params.get("rescale") is None \
+                    else opt_params.get("rescale")
+            self.method = 'auto' \
+                if opt_params.get("method") is None \
+                    else opt_params.get("method")
+            self.init_index_register = False \
+                if opt_params.get("init_index_register") is None \
+                    else opt_params.get("init_index_register")
 
         scaled_params = params
         if self.rescale:
@@ -80,10 +91,18 @@ class FrqiInitialize(Initialize):
 
         self._get_num_qubits(scaled_params)
 
+        self.controls = QuantumRegister(self.num_qubits-1)
+        self.target = QuantumRegister(1)
+
         if label is None:
             label = "FRQI"
 
-        super().__init__(self._name, self.num_qubits, scaled_params, label=label)
+        super().__init__(
+            self._name,
+            self.num_qubits,
+            scaled_params,
+            label=label
+        )
 
     def validate_parameter(self, parameter):
         if isinstance(parameter, (int, float)):
@@ -100,7 +119,9 @@ class FrqiInitialize(Initialize):
 
         # Check if param is a power of 2
         if self.num_qubits == 0 or not self.num_qubits.is_integer():
-            raise ValueError("The length of the state vector is not a positive power of 2.")
+            raise ValueError(
+                "The length of the state vector is not a positive power of 2."
+            )
 
         # Check if any pixels values is not between 0 and pi/2
         if any(0 > x > pi for x in params):
@@ -113,8 +134,10 @@ class FrqiInitialize(Initialize):
 
     def _define_initialize(self):
 
-        circuit = QuantumCircuit(self.num_qubits)
-        circuit.h(circuit.qubits[:-1])
+        circuit = QuantumCircuit(self.controls, self.target)
+
+        if self.init_index_register:
+            circuit.h(self.controls)
 
         simplified = {}
         if self.method in ('mcg', 'auto'):
@@ -135,10 +158,11 @@ class FrqiInitialize(Initialize):
                     else:
                         mcg_cnot_count += 16*n-40
 
-        if self.method == 'ucr' or 2**self.num_qubits-1 < mcg_cnot_count:
+        if self.method == 'ucr' or 2**len(self.controls) < mcg_cnot_count:
+            # `ucr` qubit index 0 is the target.
             circuit.compose(
                 ucr(RYGate, self.params),
-                circuit.qubits[::-1],
+                [*self.target, *self.controls],
                 inplace=True
             )
         else:
@@ -153,7 +177,7 @@ class FrqiInitialize(Initialize):
                     )
                     circuit.compose(
                         mcg,
-                        [*indexes, self.num_qubits-1],
+                        [*self.controls[indexes], *self.target],
                         inplace=True
                     )
         return circuit
@@ -191,7 +215,7 @@ class FrqiInitialize(Initialize):
         n = int(log2(len(values)))
 
         for i, value in enumerate(values):
-            binary_string = f'{i:{n}b}'[::-1]
+            binary_string = f'{i:{n}b}'
 
             key = None
             for k in groups:
@@ -218,9 +242,11 @@ class FrqiInitialize(Initialize):
             terms = []
             for i, bit in enumerate(binary_str):
                 if bit == '1':
-                    terms.append(variables[i])  # Add the variable directly for '1'
+                    # Add the variable directly for '1'
+                    terms.append(variables[i])
                 else:
-                    terms.append(Not(variables[i]))  # Add the negation for '0'
+                    # Add the negation for '0'
+                    terms.append(Not(variables[i]))
             return And(*terms)  # Return the conjunction (AND) of terms
 
         # Convert each binary string into a logical expression
@@ -247,7 +273,8 @@ class FrqiInitialize(Initialize):
 
             # Iterate over each term (conjunction) in the simplified expression
             for term in simplified_expr:
-                binary_string = ['-'] * n  # Initialize binary string with don't-cares
+                # Initialize binary string with don't-cares
+                binary_string = ['-'] * n
 
                 # Handle the case of single terms without Or
                 if not isinstance(term, And):
@@ -256,9 +283,11 @@ class FrqiInitialize(Initialize):
                     term = term.args
 
                 # Iterate over each literal in the term
-                for literal in term: # .args if isinstance(term, And) else [term]:
-                    if isinstance(literal, Not):  # If it's negated
-                        variable = literal.args[0]  # Get the variable inside Not
+                for literal in term:
+                    # If it's negated
+                    if isinstance(literal, Not):
+                        # Get the variable inside Not
+                        variable = literal.args[0]
                         idx = variables.index(variable)
                         binary_string[idx] = '0'
                     else:
@@ -270,6 +299,7 @@ class FrqiInitialize(Initialize):
             return binary_strings
 
         # Step 7: Output the result
-        binary_strings_output = expression_to_binary_strings(simplified_expr, variables)
+        binary_strings_output = \
+            expression_to_binary_strings(simplified_expr, variables)
 
         return binary_strings_output
