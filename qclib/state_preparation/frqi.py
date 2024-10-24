@@ -59,17 +59,25 @@ class FrqiInitialize(Initialize):
                 Possible values are ``'ucr'`` (multiplexer), ``'mcr'``
                 (multicontrolled rotations), and ``'auto'``.
                 Default is ``method='auto'``.
+            init_index_register: bool
+                Specifies whether the index register should be
+                initialized. This is achieved by applying a layer of
+                Hadamard gates to the control qubits.
+                Default is ``init_index_register=True``.
         """
         self._name = "frqi"
 
         if opt_params is None:
             self.rescale = False
             self.method = 'auto'
+            self.init_index_register = True
         else:
             self.rescale = False if opt_params.get("rescale") is None \
                                     else opt_params.get("rescale")
             self.method = 'auto' if opt_params.get("method") is None \
                                     else opt_params.get("method")
+            self.init_index_register = False if opt_params.get("init_index_register") is None \
+                                    else opt_params.get("init_index_register")
 
         scaled_params = params
         if self.rescale:
@@ -118,6 +126,8 @@ class FrqiInitialize(Initialize):
 
         circuit = QuantumCircuit(self.controls, self.target)
 
+        if self.init_index_register:
+            circuit.h(self.controls)
 
         simplified = {}
         if self.method in ('mcg', 'auto'):
