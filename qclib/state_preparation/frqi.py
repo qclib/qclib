@@ -353,40 +353,27 @@ class FrqiInitialize(Initialize):
         summation_expr = Or(*expressions)
 
         # Step 5: Simplify the Boolean expression using SymPy
-        simplified_expr = simplify_logic(summation_expr, form='dnf', force=True)
+        simplified_expr = simplify_logic(summation_expr, form='dnf', force=True, deep=False)
 
         # Step 6: Convert the simplified expression back into binary strings
         def expression_to_binary_strings(simplified_expr, variables):
             binary_strings = []
+            dontcares = ['-'] * len(variables)
 
-            # Handle cases where the simplified expression is a single term
-            if isinstance(simplified_expr, And):
-                simplified_expr = [simplified_expr]
-            else:
-                simplified_expr = simplified_expr.args
+            # Ensure we're working with a list of terms
+            terms = simplified_expr.args \
+                if not isinstance(simplified_expr, And) else [simplified_expr]
 
-            # Iterate over each term (conjunction) in the simplified expression
-            for term in simplified_expr:
-                # Initialize binary string with don't-cares
-                binary_string = ['-'] * n
+            for term in terms:
+                binary_string = dontcares.copy()
 
-                # Handle the case of single terms without Or
-                if not isinstance(term, And):
-                    term = [term]
-                else:
-                    term = term.args
+                # Ensure each term is iterable (a single variable might not be in a list)
+                literals = term.args if isinstance(term, And) else [term]
 
-                # Iterate over each literal in the term
-                for literal in term:
-                    # If it's negated
-                    if isinstance(literal, Not):
-                        # Get the variable inside Not
-                        variable = literal.args[0]
-                        idx = variables.index(variable)
-                        binary_string[idx] = '0'
-                    else:
-                        idx = variables.index(literal)
-                        binary_string[idx] = '1'
+                for literal in literals:
+                    variable = literal.args[0] if isinstance(literal, Not) else literal
+                    idx = variables.index(variable)
+                    binary_string[idx] = '0' if isinstance(literal, Not) else '1'
 
                 binary_strings.append("".join(binary_string))
 

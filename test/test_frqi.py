@@ -32,7 +32,7 @@ class TestFrqi(TestCase):
 
     def test_separability(self):
         n_qubits = 8
-        div = 4
+        div = 2**4
 
         pattern_vector = np.random.rand(2**n_qubits//div)
         state_vector = pattern_vector.copy()
