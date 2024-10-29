@@ -16,10 +16,9 @@
 
 from unittest import TestCase
 
-from random import randint
-
 import numpy as np
 
+from skimage import data
 from qiskit.quantum_info import Statevector
 from qclib.transform import Qhwt
 from qclib.state_preparation import FrqiInitialize
@@ -34,18 +33,28 @@ class TestQhwt(TestCase):
     """ Testing qclib.transform.qhwt """
 
     def test_watermark(self):
-        n_qubits = randint(4, 8)
+        n_qubits = 7
         levels = 1
 
-        state_vector1 = np.random.rand(2**(n_qubits-1))
+        # Image data.
+        blobs1 = data.binary_blobs(
+            length=2**((n_qubits-1)//2),
+            volume_fraction=0.5
+        )
+
+        state_vector1 = blobs1.reshape(-1)
         state_vector1 = state_vector1 / np.linalg.norm(state_vector1)
 
         # Creates the quantum circuit.
         circuit = FrqiInitialize(
             state_vector1,
-            opt_params={'rescale': True}
+            opt_params={
+                'rescale': True,
+                'simplify': True
+            }
         ).definition
 
+        # State vector before the watermarking.
         state1 = Statevector(circuit)
 
         # Transforms the initial state.
@@ -53,7 +62,12 @@ class TestQhwt(TestCase):
         circuit.append(qhwt, range(n_qubits))
 
         # Generates the watermark data.
-        state_vector2 = np.random.rand(2**(n_qubits-1))
+        blobs2 = data.binary_blobs(
+            length=2**((n_qubits-1)//2),
+            volume_fraction=0.5
+        )
+
+        state_vector2 = blobs2.reshape(-1)
         state_vector2 = state_vector2 / np.linalg.norm(state_vector2)
         # Lists patterns with bit=0 at `positions`.
         def patterns_with_bit_0(n, positions):
@@ -72,16 +86,21 @@ class TestQhwt(TestCase):
             state_vector2[pattern] = 0.0
 
         # Initializes the watermark.
-        opt_params = {'init_index_register': False, 'rescale': True}
+        opt_params = {
+            'init_index_register': False,
+            'rescale': True,
+            'simplify': True
+        }
         watermark = FrqiInitialize(
             state_vector2,
             opt_params=opt_params
-        )
+        ).definition
         circuit.append(watermark, range(n_qubits))
 
         # Reverts the transform.
         circuit.append(qhwt.inverse(), range(n_qubits))
 
+        # State vector after the watermarking.
         state2 = Statevector(circuit)
 
         # Compares the obtained state with the expected state.
