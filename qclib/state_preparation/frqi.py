@@ -214,18 +214,18 @@ class FrqiInitialize(Initialize):
 
         n = int(log2(len(values)))
 
-        for i, value in enumerate(values):
-            binary_string = f'{i:{n}b}'
+        original_groups = dict(
+            sorted(enumerate(values), key=lambda item: item[1])
+        )
+        last_value = float('inf')
+        for i, value in original_groups.items():
+            binary_string = f'{i:0{n}b}'
 
-            key = None
-            for k in groups:
-                if np.isclose(value, k):
-                    key = k
-                    break
-            if key is not None:
-                groups[key].append(binary_string)
+            if np.isclose(value, last_value):
+                groups[last_value].append(binary_string)
             else:
                 groups[value] = [binary_string]
+                last_value = value
 
         return groups
 
