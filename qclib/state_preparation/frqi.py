@@ -64,6 +64,13 @@ class FrqiInitialize(Initialize):
                 initialized. This is achieved by applying a layer of
                 Hadamard gates to the control qubits.
                 Default is ``init_index_register=True``.
+            separability: bool
+                This parameter enables the search for separability
+                in the state produced by the decomposition, potentially
+                reducing the circuit cost at the expense of increased
+                classical computation. It is only applicable when
+                `simplify=True`.
+                The default setting is `separability=True`.
         """
         self._name = "frqi"
 
@@ -71,6 +78,8 @@ class FrqiInitialize(Initialize):
             self.rescale = False
             self.method = 'auto'
             self.init_index_register = True
+            self.simplify = True
+            self.separability = True
         else:
             self.rescale = False \
                 if opt_params.get("rescale") is None \
@@ -81,6 +90,12 @@ class FrqiInitialize(Initialize):
             self.init_index_register = False \
                 if opt_params.get("init_index_register") is None \
                     else opt_params.get("init_index_register")
+            self.simplify = True \
+                if opt_params.get("simplify") is None \
+                    else opt_params.get("simplify")
+            self.separability = True \
+                if opt_params.get("separability") is None \
+                    else opt_params.get("separability")
 
         scaled_params = params
         if self.rescale:
@@ -133,24 +148,28 @@ class FrqiInitialize(Initialize):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
+        num_controls = len(self.controls)
 
-        circuit = QuantumCircuit(self.controls, self.target)
+        # Collects data for the decomposition.
+        idx_list = {}
+        ctrl_state_list = {}
+        groups = self._group_binary_strings(self.params)
+        idx_list, ctrl_state_list = self._ctrl_states(groups)
 
-        if self.init_index_register:
-            circuit.h(self.controls)
+        # Search for state separability.
+        if self.simplify and self.separability:
+            # Returns the number of qubits that can be ignored,
+            # reducing the length of the control register.
+            num_controls -= self._search_separability(idx_list, num_controls)
 
-        simplified = {}
-        if self.method in ('mcg', 'auto'):
-            groups = self._group_binary_strings(self.params)
-            for k, v in groups.items():
-                simplified[k] = self._simplify_logic(v)
-
+        # Estimates the cost of a MCG decomposition to
+        # autoselect between `ucr`and `mcg`.
         mcg_cnot_count = 0
         if self.method == 'auto':
             for k, v in groups.items():
-                for binary_string in simplified[k]:
-                    indexes, ctrl_state = self._ctrl_state(binary_string)
-                    n = len(indexes)
+                for bin_str in v:
+                    idx = idx_list[bin_str]
+                    n = len(idx)
                     if n == 2:
                         mcg_cnot_count += 2
                     elif n == 3:
@@ -158,28 +177,56 @@ class FrqiInitialize(Initialize):
                     else:
                         mcg_cnot_count += 16*n-40
 
-        if self.method == 'ucr' or 2**len(self.controls) < mcg_cnot_count:
+        # Constructs the quantum circuit.
+        circuit = QuantumCircuit(self.controls, self.target)
+
+        if self.init_index_register:
+            circuit.h(self.controls)
+
+        if self.method == 'ucr' or 2**num_controls < mcg_cnot_count:
+            params = self.params
+            controls = self.controls
+
+            if self.simplify and num_controls < len(self.controls):
+                angles = {}
+                for k, v in groups.items():
+                    for bin_str in v:
+                        angles[ctrl_state_list[bin_str]] = k
+
+                for i in range(2**num_controls):
+                    bin_str = f'{i:0{num_controls}b}'
+                    if bin_str not in angles:
+                        angles[bin_str] = 0.0
+
+                keys = sorted(angles.keys())
+                angles = {i: angles[i] for i in keys}
+
+                params = list(angles.values())
+                controls = list(idx_list.values())[0]
+
             # `ucr` qubit index 0 is the target.
             circuit.compose(
-                ucr(RYGate, self.params),
-                [*self.target, *self.controls],
+                ucr(RYGate, params),
+                [*self.target, *controls],
                 inplace=True
             )
         else:
             for k, v in groups.items():
                 gate_matrix = Operator(RYGate(k)).data
-                for binary_string in simplified[k]:
-                    indexes, ctrl_state = self._ctrl_state(binary_string)
+                for bin_str in v:
+                    idx = idx_list[bin_str]
+                    ctrl_state = ctrl_state_list[bin_str]
                     mcg = Mcg(
                         gate_matrix,
-                        len(indexes),
+                        len(idx),
                         ctrl_state=ctrl_state
                     )
                     circuit.compose(
                         mcg,
-                        [*self.controls[indexes], *self.target],
+                        [*self.controls[idx], *self.target],
                         inplace=True
                     )
+
         return circuit
 
     @staticmethod
@@ -189,13 +236,60 @@ class FrqiInitialize(Initialize):
         """
         if qubits is None:
             q_circuit.append(
-                FrqiInitialize(state, opt_params=opt_params), q_circuit.qubits
+                FrqiInitialize(
+                    state,
+                    opt_params=opt_params
+                ).definition,
+                q_circuit.qubits
             )
         else:
             q_circuit.append(
-                FrqiInitialize(state, opt_params=opt_params), qubits
+                FrqiInitialize(
+                    state,
+                    opt_params=opt_params
+                ).definition,
+                qubits
             )
 
+    def _ctrl_states(self, groups):
+        idx_list = {}
+        ctrl_state_list = {}
+
+        full_control_register = list(range(len(self.controls)))
+
+        for value, binary_strings in groups.items():
+            if self.simplify and len(binary_strings) > 1:
+                groups[value] = self._simplify_logic(binary_strings)
+                for binary_string in groups[value]:
+                    idx_list[binary_string], ctrl_state_list[binary_string] = \
+                        self._ctrl_state(binary_string)
+            else:
+                for binary_string in binary_strings:
+                    idx_list[binary_string] = full_control_register
+                    ctrl_state_list[binary_string] = binary_string
+
+        return idx_list, ctrl_state_list
+
+    @staticmethod
+    def _search_separability(idx_list, num_controls):
+        def missing_numbers(n, lists):
+            all_numbers = set(num for lst in lists for num in lst)
+            full_range = set(range(n))
+            missing = full_range - all_numbers
+            return sorted(missing)
+        def are_all_same_length(lists):
+            if len(lists) <= 1:
+                return True
+            first_length = len(lists[0])
+            return all(len(lst) == first_length for lst in lists)
+        missing_idx = missing_numbers(num_controls, list(idx_list.values()))
+        if are_all_same_length(list(idx_list.values())):
+            # If `len(missing_idx)>0`, the state is separable.
+            # If `are_all_same_length==True`, it is possible to use `ucr`
+            # over a reduced number of controls.
+            return len(missing_idx)
+
+        return 0
 
     @staticmethod
     def _ctrl_state(binary_string):
@@ -214,18 +308,18 @@ class FrqiInitialize(Initialize):
 
         n = int(log2(len(values)))
 
-        for i, value in enumerate(values):
-            binary_string = f'{i:{n}b}'
+        original_groups = dict(
+            sorted(enumerate(values), key=lambda item: item[1])
+        )
+        last_value = float('inf')
+        for i, value in original_groups.items():
+            binary_string = f'{i:0{n}b}'
 
-            key = None
-            for k in groups:
-                if np.isclose(value, k):
-                    key = k
-                    break
-            if key is not None:
-                groups[key].append(binary_string)
+            if np.isclose(value, last_value):
+                groups[last_value].append(binary_string)
             else:
                 groups[value] = [binary_string]
+                last_value = value
 
         return groups
 
@@ -259,40 +353,27 @@ class FrqiInitialize(Initialize):
         summation_expr = Or(*expressions)
 
         # Step 5: Simplify the Boolean expression using SymPy
-        simplified_expr = simplify_logic(summation_expr, form='dnf')
+        simplified_expr = simplify_logic(summation_expr, form='dnf', force=True, deep=False)
 
         # Step 6: Convert the simplified expression back into binary strings
         def expression_to_binary_strings(simplified_expr, variables):
             binary_strings = []
+            dontcares = ['-'] * len(variables)
 
-            # Handle cases where the simplified expression is a single term
-            if isinstance(simplified_expr, And):
-                simplified_expr = [simplified_expr]
-            else:
-                simplified_expr = simplified_expr.args
+            # Ensure we're working with a list of terms
+            terms = simplified_expr.args \
+                if not isinstance(simplified_expr, And) else [simplified_expr]
 
-            # Iterate over each term (conjunction) in the simplified expression
-            for term in simplified_expr:
-                # Initialize binary string with don't-cares
-                binary_string = ['-'] * n
+            for term in terms:
+                binary_string = dontcares.copy()
 
-                # Handle the case of single terms without Or
-                if not isinstance(term, And):
-                    term = [term]
-                else:
-                    term = term.args
+                # Ensure each term is iterable (a single variable might not be in a list)
+                literals = term.args if isinstance(term, And) else [term]
 
-                # Iterate over each literal in the term
-                for literal in term:
-                    # If it's negated
-                    if isinstance(literal, Not):
-                        # Get the variable inside Not
-                        variable = literal.args[0]
-                        idx = variables.index(variable)
-                        binary_string[idx] = '0'
-                    else:
-                        idx = variables.index(literal)
-                        binary_string[idx] = '1'
+                for literal in literals:
+                    variable = literal.args[0] if isinstance(literal, Not) else literal
+                    idx = variables.index(variable)
+                    binary_string[idx] = '0' if isinstance(literal, Not) else '1'
 
                 binary_strings.append("".join(binary_string))
 

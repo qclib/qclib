@@ -18,7 +18,8 @@ Tests for the frqi.py module.
 
 from unittest import TestCase
 import numpy as np
-from qiskit import QuantumCircuit, transpile
+from qiskit import QuantumCircuit
+from qiskit.transpiler.preset_passmanagers import generate_preset_pass_manager
 from qiskit.quantum_info import Statevector
 from qclib.state_preparation import FrqiInitialize
 
@@ -28,6 +29,45 @@ from qclib.state_preparation import FrqiInitialize
 
 
 class TestFrqi(TestCase):
+
+    def test_separability(self):
+        n_qubits = 8
+        div = 2**4
+
+        pattern_vector = np.random.rand(2**n_qubits//div)
+        state_vector = pattern_vector.copy()
+        for _ in range(1, div):
+            state_vector = np.concatenate((state_vector, pattern_vector,))
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit1 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit1,
+            state_vector,
+            opt_params={'rescale':True, 'separability': True}
+        )
+        circuit2 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit2,
+            state_vector,
+            opt_params={'rescale':True, 'separability': False}
+        )
+
+        state1 = Statevector(circuit1).data
+        state2 = Statevector(circuit2).data
+
+        pm = generate_preset_pass_manager(
+            basis_gates=['u', 'cx'],
+            optimization_level=0
+        )
+        t_circuit1 = pm.run(circuit1.decompose())
+        t_circuit2 = pm.run(circuit2.decompose())
+
+        n_cx1 = t_circuit1.count_ops()['cx']
+        n_cx2 = t_circuit2.count_ops()['cx']
+
+        self.assertTrue(n_cx1 < n_cx2)
+        self.assertTrue(np.allclose(state1, state2))
 
     def test_initialize(self):
         n_qubits = 6
@@ -79,16 +119,13 @@ class TestFrqi(TestCase):
             opt_params={'rescale':True, 'method': 'auto'}
         )
 
-        t_circuit1 = transpile(
-            circuit1.decompose(),
+        pm = generate_preset_pass_manager(
             basis_gates=['u', 'cx'],
             optimization_level=0
         )
-        t_circuit2 = transpile(
-            circuit2.decompose(),
-            basis_gates=['u', 'cx'],
-            optimization_level=0
-        )
+        t_circuit1 = pm.run(circuit1.decompose())
+        t_circuit2 = pm.run(circuit2.decompose())
+
         n_cx1 = t_circuit1.count_ops()['cx']
         n_cx2 = t_circuit2.count_ops()['cx']
 
@@ -114,16 +151,13 @@ class TestFrqi(TestCase):
             opt_params={'rescale':True, 'method': 'auto'}
         )
 
-        t_circuit1 = transpile(
-            circuit1.decompose(),
+        pm = generate_preset_pass_manager(
             basis_gates=['u', 'cx'],
             optimization_level=0
         )
-        t_circuit2 = transpile(
-            circuit2.decompose(),
-            basis_gates=['u', 'cx'],
-            optimization_level=0
-        )
+        t_circuit1 = pm.run(circuit1.decompose())
+        t_circuit2 = pm.run(circuit2.decompose())
+
         n_cx1 = t_circuit1.count_ops()['cx']
         n_cx2 = t_circuit2.count_ops()['cx']
 
