@@ -30,6 +30,180 @@ from qclib.state_preparation import FrqiInitialize
 
 class TestFrqi(TestCase):
 
+    def test_simplify_1(self):
+        '''
+        simplify  | separability
+        ------------------------
+        True      | True
+        False     | True
+        '''
+        n_qubits = 8
+        div = 2**4
+
+        pattern_vector = np.random.rand(2**n_qubits//div)
+        state_vector = pattern_vector.copy()
+        for _ in range(1, div):
+            state_vector = np.concatenate((state_vector, pattern_vector,))
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit1 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit1,
+            state_vector,
+            opt_params={'rescale':True, 'simplify': True, 'separability': True}
+        )
+        circuit2 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit2,
+            state_vector,
+            opt_params={'rescale':True, 'simplify': False, 'separability': True}
+        )
+
+        state1 = Statevector(circuit1).data
+        state2 = Statevector(circuit2).data
+
+        pm = generate_preset_pass_manager(
+            basis_gates=['u', 'cx'],
+            optimization_level=0
+        )
+        t_circuit1 = pm.run(circuit1.decompose())
+        t_circuit2 = pm.run(circuit2.decompose())
+
+        n_cx1 = t_circuit1.count_ops()['cx']
+        n_cx2 = t_circuit2.count_ops()['cx']
+
+        self.assertTrue(n_cx1 < n_cx2)
+        self.assertTrue(np.allclose(state1, state2))
+
+    def test_simplify_2(self):
+        '''
+        simplify  | separability
+        ------------------------
+        True      | False
+        False     | False
+        '''
+        n_qubits = 8
+        div = 2**4
+
+        pattern_vector = np.random.rand(2**n_qubits//div)
+        state_vector = pattern_vector.copy()
+        for _ in range(1, div):
+            state_vector = np.concatenate((state_vector, pattern_vector,))
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit1 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit1,
+            state_vector,
+            opt_params={'rescale':True, 'simplify': True, 'separability': False}
+        )
+        circuit2 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit2,
+            state_vector,
+            opt_params={'rescale':True, 'simplify': False, 'separability': False}
+        )
+
+        state1 = Statevector(circuit1).data
+        state2 = Statevector(circuit2).data
+
+        pm = generate_preset_pass_manager(
+            basis_gates=['u', 'cx'],
+            optimization_level=0
+        )
+        t_circuit1 = pm.run(circuit1.decompose())
+        t_circuit2 = pm.run(circuit2.decompose())
+
+        n_cx1 = t_circuit1.count_ops()['cx']
+        n_cx2 = t_circuit2.count_ops()['cx']
+
+        self.assertTrue(n_cx1 <= n_cx2)
+        self.assertTrue(np.allclose(state1, state2))
+
+    def test_simplify_3(self):
+        '''
+        simplify  | separability
+        ------------------------
+        True      | True
+        False     | False
+        '''
+        n_qubits = 8
+        div = 2**4
+
+        pattern_vector = np.random.rand(2**n_qubits//div)
+        state_vector = pattern_vector.copy()
+        for _ in range(1, div):
+            state_vector = np.concatenate((state_vector, pattern_vector,))
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit1 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit1,
+            state_vector,
+            opt_params={'rescale':True, 'simplify': True, 'separability': True}
+        )
+        circuit2 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit2,
+            state_vector,
+            opt_params={'rescale':True, 'simplify': False, 'separability': False}
+        )
+
+        state1 = Statevector(circuit1).data
+        state2 = Statevector(circuit2).data
+
+        pm = generate_preset_pass_manager(
+            basis_gates=['u', 'cx'],
+            optimization_level=0
+        )
+        t_circuit1 = pm.run(circuit1.decompose())
+        t_circuit2 = pm.run(circuit2.decompose())
+
+        n_cx1 = t_circuit1.count_ops()['cx']
+        n_cx2 = t_circuit2.count_ops()['cx']
+
+        self.assertTrue(n_cx1 < n_cx2)
+        self.assertTrue(np.allclose(state1, state2))
+
+    def test_simplify_4(self):
+        n_qubits = 8
+        div = 2**4
+
+        pattern_vector = np.random.rand(2**n_qubits//div)
+        state_vector = pattern_vector.copy()
+        for _ in range(1, div):
+            state_vector = np.concatenate((state_vector, pattern_vector,))
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit1 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit1,
+            state_vector,
+            opt_params={'rescale':True, 'simplify': True, 'separability': False}
+        )
+        circuit2 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit2,
+            state_vector,
+            opt_params={'rescale':True, 'simplify': False, 'separability': True}
+        )
+
+        state1 = Statevector(circuit1).data
+        state2 = Statevector(circuit2).data
+
+        pm = generate_preset_pass_manager(
+            basis_gates=['u', 'cx'],
+            optimization_level=0
+        )
+        t_circuit1 = pm.run(circuit1.decompose())
+        t_circuit2 = pm.run(circuit2.decompose())
+
+        n_cx1 = t_circuit1.count_ops()['cx']
+        n_cx2 = t_circuit2.count_ops()['cx']
+
+        self.assertTrue(n_cx1 <= n_cx2)
+        self.assertTrue(np.allclose(state1, state2))
+
     def test_separability(self):
         n_qubits = 8
         div = 2**4
@@ -69,6 +243,31 @@ class TestFrqi(TestCase):
         self.assertTrue(n_cx1 < n_cx2)
         self.assertTrue(np.allclose(state1, state2))
 
+    def test_initialize_simplify(self):
+        n_qubits = 6
+
+        state_vector = np.random.rand(2**n_qubits)
+        state_vector = state_vector / np.linalg.norm(state_vector)
+
+        circuit1 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit1,
+            state_vector,
+            opt_params={'rescale':True, 'method': 'ucr', 'simplify': True}
+        )
+
+        circuit2 = QuantumCircuit(n_qubits+1)
+        FrqiInitialize.initialize(
+            circuit2,
+            state_vector,
+            opt_params={'rescale':True, 'method': 'mcg', 'simplify': True}
+        )
+
+        state1 = Statevector(circuit1).data
+        state2 = Statevector(circuit2).data
+
+        self.assertTrue(np.allclose(state1, state2))
+
     def test_initialize(self):
         n_qubits = 6
 
@@ -79,14 +278,14 @@ class TestFrqi(TestCase):
         FrqiInitialize.initialize(
             circuit1,
             state_vector,
-            opt_params={'rescale':True, 'method': 'ucr'}
+            opt_params={'rescale':True, 'method': 'ucr', 'simplify': False}
         )
 
         circuit2 = QuantumCircuit(n_qubits+1)
         FrqiInitialize.initialize(
             circuit2,
             state_vector,
-            opt_params={'rescale':True, 'method': 'mcg'}
+            opt_params={'rescale':True, 'method': 'mcg', 'simplify': False}
         )
 
         state1 = Statevector(circuit1).data
