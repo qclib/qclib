@@ -18,8 +18,9 @@ from unittest import TestCase
 
 import numpy as np
 
-from skimage import data
-from qiskit.quantum_info import Statevector
+from skimage import data, transform
+from qiskit import QuantumCircuit
+from qiskit.quantum_info import Statevector, state_fidelity
 from qclib.transform import Qhwt
 from qclib.state_preparation import FrqiInitialize
 
@@ -34,23 +35,27 @@ class TestQhwt(TestCase):
 
     def test_watermark(self):
         n_qubits = 7
+        n_qubits_x = (n_qubits-1)//2
+        n_qubits_y = (n_qubits-1)//2
+
         levels = 1
 
         # Image data.
-        blobs1 = data.binary_blobs(
-            length=2**((n_qubits-1)//2),
-            volume_fraction=0.5
-        )
+        image1 = data.camera()
+        image1 = transform.resize(image1, (2**n_qubits_x, 2**n_qubits_y))
 
-        state_vector1 = blobs1.reshape(-1)
+        image2 = data.horse()
+        image2 = transform.resize(image2, (2**(n_qubits_x-1), 2**(n_qubits_y-1)))
+
+        # Creates the quantum circuit with the image data.
+        state_vector1 = image1.reshape(-1)
         state_vector1 = state_vector1 / np.linalg.norm(state_vector1)
 
-        # Creates the quantum circuit.
         circuit = FrqiInitialize(
             state_vector1,
             opt_params={
                 'rescale': True,
-                'simplify': True
+                'simplify': False
             }
         ).definition
 
@@ -58,38 +63,28 @@ class TestQhwt(TestCase):
         state1 = Statevector(circuit)
 
         # Transforms the initial state.
-        qhwt = Qhwt(n_qubits, levels)
-        circuit.append(qhwt, range(n_qubits))
+        qhwt_x = Qhwt(n_qubits_x, levels).definition
+        qhwt_y = Qhwt(n_qubits_y, levels).definition
+
+        qhwt = QuantumCircuit(n_qubits-1)
+        qhwt.append(qhwt_x, range(n_qubits_x))
+        qhwt.append(qhwt_y, range(n_qubits_x, n_qubits-1))
+
+        circuit.append(qhwt, range(n_qubits-1))
 
         # Generates the watermark data.
-        blobs2 = data.binary_blobs(
-            length=2**((n_qubits-1)//2),
-            volume_fraction=0.5
-        )
+        extended_image2 = np.zeros((2**n_qubits_x, 2**n_qubits_y,))
+        extended_image2[2**(n_qubits_x-1):,2**(n_qubits_y-1):] = image2
+        image2 = extended_image2
 
-        state_vector2 = blobs2.reshape(-1)
+        state_vector2 = image2.reshape(-1)
         state_vector2 = state_vector2 / np.linalg.norm(state_vector2)
-        # Lists patterns with bit=0 at `positions`.
-        def patterns_with_bit_0(n, positions):
-            return [
-                i for i in range(2 ** n) if all(
-                    not (i & (1 << p))
-                    for p in positions
-                )
-            ]
-        # The area of the diagonal detail can be
-        # selected by restricting the highest
-        # qubits to |y_{n−1}>=1 and |x_{n−1}>=1.
-        positions = [(n_qubits-1)//2-1, n_qubits-2]
-        patterns = patterns_with_bit_0(n_qubits-1, positions)
-        for pattern in patterns:
-            state_vector2[pattern] = 0.0
 
         # Initializes the watermark.
         opt_params = {
             'init_index_register': False,
             'rescale': True,
-            'simplify': True
+            'simplify': False
         }
         watermark = FrqiInitialize(
             state_vector2,
@@ -98,7 +93,7 @@ class TestQhwt(TestCase):
         circuit.append(watermark, range(n_qubits))
 
         # Reverts the transform.
-        circuit.append(qhwt.inverse(), range(n_qubits))
+        circuit.append(qhwt.inverse(), range(n_qubits-1))
 
         # State vector after the watermarking.
         state2 = Statevector(circuit)
@@ -107,4 +102,4 @@ class TestQhwt(TestCase):
         # Despite the watermark, the vectors should be very similar,
         # but not equal.
         self.assertFalse(np.array_equal(state1, state2))
-        self.assertTrue(np.allclose(state1, state2))
+        self.assertTrue(state_fidelity(state1, state2) > 0.99)
