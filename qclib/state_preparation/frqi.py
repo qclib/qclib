@@ -64,13 +64,18 @@ class FrqiInitialize(Initialize):
                 initialized. This is achieved by applying a layer of
                 Hadamard gates to the control qubits.
                 Default is ``init_index_register=True``.
+            simplify: bool
+                Enables a search to minimize the use of controls, thereby
+                reducing circuit cost. Note that this feature may incur a
+                high classical cost for longer inputs.
+                The default value is ``simplify=True``.
             separability: bool
                 This parameter enables the search for separability
                 in the state produced by the decomposition, potentially
                 reducing the circuit cost at the expense of increased
                 classical computation. It is only applicable when
                 `simplify=True`.
-                The default setting is `separability=True`.
+                The default setting is ``separability=True``.
         """
         self._name = "frqi"
 
@@ -87,7 +92,7 @@ class FrqiInitialize(Initialize):
             self.method = 'auto' \
                 if opt_params.get("method") is None \
                     else opt_params.get("method")
-            self.init_index_register = False \
+            self.init_index_register = True \
                 if opt_params.get("init_index_register") is None \
                     else opt_params.get("init_index_register")
             self.simplify = True \
@@ -154,13 +159,18 @@ class FrqiInitialize(Initialize):
         idx_list = {}
         ctrl_state_list = {}
         groups = self._group_binary_strings(self.params)
+
+        # Performs simplification.
         idx_list, ctrl_state_list = self._ctrl_states(groups)
 
         # Search for state separability.
+        missing_idx = []
         if self.simplify and self.separability:
             # Returns the number of qubits that can be ignored,
             # reducing the length of the control register.
-            num_controls -= self._search_separability(idx_list, num_controls)
+            # num_controls -= self._search_separability(idx_list, num_controls)
+            missing_idx = self._search_separability(idx_list, num_controls)
+            num_controls -= len(missing_idx)
 
         # Estimates the cost of a MCG decomposition to
         # autoselect between `ucr`and `mcg`.
@@ -183,12 +193,14 @@ class FrqiInitialize(Initialize):
         if self.init_index_register:
             circuit.h(self.controls)
 
-        if self.method == 'ucr' or 2**num_controls < mcg_cnot_count:
+        if self.method == 'ucr' or (self.method == 'auto' and 2**num_controls < mcg_cnot_count):
             params = self.params
             controls = self.controls
 
-            if self.simplify and num_controls < len(self.controls):
+            if self.simplify and self.separability and num_controls < len(self.controls):
                 angles = {}
+                controls = self.complement(len(self.controls), missing_idx)[::-1]
+
                 for k, v in groups.items():
                     for bin_str in v:
                         angles[ctrl_state_list[bin_str]] = k
@@ -198,11 +210,8 @@ class FrqiInitialize(Initialize):
                     if bin_str not in angles:
                         angles[bin_str] = 0.0
 
-                keys = sorted(angles.keys())
-                angles = {i: angles[i] for i in keys}
-
+                angles = dict(sorted(angles.items()))
                 params = list(angles.values())
-                controls = list(idx_list.values())[0]
 
             # `ucr` qubit index 0 is the target.
             circuit.compose(
@@ -228,6 +237,14 @@ class FrqiInitialize(Initialize):
                     )
 
         return circuit
+
+    @staticmethod
+    def complement(length, indexes):
+        """
+        Returns the complement of an integer list.
+        """
+        complement = sorted(set(range(length)).difference(set(indexes)))
+        return complement
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):
@@ -287,20 +304,21 @@ class FrqiInitialize(Initialize):
             # If `len(missing_idx)>0`, the state is separable.
             # If `are_all_same_length==True`, it is possible to use `ucr`
             # over a reduced number of controls.
-            return len(missing_idx)
+            return missing_idx
 
-        return 0
+        return []
 
     @staticmethod
     def _ctrl_state(binary_string):
         indexes = []
         ctrl_state = []
+        n = len(binary_string)
         for i, b in enumerate(binary_string):
             if b != '-':
-                indexes.append(i)
+                indexes.append(n-i-1)
                 ctrl_state.append(b)
 
-        return indexes, ''.join(ctrl_state)
+        return indexes, ''.join(ctrl_state)[::-1]
 
     @staticmethod
     def _group_binary_strings(values):
