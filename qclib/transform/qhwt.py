@@ -35,30 +35,33 @@ class Qhwt(Gate):
         super().__init__('qhwt', num_qubits, [], "Qhwt")
 
     def _define(self):
+        self.definition = self._define_initialize()
 
-        self.definition = QuantumCircuit(self.register)
-        num_qubits = len(self.register)
+    def _define_initialize(self):
+
+        circuit = QuantumCircuit(self.register)
 
         for level in range(self.levels):
             h_gate = HGate()
             if level > 0:
                 h_gate = h_gate.control(level)
 
-            self.definition.compose(
+            circuit.compose(
                 h_gate,
-                self.register[:level+1]
+                self.register[:level+1],
+                inplace=True
             )
-
-            if level < num_qubits - 1:
-                p_gate = self._permutation_gate(num_qubits - level)
+            if level < self.num_qubits - 1:
+                p_gate = self._permutation_gate(self.num_qubits - level)
                 if level > 0:
                     p_gate = p_gate.control(level)
 
-                self.definition.compose(
+                circuit.compose(
                     p_gate,
-                    self.register
+                    self.register,
+                    inplace=True
                 )
-
+        return circuit
 
     @staticmethod
     def _permutation_gate(num_qubits):
