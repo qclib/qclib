@@ -48,8 +48,7 @@ class FrqiInitialize(Initialize):
             A vector representing an image.
             Values are angles representing color.
 
-        opt_params: {'rescale': rescale
-                     'method': method}
+        opt_params: {'parameter': value}
             rescale: bool
                 If `True`, it rescales the values of the `params`
                 vector to the range between 0 and pi.
@@ -179,13 +178,13 @@ class FrqiInitialize(Initialize):
             for k, v in groups.items():
                 for bin_str in v:
                     idx = idx_list[bin_str]
-                    n = len(idx)
-                    if n == 2:
+                    n_controls = len(idx)
+                    if n_controls == 1:
                         mcg_cnot_count += 2
-                    elif n == 3:
+                    elif n_controls == 2:
                         mcg_cnot_count += 4
-                    else:
-                        mcg_cnot_count += 16*n-40
+                    elif n_controls > 2:
+                        mcg_cnot_count += 16*(n_controls+1)-40
 
         # Constructs the quantum circuit.
         circuit = QuantumCircuit(self.controls, self.target)
@@ -193,7 +192,9 @@ class FrqiInitialize(Initialize):
         if self.init_index_register:
             circuit.h(self.controls)
 
-        if self.method == 'ucr' or (self.method == 'auto' and 2**num_controls < mcg_cnot_count):
+        if self.method == 'ucr' or (
+            self.method == 'auto' and 2**num_controls < mcg_cnot_count
+        ):
             params = self.params
             controls = self.controls
 
