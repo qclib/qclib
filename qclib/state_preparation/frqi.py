@@ -27,7 +27,6 @@ from qiskit.circuit.library import RYGate, UCGate
 from qiskit.quantum_info import Operator
 from qclib.gates.initialize import Initialize
 from qclib.gates import Mcg
-from qclib.gates.ucr import ucr
 
 # pylint: disable=maybe-no-member
 
@@ -159,6 +158,15 @@ class FrqiInitialize(Initialize):
         ctrl_state_list = {}
         groups = self._group_binary_strings(self.params)
 
+        # Ignores the most repeated angle controls.
+        global_angle = 0.0
+        if self.simplify:
+            # Find the item with the largest number of lists.
+            max_item = max(groups.items(), key=lambda item: len(item[1]))
+            if len(max_item[1]) > 1:
+                global_angle = max_item[0]
+                groups[global_angle] = []
+
         # Performs simplification.
         idx_list, ctrl_state_list = self._ctrl_states(groups)
 
@@ -194,6 +202,9 @@ class FrqiInitialize(Initialize):
         if self.init_index_register:
             circuit.h(self.controls)
 
+        if global_angle != 0.0:
+            circuit.ry(global_angle, self.target)
+
         if self.method == 'ucr' or (
             self.method == 'auto' and 2**num_controls < mcg_cnot_count
         ):
@@ -206,7 +217,7 @@ class FrqiInitialize(Initialize):
 
                 for k, v in groups.items():
                     for bin_str in v:
-                        angles[ctrl_state_list[bin_str]] = k
+                        angles[ctrl_state_list[bin_str]] = k - global_angle
 
                 for i in range(2**num_controls):
                     bin_str = f'{i:0{num_controls}b}'
@@ -229,7 +240,7 @@ class FrqiInitialize(Initialize):
 
         else:
             for k, v in groups.items():
-                gate_matrix = Operator(RYGate(k)).data
+                gate_matrix = Operator(RYGate(k-global_angle)).data
                 for bin_str in v:
                     idx = idx_list[bin_str]
                     ctrl_state = ctrl_state_list[bin_str]
