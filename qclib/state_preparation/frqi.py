@@ -183,7 +183,9 @@ class FrqiInitialize(Initialize):
                         mcg_cnot_count += 2
                     elif n_controls == 2:
                         mcg_cnot_count += 4
-                    elif n_controls > 2:
+                    elif n_controls == 3:
+                        mcg_cnot_count += 8
+                    elif n_controls > 3:
                         mcg_cnot_count += 16*(n_controls+1)-40
 
         # Constructs the quantum circuit.
