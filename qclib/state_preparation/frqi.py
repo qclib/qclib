@@ -23,7 +23,7 @@ import numpy as np
 from sympy import symbols, Or, And, Not
 from sympy.logic.boolalg import simplify_logic
 from qiskit import QuantumCircuit, QuantumRegister
-from qiskit.circuit.library import RYGate
+from qiskit.circuit.library import RYGate, UCGate
 from qiskit.quantum_info import Operator
 from qclib.gates.initialize import Initialize
 from qclib.gates import Mcg
@@ -214,12 +214,17 @@ class FrqiInitialize(Initialize):
                 angles = dict(sorted(angles.items()))
                 params = list(angles.values())
 
-            # `ucr` qubit index 0 is the target.
+            gates = []
+            for param in params:
+                gates.append(Operator(RYGate(param)).data)
+
+            # `UCGate` qubit index 0 is the target.
             circuit.compose(
-                ucr(RYGate, params),
+                UCGate(gates),
                 [*self.target, *controls],
                 inplace=True
             )
+
         else:
             for k, v in groups.items():
                 gate_matrix = Operator(RYGate(k)).data
