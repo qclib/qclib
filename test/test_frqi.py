@@ -318,6 +318,9 @@ class TestFrqi(TestCase):
             opt_params={'rescale':True, 'method': 'auto'}
         )
 
+        state1 = Statevector(circuit1).data
+        state2 = Statevector(circuit2).data
+
         pm = generate_preset_pass_manager(
             basis_gates=['u', 'cx'],
             optimization_level=0
@@ -329,6 +332,7 @@ class TestFrqi(TestCase):
         n_cx2 = t_circuit2.count_ops()['cx']
 
         self.assertTrue(n_cx1 > n_cx2)
+        self.assertTrue(np.allclose(state1, state2))
 
     def test_cnot_count_random(self):
         n_qubits = 6
@@ -350,6 +354,9 @@ class TestFrqi(TestCase):
             opt_params={'rescale':True, 'method': 'auto'}
         )
 
+        state1 = Statevector(circuit1).data
+        state2 = Statevector(circuit2).data
+
         pm = generate_preset_pass_manager(
             basis_gates=['u', 'cx'],
             optimization_level=0
@@ -361,3 +368,4 @@ class TestFrqi(TestCase):
         n_cx2 = t_circuit2.count_ops()['cx']
 
         self.assertTrue(n_cx1 >= n_cx2)
+        self.assertTrue(np.allclose(state1, state2))
