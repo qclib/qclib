@@ -143,15 +143,15 @@ class Ucr(Gate):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        idx_list = {}
-        ctrl_state_list = {}
-        missing_idx = []
+        # pylint: disable=possibly-used-before-assignment
+
         global_angle = 0.0
         mcg_cnot_count = 2**1024
         num_controls = len(self.controls)
 
         # Collects data for the decomposition.
-        groups = self._group_binary_strings(self.params)
+        if self.simplify or self.method != 'multiplexor':
+            groups = self._group_binary_strings(self.params)
 
         # Ignores the most repeated angle controls.
         if self.simplify:
@@ -162,7 +162,8 @@ class Ucr(Gate):
                 groups[global_angle] = []
 
         # Performs simplification.
-        idx_list, ctrl_state_list = self._ctrl_states(groups)
+        if self.simplify or self.method != 'multiplexor':
+            idx_list, ctrl_state_list = self._ctrl_states(groups)
 
         if self.simplify:
             # Search for separability (qubits not used after simplification).
