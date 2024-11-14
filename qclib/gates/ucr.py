@@ -145,10 +145,10 @@ class Ucr(Gate):
     def _define_initialize(self):
         idx_list = {}
         ctrl_state_list = {}
-        num_controls = len(self.controls)
-        mcg_cnot_count = 2**1024
         missing_idx = []
         global_angle = 0.0
+        mcg_cnot_count = 2**1024
+        num_controls = len(self.controls)
 
         # Collects data for the decomposition.
         groups = self._group_binary_strings(self.params)
@@ -204,10 +204,11 @@ class Ucr(Gate):
                     for bin_str in v:
                         angles[ctrl_state_list[bin_str]] = k - global_angle
 
-                for i in range(2**num_controls):
-                    bin_str = f'{i:0{num_controls}b}'
-                    if bin_str not in angles:
-                        angles[bin_str] = 0.0
+                if len(angles) < 2**num_controls:
+                    for i in range(2**num_controls):
+                        bin_str = f'{i:0{num_controls}b}'
+                        if bin_str not in angles:
+                            angles[bin_str] = 0.0
 
                 angles = dict(sorted(angles.items()))
                 params = list(angles.values())
