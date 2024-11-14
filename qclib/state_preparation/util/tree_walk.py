@@ -17,7 +17,7 @@ https://arxiv.org/abs/2108.10182
 """
 
 from qiskit.circuit.library import RYGate, RZGate
-from qclib.gates.ucr import ucr
+from qclib.gates.ucr import multiplexor
 from qclib.state_preparation.util.tree_utils import leftmost, children
 
 
@@ -60,11 +60,11 @@ def top_down(angle_tree, circuit, start_level, control_nodes=None, target_nodes=
             # If both multiplexors are used (RY and RZ), we can save two CNOTs.
             # That is why the RZ multiplexor is reversed.
             if any(angles_y):
-                ucry = ucr(RYGate, angles_y, last_control=not any(angles_z))
+                ucry = multiplexor(RYGate, angles_y, last_control=not any(angles_z))
                 circuit.append(ucry, [target_qubit] + control_qubits[::-1])
 
             if any(angles_z):
-                ucrz = ucr(RZGate, angles_z, last_control=not any(angles_y))
+                ucrz = multiplexor(RZGate, angles_z, last_control=not any(angles_y))
                 circuit.append(
                     ucrz.reverse_ops(), [target_qubit] + control_qubits[::-1]
                 )
