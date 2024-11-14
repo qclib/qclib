@@ -24,6 +24,7 @@ from sympy import symbols, Or, And, Not
 from sympy.logic.boolalg import simplify_logic as sp_simplify_logic
 from qclib.gates import Mcg
 
+_mcg_cnot_count = {1:2, 2:4, 3:14, 4:24, 5:40, 6:56, 7:80}
 
 def multiplexor(
     r_gate: Union[Type[RZGate], Type[RYGate]],
@@ -171,13 +172,9 @@ class Ucr(Gate):
                     for bin_str in v:
                         idx = idx_list[bin_str]
                         n_controls = len(idx)
-                        if n_controls == 1:
-                            mcg_cnot_count += 2
-                        elif n_controls == 2:
-                            mcg_cnot_count += 4
-                        elif n_controls == 3:
-                            mcg_cnot_count += 8
-                        elif n_controls > 3:
+                        if n_controls < 8:
+                            mcg_cnot_count += _mcg_cnot_count[n_controls]
+                        else:
                             mcg_cnot_count += 16*(n_controls+1)-40
 
         # Constructs the quantum circuit.
