@@ -69,7 +69,7 @@ class TestFrqi(TestCase):
         self.assertTrue(n_cx1 < n_cx2)
         self.assertTrue(np.allclose(state1, state2))
 
-    def test_simplify_ucr(self):
+    def test_simplify_multiplexor(self):
         n_qubits = 6
         div = 2**4
 
@@ -83,13 +83,13 @@ class TestFrqi(TestCase):
         FrqiInitialize.initialize(
             circuit1,
             state_vector,
-            opt_params={'rescale':True, 'simplify': True, 'method': 'ucr'}
+            opt_params={'rescale':True, 'simplify': True, 'method': 'multiplexor'}
         )
         circuit2 = QuantumCircuit(n_qubits+1)
         FrqiInitialize.initialize(
             circuit2,
             state_vector,
-            opt_params={'rescale':True, 'simplify': False, 'method': 'ucr'}
+            opt_params={'rescale':True, 'simplify': False, 'method': 'multiplexor'}
         )
 
         state1 = Statevector(circuit1).data
@@ -174,7 +174,7 @@ class TestFrqi(TestCase):
 
         self.assertTrue(n_cx1 == 2**n_qubits // div)
 
-    def test_initialize_simplify(self):
+    def test_initialize_simplify_true(self):
         n_qubits = 6
 
         state_vector = np.random.rand(2**n_qubits)
@@ -184,7 +184,7 @@ class TestFrqi(TestCase):
         FrqiInitialize.initialize(
             circuit1,
             state_vector,
-            opt_params={'rescale':True, 'method': 'ucr', 'simplify': True}
+            opt_params={'rescale':True, 'method': 'multiplexor', 'simplify': True}
         )
 
         circuit2 = QuantumCircuit(n_qubits+1)
@@ -199,7 +199,7 @@ class TestFrqi(TestCase):
 
         self.assertTrue(np.allclose(state1, state2))
 
-    def test_initialize(self):
+    def test_initialize_simplify_false(self):
         n_qubits = 6
 
         state_vector = np.random.rand(2**n_qubits)
@@ -209,7 +209,7 @@ class TestFrqi(TestCase):
         FrqiInitialize.initialize(
             circuit1,
             state_vector,
-            opt_params={'rescale':True, 'method': 'ucr', 'simplify': False}
+            opt_params={'rescale':True, 'method': 'multiplexor', 'simplify': False}
         )
 
         circuit2 = QuantumCircuit(n_qubits+1)
@@ -251,7 +251,7 @@ class TestFrqi(TestCase):
         FrqiInitialize.initialize(
             circuit1,
             state_vector,
-            opt_params={'rescale':True, 'method': 'ucr'}
+            opt_params={'rescale':True, 'method': 'mcg'}
         )
 
         circuit2 = QuantumCircuit(n_qubits+1)
@@ -287,7 +287,7 @@ class TestFrqi(TestCase):
         FrqiInitialize.initialize(
             circuit1,
             state_vector,
-            opt_params={'rescale':True, 'method': 'ucr'}
+            opt_params={'rescale':True, 'method': 'multiplexor'}
         )
 
         circuit2 = QuantumCircuit(n_qubits+1)
