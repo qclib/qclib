@@ -27,7 +27,7 @@ from qiskit.circuit.library import UnitaryGate, UCRYGate, UCRZGate, MCXGate, MCM
 from qiskit.quantum_info.operators.predicates import is_unitary_matrix
 from qiskit.synthesis.unitary.qsd import _apply_a2
 from qiskit.circuit.library import UCGate
-from qclib.gates.ucr import ucr
+from qclib.gates.ucr import multiplexor
 
 
 def unitary(gate, decomposition="qsd", iso=0, apply_a2=True):
@@ -70,7 +70,7 @@ def build_unitary(gate, decomposition="qsd", iso=0):
 
         # Middle circuit
         # Last CZGate is ommited and absorved into the neighboring multiplexor.
-        ucry = ucr(RYGate, list(2 * theta), CZGate, False)
+        ucry = multiplexor(RYGate, list(2 * theta), CZGate, False)
 
         circuit.append(
             ucry.to_instruction(), [n_qubits - 1] + list(range(n_qubits - 1))
