@@ -85,7 +85,7 @@ class Ucr(Gate):
     """
     def __init__(
         self,
-        angle_list: list[np.ndarray],
+        angle_list: List[List[float]],
         r_gate: Union[Type[RZGate], Type[RYGate]] = RYGate,
         up_to_diagonal: bool = False,
         method: str = 'multiplexor',
