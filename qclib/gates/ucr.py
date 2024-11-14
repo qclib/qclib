@@ -93,6 +93,12 @@ class Ucr(Gate):
         simplify: bool = False,
         label=None
     ):
+        if method not in ['auto', 'multiplexor', 'mcg']:
+            raise ValueError(
+                f"Method '{method}' is not one of the valid options "
+                "['auto', 'multiplexor', 'mcg']."
+            )
+
         self._name = "ucr"
         self.r_gate = r_gate
         self.up_to_diagonal = up_to_diagonal
