@@ -143,126 +143,193 @@ class Ucr(Gate):
         self.definition = self._define_initialize()
 
     def _define_initialize(self):
-        # pylint: disable=possibly-used-before-assignment
+        circuit = QuantumCircuit(self.controls, self.target)
 
-        global_angle = 0.0
-        mcg_cnot_count = 2**1024
-        num_controls = len(self.controls)
+        if not self.simplify:
+            if self.method != 'mcg':
+                # 'auto' or 'multiplexor'.
 
-        # Collects data for the decomposition.
-        if self.simplify or self.method != 'multiplexor':
+                ucr = multiplexor(self.r_gate, self.params)
+                # `multiplexor` qubit index 0 is the target.
+                circuit.compose(
+                    ucr,
+                    [*self.target, *self.controls],
+                    inplace=True
+                )
+
+            else:
+                # 'mcg'.
+
+                n = len(self.controls)
+
+                for i, value in enumerate(self.params):
+                    ctrl_state = f'{i:0{n}b}'
+                    gate_matrix = self.r_gate(value).to_matrix()
+
+                    mcg = Mcg(
+                        gate_matrix,
+                        n,
+                        ctrl_state=ctrl_state
+                    )
+                    circuit.compose(
+                        mcg,
+                        [*self.controls, *self.target],
+                        inplace=True
+                    )
+
+        else:
+            num_controls = len(self.controls)
+
+            # Collects data for the decomposition.
             groups = self._group_binary_strings(self.params)
 
-        # Ignores the most repeated angle controls.
-        if self.simplify:
+            # Ignores the most repeated angle controls.
             # Find the item with the largest number of lists.
+            global_angle = 0.0
             max_item = max(groups.items(), key=lambda item: len(item[1]))
-            if len(max_item[1]) > 1:
-                global_angle = max_item[0]
-                groups[global_angle] = []
+            global_angle = max_item[0]
+            groups[global_angle] = []
 
-        # Performs simplification.
-        if self.simplify or self.method != 'multiplexor':
-            idx_list, ctrl_state_list = self._ctrl_states(groups)
+            # Performs simplification.
+            indexes, ctrl_states = self._ctrl_states(groups)
 
-        if self.simplify:
             # Search for separability (qubits not used after simplification).
             # Returns the number of qubits that can be ignored,
             # reducing the length of the control register.
-            missing_idx = self._search_separability(idx_list, num_controls)
-            num_controls -= len(missing_idx)
+            missing_indexes = self._search_separability(indexes, num_controls)
+            num_controls -= len(missing_indexes)
 
             # Estimates the cost of a MCG decomposition to
             # autoselect between `multiplexor`and `mcg`.
+            mcg_cnot_count = 2**num_controls + 1
             if self.method == 'auto':
+                mcg_cnot_count = 0
                 for k, v in groups.items():
                     for bin_str in v:
-                        idx = idx_list[bin_str]
+                        idx = indexes[bin_str]
                         n_controls = len(idx)
                         if n_controls < 8:
                             mcg_cnot_count += _mcg_cnot_count[n_controls]
                         else:
                             mcg_cnot_count += 16*(n_controls+1)-40
 
-        # Constructs the quantum circuit.
-        circuit = QuantumCircuit(self.controls, self.target)
-
-        if self.method == 'multiplexor' or (
-            self.method == 'auto' and 2**num_controls < mcg_cnot_count
-        ):
-            params = self.params
-            controls = self.controls
-
-            # If successfully separated.
-            if num_controls < len(self.controls):
-                if global_angle != 0.0:
-                    circuit.ry(global_angle, self.target)
-
-                angles = {}
-                controls = self.complement(len(self.controls), missing_idx)[::-1]
-
-                for k, v in groups.items():
-                    for bin_str in v:
-                        angles[ctrl_state_list[bin_str]] = k - global_angle
-
-                if len(angles) < 2**num_controls:
-                    for i in range(2**num_controls):
-                        bin_str = f'{i:0{num_controls}b}'
-                        if bin_str not in angles:
-                            angles[bin_str] = 0.0
-
-                angles = dict(sorted(angles.items()))
-                params = list(angles.values())
-
-            # `multiplexor` qubit index 0 is the target.
-            ucr = multiplexor(self.r_gate, params)
-            circuit.compose(
-                ucr,
-                [*self.target, *controls],
-                inplace=True
-            )
-
-        else: # 'mcg'
             if global_angle != 0.0:
-                circuit.ry(global_angle, self.target)
+                r_gate = self.r_gate(global_angle)
+                circuit.compose(
+                    r_gate,
+                    self.target,
+                    inplace=True
+                )
 
-            for k, v in groups.items():
-                gate_matrix = RYGate(k-global_angle).to_matrix()
+            if self.method == 'multiplexor' or (
+                self.method == 'auto' and 2**num_controls < mcg_cnot_count
+            ):
+                if len(missing_indexes) == 0:
+                    # It is not possible to separate the state.
+                    params = np.array(self.params) - global_angle
+                    controls = self.controls
+                else:
+                    # It is possible to separate the state.
+                    #
+                    # Reduces the number of control bits, eliminating ignored
+                    # indexes, and assembles an ordered and reduced list of
+                    # angles according to the active bit patterns corresponding
+                    # to each angle value.
+                    angles = {}
+                    controls = self.complement(len(self.controls), missing_indexes)
 
-                for bin_str in v:
-                    idx = idx_list[bin_str]
-                    ctrl_state = ctrl_state_list[bin_str]
-                    mcg = Mcg(
-                        gate_matrix,
-                        len(idx),
-                        ctrl_state=ctrl_state
-                    )
-                    circuit.compose(
-                        mcg,
-                        [*self.controls[idx], *self.target],
-                        inplace=True
-                    )
+                    for k, v in groups.items():
+                        for bin_str in v:
+                            reduced_bin_str = \
+                                [
+                                    char for i, char in enumerate(bin_str[::-1]) if i in controls
+                                ][::-1]
+                            dontcares_indexes = \
+                                [
+                                    i for i, char in enumerate(reduced_bin_str) if char == '-'
+                                ]
+                            n_placeholders = len(dontcares_indexes)
+                            for i in range(2**n_placeholders):
+                                pattern = f'{i:0{n_placeholders}b}'
+                                for j, dontcare_index in enumerate(dontcares_indexes):
+                                    reduced_bin_str[dontcare_index] = pattern[j]
+                                angles["".join(reduced_bin_str)] = k - global_angle
+
+                    # Completes the positions of the missing bit patterns
+                    # (if any) with zeros.
+                    if len(angles) < 2**num_controls:
+                        for i in range(2**num_controls):
+                            bin_str = f'{i:0{num_controls}b}'
+                            if bin_str not in angles:
+                                angles[bin_str] = 0.0
+
+                    angles = dict(sorted(angles.items()))
+                    params = list(angles.values())
+
+                # `multiplexor` qubit index 0 is the target.
+                ucr = multiplexor(self.r_gate, params)
+                circuit.compose(
+                    ucr,
+                    [*self.target, *controls],
+                    inplace=True
+                )
+
+            else:
+                # 'mcg'
+                for k, v in groups.items():
+                    gate_matrix = self.r_gate(k - global_angle).to_matrix()
+
+                    for bin_str in v:
+                        idx = indexes[bin_str]
+                        ctrl_state = ctrl_states[bin_str]
+                        mcg = Mcg(
+                            gate_matrix,
+                            len(idx),
+                            ctrl_state=ctrl_state
+                        )
+                        circuit.compose(
+                            mcg,
+                            [*self.controls[idx], *self.target],
+                            inplace=True
+                        )
 
         return circuit
 
     def _ctrl_states(self, groups):
-        idx_list = {}
-        ctrl_state_list = {}
+        indexes = {}
+        ctrl_states = {}
 
         full_control_register = list(range(len(self.controls)))
 
         for value, binary_strings in groups.items():
-            if self.simplify and len(binary_strings) > 1:
+            if len(binary_strings) > 1:
                 groups[value] = simplify_logic(binary_strings)
                 for binary_string in groups[value]:
-                    idx_list[binary_string], ctrl_state_list[binary_string] = \
+                    indexes[binary_string], \
+                    ctrl_states[binary_string] = \
                         self._ctrl_state(binary_string)
             else:
+                # Note that zero binary strings does not produce a result, as
+                # expected, possibly allowing separation of the multiplexor
+                # or reduction in the number of UCGs.
                 for binary_string in binary_strings:
-                    idx_list[binary_string] = full_control_register
-                    ctrl_state_list[binary_string] = binary_string
+                    indexes[binary_string] = full_control_register
+                    ctrl_states[binary_string] = binary_string
 
-        return idx_list, ctrl_state_list
+        return indexes, ctrl_states
+
+    @staticmethod
+    def _ctrl_state(binary_string):
+        indexes = []
+        ctrl_state = []
+        n = len(binary_string)
+        for i, b in enumerate(binary_string):
+            if b != '-':
+                # Indexes are inverted on Qiskit circuits.
+                indexes.append(n-i-1)
+                ctrl_state.append(b)
+        # Sorts indexes in ascending order.
+        return indexes[::-1], ''.join(ctrl_state)
 
     @staticmethod
     def complement(length, indexes):
@@ -274,37 +341,19 @@ class Ucr(Gate):
 
     @staticmethod
     def _search_separability(idx_list, num_controls):
-        def missing_numbers(n, lists):
+        """
+        If `len(missing)>0`, the `multiplexor` is separable.
+        That is, it is possible to use `multiplexor` over a
+        reduced number of controls.
+        """
+        def list_missing(n, lists):
             all_numbers = set(num for lst in lists for num in lst)
             full_range = set(range(n))
             missing = full_range - all_numbers
             return sorted(missing)
-        def are_all_same_length(lists):
-            if len(lists) <= 1:
-                return True
-            first_length = len(lists[0])
-            return all(len(lst) == first_length for lst in lists)
 
-        missing_idx = missing_numbers(num_controls, list(idx_list.values()))
-        if are_all_same_length(list(idx_list.values())):
-            # If `len(missing_idx)>0`, the state is separable.
-            # If `are_all_same_length==True`, it is possible to use `multiplexor`
-            # over a reduced number of controls.
-            return missing_idx
-
-        return []
-
-    @staticmethod
-    def _ctrl_state(binary_string):
-        indexes = []
-        ctrl_state = []
-        n = len(binary_string)
-        for i, b in enumerate(binary_string):
-            if b != '-':
-                indexes.append(n-i-1)
-                ctrl_state.append(b)
-
-        return indexes, ''.join(ctrl_state)[::-1]
+        missing = list_missing(num_controls, list(idx_list.values()))
+        return missing
 
     @staticmethod
     def _group_binary_strings(values):
@@ -319,7 +368,7 @@ class Ucr(Gate):
         for i, value in original_groups.items():
             binary_string = f'{i:0{n}b}'
 
-            if np.isclose(value, last_value):
+            if np.isclose(value, last_value, atol=0.0, rtol=1e-07):
                 groups[last_value].append(binary_string)
             else:
                 groups[value] = [binary_string]
