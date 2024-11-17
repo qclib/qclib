@@ -4,3 +4,4 @@ deprecation
 numpy
 tensorly
 graphviz
+scikit-image

@@ -28,6 +28,7 @@ setuptools.setup(
         'deprecation',
         'tensorly>=0.8.0',
         'keras',
-        'graphviz'
+        'graphviz',
+        'scikit-image'
     ]
 )
