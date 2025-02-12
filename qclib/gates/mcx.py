@@ -71,33 +71,93 @@ class McxVchainDirty(Gate):
         )
 
     @staticmethod
-    def toffoli_multi_target(num_targets, side=None):
-        """ " """
+    def mcmtx_by_side(qc, first_target_position, n_targets_extra, side=True):
+        """add a cascade of CNOTs in the quantum circuit
+           in forward or reverse order, with depth log(n).
 
-        size = 2 + num_targets
-        circuit = QuantumCircuit(size)
+        Args:
+            qc: QuantumCircuit object
+            first_target_position: Position of the first extra target qubit
+            n_targets_extra (int): Number of extra target qubits.
+            side (bool): True for right side (forward order),
+            False for left side (reverse order).
+
+        Returns:
+            QuantumCircuit: Circuit with applied CNOT gates.
+        """
+        num_qubits = n_targets_extra + 1
+        # qc = QuantumCircuit(num_qubits)
+        indexes = []
+        control_idx = 0
+        level = 0
+
+        # Generates the list of (control, target) pairs
+        for step in range(n_targets_extra):
+            if step < 2:
+                control = first_target_position + step - 1
+                target = control + 1
+                indexes.append((control, target))
+            else:
+                max_control = 3 * (2 ** level)
+                if control_idx < max_control:
+                    control = first_target_position + control_idx - 1
+                    target = first_target_position + step
+                    indexes.append((control, target))
+                    control_idx += 1
+                else:
+
+                    control_idx = 0
+                    control = first_target_position + control_idx - 1
+                    target = first_target_position + step
+                    indexes.append((control, target))
+                    control_idx = 1
+                    level += 1
+
+        # Applies the gates in the appropriate order
+        for control, target in (indexes if side else reversed(indexes)):
+            qc.cx(control, target)
+
+        return qc
+
+
+    def toffoli_multi_target(self, num_targets, side=None):
+        """Constructs a multi-target Toffoli gate circuit with optional left, right, or both-side CNOTs.
+
+        Args:
+            num_targets (int): Number of target qubits.
+            side (str, optional): Specifies the side for CNOTs.
+                                  Options: "l" (left), "r" (right), or None (both sides). Defaults to None.
+
+        Returns:
+            QuantumCircuit: Quantum circuit with the multi-target Toffoli gate applied.
+        """
+        if num_targets < 1:
+            raise ValueError("Number of target qubits must be at least 1.")
+
+        # Initialize the circuit with the required number of qubits
+        num_qubits = 2 + num_targets  # 2 control qubits + num_targets
+        circuit = QuantumCircuit(num_qubits)
+
+        # Apply left-side CNOTs if specified
+        if side in ["l", None]:
+            circuit = self.mcmtx_by_side(circuit, 3, num_targets - 1, False)
+
+        # Apply the Toffoli gate (CCX) between the first two qubits and the first target
+        circuit.ccx(0, 1, 2)
+
+        # Apply right-side CNOTs if specified
+        if side in ["r", None]:
+            circuit = self.mcmtx_by_side(circuit, 3, num_targets - 1, True)
+
+        # Set circuit name based on the side
         if side == "l":
-            for i in range(num_targets - 1):
-                circuit.name = 'toff_left'
-                circuit.cx(size - i - 2, size - i - 1)
-            circuit.ccx(0, 1, 2)
-            return circuit
-
+            circuit.name = "toff_left"
         elif side == "r":
-            circuit.name = 'toff_right'
-            circuit.ccx(0, 1, 2)
-            for i in range(num_targets - 1):
-                circuit.cx(i + 2, i + 3)
-            return circuit
-
+            circuit.name = "toff_right"
         elif side is None:
-            circuit.name = 'toff_l_and_r'
-            for i in range(num_targets - 1):
-                circuit.cx(size - i - 2, size - i - 1)
-            circuit.ccx(0, 1, 2)
-            for i in range(num_targets - 1):
-                circuit.cx(i + 2, i + 3)
-            return circuit
+            circuit.name = "toff_l_and_r"
+
+        return circuit
 
     def _define(self):
         self.definition = QuantumCircuit(
