@@ -131,8 +131,6 @@ class McxVchainDirty(Gate):
         Returns:
             QuantumCircuit: Quantum circuit with the multi-target Toffoli gate applied.
         """
-        if num_targets < 1:
-            raise ValueError("Number of target qubits must be at least 1.")
 
         # Initialize the circuit with the required number of qubits
         num_qubits = 2 + num_targets  # 2 control qubits + num_targets

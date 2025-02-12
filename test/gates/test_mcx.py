@@ -293,6 +293,43 @@ class TestMcxVchainDirty(TestCase):
                 == tr_mcx_v_chain.count_ops()["cx"]
             )
 
+    def test_toffoli_multi_target_log_depth(self):
+        """Calculates and prints the depth of the multi-target Toffoli circuit.
+
+        Args:
+            num_targets (int): Number of target qubits.
+            side (str, optional): Specifies the side for CNOTs.
+                                  Options: "l" (left), "r" (right), or None (both sides). Defaults to None.
+        """
+        mcx_instance = McxVchainDirty(num_controls=5)
+        num_targets = np.random.randint(5, 20)
+        side = None
+        circuit = mcx_instance.toffoli_multi_target(num_targets, side)
+        c_depth = circuit.depth()
+        t_depth = self.theoretical_depth(num_targets)
+        self.assertEqual(c_depth, t_depth)
+
+
+    @staticmethod
+    def theoretical_depth(number_of_targets):
+        nt = number_of_targets - 3
+        stop = False
+        k = 0
+        depth = 0
+        if nt == 0:
+            return 5
+        elif nt == 4:
+            return 7
+        while not stop and nt > 0:
+            maximum_qubits = 3 * 2 ** k
+            diff = nt - maximum_qubits
+            depth += 1
+            k += 1
+            if diff >= 0:
+                nt = diff
+            else:
+                stop = True
+        return 5 + 2 * depth
 
     def _operator_cmp(
             self,
