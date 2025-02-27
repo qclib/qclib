@@ -18,8 +18,8 @@ from unittest import TestCase
 
 import numpy as np
 from qiskit import QuantumCircuit, QuantumRegister, transpile
-from qiskit.quantum_info import Operator
-from qclib.gates.mcx import McxVchainDirty, LinearMcx
+from qiskit.quantum_info import Operator, Statevector
+from qclib.gates.mcx import McxVchainDirty, LinearMcx, MCXGidneyLogDepth, MCXGidneyLinearDepth
 
 
 def apply_control_state_on_quantum_circuit(
@@ -373,3 +373,83 @@ class TestMcxVchainDirty(TestCase):
         )
 
         return mcx_qiskit
+
+
+class TestMCXGidneyLinearDepth(TestCase):
+    """ Test MCX synthesis for 1 ancilla with linear depth """
+    def test_operator_correctness(self):
+        for num_ctrl_qubits in range(3, 15):
+            reference = np.zeros(2 ** (num_ctrl_qubits + 1))
+            reference[-1] = 1
+
+            for gate in [
+                MCXGidneyLinearDepth(num_ctrl_qubits, clean=True),
+                MCXGidneyLinearDepth(num_ctrl_qubits, clean=False),
+            ]:
+                with self.subTest(gate=gate):
+                    qc = QuantumCircuit(num_ctrl_qubits + 2)
+                    qc.x(list(range(num_ctrl_qubits)))
+                    qc.compose(gate.definition, inplace=True)
+                    statevector = Statevector(qc).data
+
+                    corrected = np.zeros(2 ** (num_ctrl_qubits + 1), dtype=complex)
+                    for i, statevector_amplitude in enumerate(statevector):
+                        i = int(bin(i)[2:].zfill(qc.num_qubits)[1:], 2)  # 1 ancilla qubit
+                        corrected[i] += statevector_amplitude
+                    statevector = corrected
+                np.testing.assert_array_almost_equal(statevector.real, reference)
+
+    def test_gate_count_clean(self):
+        """ Gate count based on the fact that qiskit decomposes each toffoli gate into 6 cx gates."""
+        for num_ctrl_qubits in range(3, 15):
+            mcx_circ = MCXGidneyLinearDepth(num_ctrl_qubits, clean=True).definition
+            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx"], optimization_level=3)
+            cx_count = tr_mcx.count_ops()["cx"]
+            self.assertLessEqual(cx_count, 12 * num_ctrl_qubits - 18)
+
+    def test_gate_count_dirty(self):
+        for num_ctrl_qubits in range(3, 15):
+            mcx_circ = MCXGidneyLinearDepth(num_ctrl_qubits, clean=False).definition
+            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx"], optimization_level=3)
+            cx_count = tr_mcx.count_ops()["cx"]
+            self.assertLessEqual(cx_count, 24 * num_ctrl_qubits - 48)
+
+
+class TestMCXGidneyLogDepth(TestCase):
+    """ Test MCX synthesis for 2 ancilla with logarithmic depth """
+    def test_operator_correctness(self):
+        for num_ctrl_qubits in range(3, 15):
+            reference = np.zeros(2 ** (num_ctrl_qubits + 1))
+            reference[-1] = 1
+
+            for gate in [
+                MCXGidneyLogDepth(num_ctrl_qubits, clean=True),
+                MCXGidneyLogDepth(num_ctrl_qubits, clean=False),
+            ]:
+                with self.subTest(gate=gate):
+                    qc = QuantumCircuit(num_ctrl_qubits + 3)
+                    qc.x(list(range(num_ctrl_qubits)))
+                    qc.compose(gate.definition, inplace=True)
+                    statevector = Statevector(qc).data
+
+                    corrected = np.zeros(2 ** (num_ctrl_qubits + 1), dtype=complex)
+                    for i, statevector_amplitude in enumerate(statevector):
+                        i = int(bin(i)[2:].zfill(qc.num_qubits)[2:], 2)  # 2 ancilla qubit
+                        corrected[i] += statevector_amplitude
+                    statevector = corrected
+                np.testing.assert_array_almost_equal(statevector.real, reference)
+
+    def test_gate_count_clean(self):
+        for num_ctrl_qubits in range(3, 15):
+            mcx_circ = MCXGidneyLogDepth(num_ctrl_qubits, clean=True).definition
+            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx"], optimization_level=3)
+            cx_count = tr_mcx.count_ops()["cx"]
+            self.assertLessEqual(cx_count, 12 * num_ctrl_qubits - 18)
+
+    def test_gate_count_dirty(self):
+        for num_ctrl_qubits in range(3, 15):
+            mcx_circ = MCXGidneyLogDepth(num_ctrl_qubits, clean=False).definition
+            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx"], optimization_level=3)
+            cx_count = tr_mcx.count_ops()["cx"]
+            self.assertLessEqual(cx_count, 24 * num_ctrl_qubits - 48)
+
