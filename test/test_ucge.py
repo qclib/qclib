@@ -87,6 +87,44 @@ class TestUCGEInitialize(TestCase):
 
         self._test_compare_ucg_bipartition(num_qubits, input_vector1, input_vector2)
 
+    def test_3_partition_complex(self):
+        num_qubits1 = 2
+        num_qubits2 = 3
+        num_qubits3 = 1
+        num_qubits = num_qubits1 + num_qubits2 + num_qubits3
+
+        real_part = np.random.rand(2 ** num_qubits1)
+        imag_part = np.random.rand(2 ** num_qubits1)
+        input_vector1 = real_part + 1j * imag_part
+        input_vector1 = input_vector1 / np.linalg.norm(input_vector1)
+
+        real_part = np.random.rand(2 ** num_qubits2)
+        imag_part = np.random.rand(2 ** num_qubits2)
+        input_vector2 = real_part + 1j * imag_part
+        input_vector2 = input_vector2 / np.linalg.norm(input_vector2)
+
+        real_part = np.random.rand(2 ** num_qubits3)
+        imag_part = np.random.rand(2 ** num_qubits3)
+        input_vector3 = real_part + 1j * imag_part
+        input_vector3 = input_vector3 / np.linalg.norm(input_vector3)
+
+        input_vector = np.kron(np.kron(input_vector1, input_vector2), input_vector3)
+
+        circuit1 = QuantumCircuit(num_qubits)
+        UCGInitialize.initialize(circuit1, input_vector)
+        state1 = Statevector(circuit1)
+
+        circuit2 = QuantumCircuit(num_qubits)
+        UCGEInitialize.initialize(circuit2, input_vector)
+        state2 = Statevector(circuit2)
+
+        circuit1_transpiled = transpile(circuit1, basis_gates=['u', 'cx'])
+        circuit2_transpiled = transpile(circuit2, basis_gates=['u', 'cx'])
+
+        self.assertTrue(np.allclose(input_vector, state2))
+        self.assertTrue(np.allclose(state1, state2))
+        self.assertTrue(circuit1_transpiled.depth() >= circuit2_transpiled.depth())
+
     def test_minimal_complex(self):
         np.random.seed(1)
         n_qubits = 2
