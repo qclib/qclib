@@ -55,7 +55,7 @@ class TestUCGEInitialize(TestCase):
 
         self.assertTrue(np.allclose(input_vector, state2))
         self.assertTrue(np.allclose(state1, state2))
-        self.assertTrue(circuit1_transpiled.depth()**1/2 > circuit2_transpiled.depth())
+        self.assertTrue(2*circuit1_transpiled.depth()**(1/2) > circuit2_transpiled.depth())
 
     def test_compare_ucg_bipartition_real(self):
         num_qubits1 = 3
@@ -123,7 +123,7 @@ class TestUCGEInitialize(TestCase):
 
         self.assertTrue(np.allclose(input_vector, state2))
         self.assertTrue(np.allclose(state1, state2))
-        self.assertTrue(circuit1_transpiled.depth()**1/3 > circuit2_transpiled.depth())
+        self.assertTrue(2*circuit1_transpiled.depth()**(1/3) > circuit2_transpiled.depth())
 
     def test_minimal_complex(self):
         np.random.seed(1)
