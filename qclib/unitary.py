@@ -72,8 +72,8 @@ def build_unitary(gate, decomposition="qsd", iso=0):
         # Last CZGate is ommited and absorved into the neighboring multiplexor.
         ucry = multiplexor(RYGate, list(2 * theta), CZGate, False)
 
-        circuit.append(
-            ucry.to_instruction(), [n_qubits - 1] + list(range(n_qubits - 1))
+        circuit.compose(
+            ucry, [n_qubits - 1] + list(range(n_qubits - 1)), inplace=True
         )
         # Optimization (A.1) from "Synthesis of Quantum Logic Circuits".
         # Last CZGate from ucry is absorbed here.
@@ -88,7 +88,7 @@ def build_unitary(gate, decomposition="qsd", iso=0):
         return _qrd(gate)
 
     circuit = QuantumCircuit(int(log2(size)), name="qsd2q")
-    circuit.append(UnitaryGate(gate), circuit.qubits)
+    circuit.compose(UnitaryGate(gate), circuit.qubits, inplace=True)
 
     return circuit
 
@@ -99,7 +99,7 @@ def _unitary(gate_list, n_qubits, decomposition="qsd"):
         if len(gate_list[0]) == 2:
             qubits = QuantumRegister(n_qubits)
             circuit = QuantumCircuit(qubits)
-            circuit.append(UCGate(gate_list), qubits[[0]] + qubits[1:])
+            circuit.compose(UCGate(gate_list), qubits[[0]] + qubits[1:], inplace=True)
             return circuit
 
         return _csd(gate_list, n_qubits)
@@ -127,7 +127,7 @@ def _csd(gate_list, n_qubits):
 
     target = int(n_qubits - log2(len(left)))
     control = list(range(0, target)) + list(range(target + 1, n_qubits))
-    circuit.append(UCRYGate(list(mid)), [target] + control)
+    circuit.compose(UCRYGate(list(mid)), [target] + control, inplace=True)
 
     circuit = circuit.compose(gate_right, qubits)
 
@@ -169,14 +169,14 @@ def _qsd(gate1, gate2):
 
     # Left circuit
     left_gate = build_unitary(gate_w, "qsd")
-    circuit.append(left_gate.to_instruction(), qubits[0:-1])
+    circuit.compose(left_gate.to_instruction(), qubits[0:-1], inplace=True)
 
     # Middle circuit
-    circuit.append(UCRZGate(list(-2 * np.angle(list_d))), qubits[[-1]] + qubits[0:-1])
+    circuit.compose(UCRZGate(list(-2 * np.angle(list_d))), qubits[[-1]] + qubits[0:-1], inplace=True)
 
     # Right circuit
     right_gate = build_unitary(gate_v, "qsd")
-    circuit.append(right_gate.to_instruction(), qubits[0:-1])
+    circuit.compose(right_gate.to_instruction(), qubits[0:-1], inplace=True)
 
     return circuit
 

@@ -62,12 +62,16 @@ def multiplexor(
     #   The boxed CNOT gates may be canceled.
     # This is why "last_cnot=False" in both calls of "rotation_multiplexor()" and
     # also why the multiplexer in the second "circuit.append()" is reversed.
+
     mult = multiplexor(r_gate, multiplexed_angles[: size // 2], c_gate, False)
+
     circuit.compose(mult, reg[0:-1], inplace=True)
 
     circuit.compose(c_gate(), [control, target], inplace=True)
 
+
     mult = multiplexor(r_gate, multiplexed_angles[size // 2 :], c_gate, False)
+
     circuit.compose(mult.reverse_ops(), reg[0:-1], inplace=True)
 
     # The following condition allows saving CNOTs when two multiplexors are used
