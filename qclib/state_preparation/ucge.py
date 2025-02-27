@@ -179,6 +179,7 @@ class UCGEInitialize(UCGInitialize):
         new_parent = []
         for k in range(size):
             angle = np.angle([children[2 * k], children[2 * k + 1]])
+            angle = np.round(angle, 14)
             angle = angle % (2 * np.pi)
             phase = np.sum(angle)
             new_parent.append(parent[k] * np.exp(1j * phase / 2))
