@@ -13,16 +13,22 @@
 # limitations under the License.
 
 """
-todo
+Efficient version of the UCG approach for separable states
+https://arxiv.org/abs/2409.05618
 """
 import numpy as np
-import qiskit
 from qiskit.circuit.library import UCGate
-from qiskit.quantum_info import Operator
 from qclib.state_preparation.ucg import UCGInitialize
 
 
-def _repetition_verify(base, d, mux, mux_cpy):
+def _repetition_verify(
+    base: int, d: int, mux: "list[np.ndarray]", mux_cpy: "list[np.ndarray]"
+):
+    """
+    Checks whether a possible repeating pattern is valid by checking whether all elements repeat
+    in a period d and marks operators to be removed
+    """
+
     i = 0
     next_base = base + d
     while i < d:
@@ -33,20 +39,23 @@ def _repetition_verify(base, d, mux, mux_cpy):
     return True
 
 
-def _repetition_search(mux, n, mux_cpy):
+def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarray]"):
+    """
+    Search for possible repetitions by searching for equal operators in indices that are
+    powers of two When found, it calculates the position of the controls to be eliminated
+    """
 
     dont_carry = []
     for i in range(1, len(mux) // 2 + 1):
-        d = i
         entanglement = False
-        if np.log2(d).is_integer() and np.allclose(mux[i], mux[0]):
+        if np.log2(i).is_integer() and np.allclose(mux[i], mux[0]):
             mux_org = mux_cpy[:]
-            repetitions = len(mux) // (2 * d)
+            repetitions = len(mux) // (2 * i)
             base = 0
             while repetitions:
                 repetitions -= 1
-                valid = _repetition_verify(base, d, mux, mux_cpy)
-                base += 2 * d
+                valid = _repetition_verify(base, i, mux, mux_cpy)
+                base += 2 * i
                 if not valid:
                     mux_cpy[:] = mux_org
                     break
@@ -54,12 +63,17 @@ def _repetition_search(mux, n, mux_cpy):
                     entanglement = True
 
         if entanglement:
-            dont_carry.append(n + int(np.log2(d)) + 1)
+            dont_carry.append(n + int(np.log2(i)) + 1)
     return dont_carry
 
 
 class UCGEInitialize(UCGInitialize):
-    """ todo """
+    """
+    This class implements an efficient state preparation for separable states
+    Based on the UCG approach
+
+    https://arxiv.org/abs/2409.05618
+    """
 
     def __init__(self, params, label=None, opt_params=None):
         super().__init__(params, label=label, opt_params=opt_params)
@@ -83,7 +97,47 @@ class UCGEInitialize(UCGInitialize):
             r_gate = r_gate // 2
             tree_level -= 1
 
+        self.circuit.global_phase -= sum(np.angle(self.params) % (2 * np.pi)) / len(
+            self.params
+        )
+
         return self.circuit.inverse()
+
+    # pylint: disable=arguments-differ
+    def _apply_diagonal(self, bit_target: str, parent: "list[float]", ucg: UCGate):
+        children = parent
+
+        if bit_target == "1":
+            diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
+        else:
+            diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
+        if ucg.dont_carry and diagonal.shape[0] > 1:
+            # If `diagonal.shape[0] == 1` then diagonal == [1.].
+            # Therefore, `diagonal` has no effect on `children`.
+            size_required = len(ucg.dont_carry) + len(ucg.controls)
+            min_qubit = min([*ucg.dont_carry, *ucg.controls])
+            ctrl_qc = [x - min_qubit for x in ucg.controls]
+
+            # Adjusts the diagonal to the right size
+            # Necessary when a simplification occurs
+            for i in range(size_required):
+                if i not in ctrl_qc:
+                    d = 2**i
+                    new_diagonal = []
+                    n = len(diagonal)
+
+                    # Extends the operator to the total number of qubits in the circuit
+                    # This acts as identity on non-target qubits
+                    for j in range(n):
+                        new_diagonal.append(diagonal[j])
+                        if (j + 1) % d == 0:
+                            new_diagonal.extend(diagonal[j + 1 - d : j + 1])
+
+                    diagonal = np.array(new_diagonal)
+
+        children = children * diagonal
+
+        return children
 
     def _disentangle_qubit(
         self,
@@ -109,7 +163,32 @@ class UCGEInitialize(UCGInitialize):
 
         return bit_target, ucg
 
-    def _simplify(self, mux, level):
+    @staticmethod
+    def _update_parent(children):
+
+        size = len(children) // 2
+        # Calculates norms.
+        parent = [
+            np.linalg.norm([children[2 * k], children[2 * k + 1]]) for k in range(size)
+        ]
+
+        # Calculates phases.
+        new_parent = []
+        for k in range(size):
+            angle = np.angle([children[2 * k], children[2 * k + 1]])
+            angle = np.round(angle, 14)
+            angle = angle % (2 * np.pi)
+            phase = np.sum(angle)
+            new_parent.append(parent[k] * np.exp(1j * phase / 2))
+
+        parent = new_parent
+
+        return parent
+
+    def _simplify(self, mux: "list[np.ndarray]", level: int):
+        """
+        Returns the position of controls that can be eliminated and the simplified multiplexer
+        """
 
         mux_cpy = mux.copy()
         dont_carry = []
@@ -121,35 +200,6 @@ class UCGEInitialize(UCGInitialize):
         new_mux = [matrix for matrix in mux_cpy if matrix is not None]
 
         return dont_carry, new_mux
-
-    def _apply_diagonal(
-        self,
-        bit_target: str,
-        parent: "list[float]",
-        ucg: UCGate
-    ):
-        children = parent
-
-        if bit_target == "1":
-            diagonal = np.conj(ucg._get_diagonal())[
-                1::2
-            ]  # pylint: disable=protected-access
-        else:
-            diagonal = np.conj(ucg._get_diagonal())[
-                ::2
-            ]  # pylint: disable=protected-access
-        if ucg.dont_carry:
-            ucg.controls.reverse()
-            size_required = len(ucg.dont_carry) + len(ucg.controls)
-            ctrl_qc = [self.num_qubits - 1 - x for x in ucg.controls]
-            unitary_diagonal = np.diag(diagonal)
-            qc = qiskit.QuantumCircuit(size_required)
-            qc.unitary(unitary_diagonal, ctrl_qc)
-            matrix = Operator(qc).to_matrix()
-            diagonal = np.diag(matrix)
-        children = children * diagonal
-
-        return children
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):
