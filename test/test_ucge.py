@@ -13,7 +13,8 @@
 # limitations under the License.
 
 """
-    Tests for the bergholm state preparation
+Tests for UCGEInitialize
+https://arxiv.org/abs/2409.05618
 """
 from unittest import TestCase
 import random
@@ -31,7 +32,11 @@ class TestUCGEInitialize(TestCase):
     def _logical_swap(num_qubits, input_vector, new_order):
         qubit_shape = [2] * num_qubits
         reshaped_state = input_vector.reshape(qubit_shape)
-        swapped_vector = np.moveaxis(reshaped_state, new_order, range(len(new_order))).reshape(-1,)
+        swapped_vector = np.moveaxis(
+            reshaped_state, new_order, range(len(new_order))
+        ).reshape(
+            -1,
+        )
 
         return swapped_vector
 
@@ -50,22 +55,24 @@ class TestUCGEInitialize(TestCase):
         UCGEInitialize.initialize(circuit2, input_vector)
         state2 = Statevector(circuit2)
 
-        circuit1_transpiled = transpile(circuit1, basis_gates=['u', 'cx'])
-        circuit2_transpiled = transpile(circuit2, basis_gates=['u', 'cx'])
+        circuit1_transpiled = transpile(circuit1, basis_gates=["u", "cx"])
+        circuit2_transpiled = transpile(circuit2, basis_gates=["u", "cx"])
 
         self.assertTrue(np.allclose(input_vector, state2))
         self.assertTrue(np.allclose(state1, state2))
-        self.assertTrue(2*circuit1_transpiled.depth()**(1/2) > circuit2_transpiled.depth())
+        self.assertTrue(
+            2 * circuit1_transpiled.depth() ** (1 / 2) > circuit2_transpiled.depth()
+        )
 
     def test_compare_ucg_bipartition_real(self):
         num_qubits1 = 3
         num_qubits2 = 4
         num_qubits = num_qubits1 + num_qubits2
 
-        input_vector1 = np.random.rand(2 ** num_qubits1)
+        input_vector1 = np.random.rand(2**num_qubits1)
         input_vector1 = input_vector1 / np.linalg.norm(input_vector1)
 
-        input_vector2 = np.random.rand(2 ** num_qubits2)
+        input_vector2 = np.random.rand(2**num_qubits2)
         input_vector2 = input_vector2 / np.linalg.norm(input_vector2)
 
         self._test_compare_ucg_bipartition(num_qubits, input_vector1, input_vector2)
@@ -75,13 +82,13 @@ class TestUCGEInitialize(TestCase):
         num_qubits2 = 4
         num_qubits = num_qubits1 + num_qubits2
 
-        real_part = np.random.rand(2 ** num_qubits1)
-        imag_part = np.random.rand(2 ** num_qubits1)
+        real_part = np.random.rand(2**num_qubits1)
+        imag_part = np.random.rand(2**num_qubits1)
         input_vector1 = real_part + 1j * imag_part
         input_vector1 = input_vector1 / np.linalg.norm(input_vector1)
 
-        real_part = np.random.rand(2 ** num_qubits2)
-        imag_part = np.random.rand(2 ** num_qubits2)
+        real_part = np.random.rand(2**num_qubits2)
+        imag_part = np.random.rand(2**num_qubits2)
         input_vector2 = real_part + 1j * imag_part
         input_vector2 = input_vector2 / np.linalg.norm(input_vector2)
 
@@ -93,18 +100,18 @@ class TestUCGEInitialize(TestCase):
         num_qubits3 = 1
         num_qubits = num_qubits1 + num_qubits2 + num_qubits3
 
-        real_part = np.random.rand(2 ** num_qubits1)
-        imag_part = np.random.rand(2 ** num_qubits1)
+        real_part = np.random.rand(2**num_qubits1)
+        imag_part = np.random.rand(2**num_qubits1)
         input_vector1 = real_part + 1j * imag_part
         input_vector1 = input_vector1 / np.linalg.norm(input_vector1)
 
-        real_part = np.random.rand(2 ** num_qubits2)
-        imag_part = np.random.rand(2 ** num_qubits2)
+        real_part = np.random.rand(2**num_qubits2)
+        imag_part = np.random.rand(2**num_qubits2)
         input_vector2 = real_part + 1j * imag_part
         input_vector2 = input_vector2 / np.linalg.norm(input_vector2)
 
-        real_part = np.random.rand(2 ** num_qubits3)
-        imag_part = np.random.rand(2 ** num_qubits3)
+        real_part = np.random.rand(2**num_qubits3)
+        imag_part = np.random.rand(2**num_qubits3)
         input_vector3 = real_part + 1j * imag_part
         input_vector3 = input_vector3 / np.linalg.norm(input_vector3)
 
@@ -118,12 +125,12 @@ class TestUCGEInitialize(TestCase):
         UCGEInitialize.initialize(circuit2, input_vector)
         state2 = Statevector(circuit2)
 
-        circuit1_transpiled = transpile(circuit1, basis_gates=['u', 'cx'])
-        circuit2_transpiled = transpile(circuit2, basis_gates=['u', 'cx'])
+        circuit1_transpiled = transpile(circuit1, basis_gates=["u", "cx"])
+        circuit2_transpiled = transpile(circuit2, basis_gates=["u", "cx"])
 
         self.assertTrue(np.allclose(input_vector, state2))
         self.assertTrue(np.allclose(state1, state2))
-        self.assertTrue(2*circuit1_transpiled.depth()**(1/3) > circuit2_transpiled.depth())
+        self.assertTrue(2 * circuit1_transpiled.depth() ** (1 / 3) > circuit2_transpiled.depth())
 
     def test_minimal_complex(self):
         np.random.seed(1)
@@ -137,7 +144,7 @@ class TestUCGEInitialize(TestCase):
             state = np.kron(state, state_one_qubit)
 
         ucge_circ = UCGEInitialize(state).definition
-        transpiled_ucge_circ = transpile(ucge_circ, basis_gates=['u', 'cx'])
+        transpiled_ucge_circ = transpile(ucge_circ, basis_gates=["u", "cx"])
         ucge_depth = transpiled_ucge_circ.depth()
 
         self.assertTrue(ucge_depth == 1)

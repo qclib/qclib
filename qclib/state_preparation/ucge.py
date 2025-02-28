@@ -14,13 +14,16 @@
 
 """
 Efficient version of the UCG approach for separable states
+https://arxiv.org/abs/2409.05618
 """
 import numpy as np
 from qiskit.circuit.library import UCGate
 from qclib.state_preparation.ucg import UCGInitialize
 
 
-def _repetition_verify(base: int, d: int, mux: 'list[np.ndarray]', mux_cpy: 'list[np.ndarray]'):
+def _repetition_verify(
+    base: int, d: int, mux: "list[np.ndarray]", mux_cpy: "list[np.ndarray]"
+):
     """
     Checks whether a possible repeating pattern is valid by checking whether all elements repeat
     in a period d and marks operators to be removed
@@ -36,10 +39,10 @@ def _repetition_verify(base: int, d: int, mux: 'list[np.ndarray]', mux_cpy: 'lis
     return True
 
 
-def _repetition_search(mux: 'list[np.ndarray]', n: int, mux_cpy: 'list[np.ndarray]'):
+def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarray]"):
     """
-    Search for possible repetitions by searching for equal operators in indices that are powers of two
-    When found, it calculates the position of the controls to be eliminated
+    Search for possible repetitions by searching for equal operators in indices that are
+    powers of two When found, it calculates the position of the controls to be eliminated
     """
 
     dont_carry = []
@@ -68,6 +71,8 @@ class UCGEInitialize(UCGInitialize):
     """
     This class implements an efficient state preparation for separable states
     Based on the UCG approach
+
+    https://arxiv.org/abs/2409.05618
     """
 
     def __init__(self, params, label=None, opt_params=None):
@@ -92,32 +97,26 @@ class UCGEInitialize(UCGInitialize):
             r_gate = r_gate // 2
             tree_level -= 1
 
-        self.circuit.global_phase -= sum(np.angle(self.params) % (2*np.pi)) / len(self.params)
+        self.circuit.global_phase -= sum(np.angle(self.params) % (2 * np.pi)) / len(
+            self.params
+        )
 
         return self.circuit.inverse()
 
-    def _apply_diagonal(
-        self,
-        bit_target: str,
-        parent: "list[float]",
-        ucg: UCGate
-    ):
+    # pylint: disable=arguments-differ
+    def _apply_diagonal(self, bit_target: str, parent: "list[float]", ucg: UCGate):
         children = parent
 
         if bit_target == "1":
-            diagonal = np.conj(ucg._get_diagonal())[
-                1::2
-            ]  # pylint: disable=protected-access
+            diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
         else:
-            diagonal = np.conj(ucg._get_diagonal())[
-                ::2
-            ]  # pylint: disable=protected-access
+            diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
         if ucg.dont_carry and diagonal.shape[0] > 1:
             # If `diagonal.shape[0] == 1` then diagonal == [1.].
             # Therefore, `diagonal` has no effect on `children`.
             size_required = len(ucg.dont_carry) + len(ucg.controls)
             min_qubit = min([*ucg.dont_carry, *ucg.controls])
-            ctrl_qc = [x-min_qubit for x in ucg.controls]
+            ctrl_qc = [x - min_qubit for x in ucg.controls]
 
             # Adjusts the diagonal to the right size
             # Necessary when a simplification occurs
@@ -132,7 +131,7 @@ class UCGEInitialize(UCGInitialize):
                     for j in range(n):
                         new_diagonal.append(diagonal[j])
                         if (j + 1) % d == 0:
-                            new_diagonal.extend(diagonal[j + 1 - d:j + 1])
+                            new_diagonal.extend(diagonal[j + 1 - d : j + 1])
 
                     diagonal = np.array(new_diagonal)
 
@@ -170,9 +169,7 @@ class UCGEInitialize(UCGInitialize):
         size = len(children) // 2
         # Calculates norms.
         parent = [
-            np.linalg.norm(
-                [children[2 * k], children[2 * k + 1]]
-            ) for k in range(size)
+            np.linalg.norm([children[2 * k], children[2 * k + 1]]) for k in range(size)
         ]
 
         # Calculates phases.
@@ -188,7 +185,7 @@ class UCGEInitialize(UCGInitialize):
 
         return parent
 
-    def _simplify(self, mux: 'list[np.ndarray]', level: int):
+    def _simplify(self, mux: "list[np.ndarray]", level: int):
         """
         Returns the position of controls that can be eliminated and the simplified multiplexer
         """
