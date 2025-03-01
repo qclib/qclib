@@ -23,29 +23,17 @@ from qiskit import QuantumCircuit, transpile
 from qiskit.quantum_info import Statevector
 from qclib.state_preparation import UCGInitialize
 from qclib.state_preparation import UCGEInitialize
-
+from qclib.util import logical_swap
 
 class TestUCGEInitialize(TestCase):
     """Test UCGEInitialize"""
-
-    @staticmethod
-    def _logical_swap(num_qubits, input_vector, new_order):
-        qubit_shape = [2] * num_qubits
-        reshaped_state = input_vector.reshape(qubit_shape)
-        swapped_vector = np.moveaxis(
-            reshaped_state, new_order, range(len(new_order))
-        ).reshape(
-            -1,
-        )
-
-        return swapped_vector
 
     def _test_compare_ucg_bipartition(self, num_qubits, input_vector1, input_vector2):
         qubit_order = list(range(num_qubits))
         random.shuffle(qubit_order)
 
         input_vector = np.kron(input_vector1, input_vector2)
-        input_vector = self._logical_swap(num_qubits, input_vector, qubit_order)
+        input_vector = logical_swap(input_vector, qubit_order)
 
         circuit1 = QuantumCircuit(num_qubits)
         UCGInitialize.initialize(circuit1, input_vector)
