@@ -220,7 +220,7 @@ def schmidt_decomposition(state_vector, partition, rank=0, svd='auto'):
         (
             svd == 'auto' and
             rank==1 and
-            n_qubits >= 14 and
+            n_qubits >= 12 and
             len(partition) > round(n_qubits/2.5)
         )
     ):
