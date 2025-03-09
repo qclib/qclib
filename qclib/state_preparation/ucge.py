@@ -111,6 +111,7 @@ class UCGEInitialize(UCGInitialize):
             diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
         else:
             diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
+        diagonal = np.round(diagonal, 14)
         if ucg.dont_carry and diagonal.shape[0] > 1:
             # If `diagonal.shape[0] == 1` then diagonal == [1.].
             # Therefore, `diagonal` has no effect on `children`.
@@ -176,7 +177,7 @@ class UCGEInitialize(UCGInitialize):
         new_parent = []
         for k in range(size):
             angle = np.angle([children[2 * k], children[2 * k + 1]])
-            angle = np.round(angle, 14)
+            # angle = np.round(angle, 14)
             angle = angle % (2 * np.pi)
             phase = np.sum(angle)
             new_parent.append(parent[k] * np.exp(1j * phase / 2))
