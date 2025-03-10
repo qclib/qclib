@@ -112,7 +112,7 @@ class UCGEInitialize(UCGInitialize):
         else:
             diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
 
-        diagonal = np.abs(diagonal) * np.exp(1j * np.round(np.angle(diagonal), 6))
+        diagonal = np.abs(diagonal) * np.exp(1j * np.round(np.angle(diagonal), 15))
 
         if ucg.dont_carry and diagonal.shape[0] > 1:
             # If `diagonal.shape[0] == 1` then diagonal == [1.].
