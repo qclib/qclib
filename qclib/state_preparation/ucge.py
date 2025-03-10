@@ -174,7 +174,6 @@ class UCGEInitialize(UCGInitialize):
         if size > 1:
             for k in range(size):
                 angle = np.angle([children[2 * k], children[2 * k + 1]])
-                angle = np.round(angle, 14)
                 angle = angle % (2 * np.pi)
                 phase = np.sum(angle) / 2
                 value = parent[k] * np.exp(1j * phase)
