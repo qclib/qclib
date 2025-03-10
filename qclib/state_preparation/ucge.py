@@ -97,10 +97,6 @@ class UCGEInitialize(UCGInitialize):
             r_gate = r_gate // 2
             tree_level -= 1
 
-        self.circuit.global_phase -= sum(np.angle(self.params) % (2 * np.pi)) / len(
-            self.params
-        )
-
         return self.circuit.inverse()
 
     # pylint: disable=arguments-differ
@@ -174,14 +170,23 @@ class UCGEInitialize(UCGInitialize):
 
         # Calculates phases.
         new_parent = []
-        for k in range(size):
-            angle = np.angle([children[2 * k], children[2 * k + 1]])
-            angle = np.round(angle, 14)
-            angle = angle % (2 * np.pi)
-            phase = np.sum(angle)
-            new_parent.append(parent[k] * np.exp(1j * phase / 2))
 
-        parent = new_parent
+        if size > 1:
+            for k in range(size):
+                angle = np.angle([children[2 * k], children[2 * k + 1]])
+                angle = np.round(angle, 14)
+                angle = angle % (2 * np.pi)
+                phase = np.sum(angle) / 2
+                value = parent[k] * np.exp(1j * phase)
+
+                temp = children[2 * k] / value
+                if temp.real < 0:
+                    new_parent.append(-value)
+                else:
+                    new_parent.append(value)
+
+
+            parent = new_parent
 
         return parent
 

@@ -136,3 +136,35 @@ class TestUCGEInitialize(TestCase):
         ucge_depth = transpiled_ucge_circ.depth()
 
         self.assertTrue(ucge_depth == 1)
+
+    def test_product6(self):
+
+        n_subspaces = 6
+        subspace_dim = 4
+
+        # Creates a product state
+        state = [1]
+        for _ in range(n_subspaces):
+            state_one_subspace = np.random.rand(subspace_dim) + np.random.rand(subspace_dim) * 1j
+            state_one_subspace = state_one_subspace / np.linalg.norm(state_one_subspace)
+            state = np.kron(state, state_one_subspace)
+
+        qubit_order = list(range(12))
+        random.shuffle(qubit_order)
+
+        state = logical_swap(state, qubit_order)
+
+        ucge_circ = UCGEInitialize(state).definition
+        calc_state = Statevector(ucge_circ)
+
+        self.assertTrue(np.allclose(state, calc_state))
+
+        transpiled_ucge_circ = transpile(ucge_circ, basis_gates=["u", "cx"])
+        ucge_depth = transpiled_ucge_circ.depth()
+
+        state_one_subspace = np.random.rand(subspace_dim) + np.random.rand(subspace_dim) * 1j
+        state_one_subspace = state_one_subspace / np.linalg.norm(state_one_subspace)
+        ucge_circ_one = UCGEInitialize(state_one_subspace).definition
+        t_one_depth = transpile(ucge_circ_one, basis_gates=["u", "cx"])
+        one_depth = t_one_depth.depth()
+        self.assertEqual(ucge_depth, one_depth)
