@@ -174,12 +174,20 @@ class UCGEInitialize(UCGInitialize):
 
         # Calculates phases.
         new_parent = []
+
         for k in range(size):
             angle = np.angle([children[2 * k], children[2 * k + 1]])
             angle = np.round(angle, 14)
             angle = angle % (2 * np.pi)
-            phase = np.sum(angle)
-            new_parent.append(parent[k] * np.exp(1j * phase / 2))
+            phase = np.sum(angle) / 2
+            value = parent[k] * np.exp(1j * phase)
+
+            temp = children[2 * k] / value
+            if temp.real < 0:
+                new_parent.append(-value)
+            else:
+                new_parent.append(value)
+
 
         parent = new_parent
 
