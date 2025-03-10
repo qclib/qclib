@@ -66,8 +66,8 @@ class TestUCGEInitialize(TestCase):
         self._test_compare_ucg_bipartition(num_qubits, input_vector1, input_vector2)
 
     def test_compare_ucg_bipartition_complex(self):
-        num_qubits1 = 3
-        num_qubits2 = 4
+        num_qubits1 = 6
+        num_qubits2 = 6
         num_qubits = num_qubits1 + num_qubits2
 
         real_part = np.random.rand(2**num_qubits1)
@@ -136,3 +136,42 @@ class TestUCGEInitialize(TestCase):
         ucge_depth = transpiled_ucge_circ.depth()
 
         self.assertTrue(ucge_depth == 1)
+
+    def test_product6(self):
+
+        n_subspaces = 6
+        subspace_dim = 4
+
+        # Creates a product state
+        state = [1]
+        for _ in range(n_subspaces):
+            state_one_subspace = np.random.rand(subspace_dim) + np.random.rand(subspace_dim) * 1j
+            state_one_subspace = state_one_subspace / np.linalg.norm(state_one_subspace)
+            state = np.kron(state, state_one_subspace)
+
+        qubit_order = list(range(12))
+        random.shuffle(qubit_order)
+
+        state = logical_swap(state, qubit_order)
+
+        ucge_circ = UCGEInitialize(state).definition
+        calc_state = Statevector(ucge_circ)
+
+        p1 = np.angle(state[0])
+        p2 = np.angle(calc_state[0])
+        state2 = np.exp(-1j*p1) * state
+        calc_state2 = np.exp(-1j * p2) * calc_state
+        self.assertTrue(np.allclose(state2, calc_state2))
+
+        # TODO: Fix global phase
+        self.assertTrue(np.allclose(state, calc_state))
+
+        transpiled_ucge_circ = transpile(ucge_circ, basis_gates=["u", "cx"])
+        ucge_depth = transpiled_ucge_circ.depth()
+
+        state_one_subspace = np.random.rand(subspace_dim) + np.random.rand(subspace_dim) * 1j
+        state_one_subspace = state_one_subspace / np.linalg.norm(state_one_subspace)
+        ucge_circ_one = UCGEInitialize(state_one_subspace).definition
+        t_one_depth = transpile(ucge_circ_one, basis_gates=["u", "cx"])
+        one_depth = t_one_depth.depth()
+        self.assertEqual(ucge_depth, one_depth)
