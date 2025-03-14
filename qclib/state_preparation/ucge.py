@@ -45,9 +45,9 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarra
     """
 
     dont_carry = []
-    for i in range(1, len(mux) // 2 + 1):
+    for i in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
         not_entangled = False
-        if np.log2(i).is_integer() and np.allclose(mux[i], mux[0]):
+        if np.allclose(mux[i], mux[0]):
             repetitions = len(mux) // (2 * i)
             base = 0
             while repetitions:
