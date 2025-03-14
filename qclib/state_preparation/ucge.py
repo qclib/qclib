@@ -33,7 +33,7 @@ def _repetition_verify(
 
     if not np.allclose(mux[base:base+d], mux[next_base:next_base+d]):
         return False
-    
+
     mux_cpy[next_base:next_base+d] = d * [None]
     return True
 
@@ -48,7 +48,6 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarra
     for i in range(1, len(mux) // 2 + 1):
         not_entangled = False
         if np.log2(i).is_integer() and np.allclose(mux[i], mux[0]):
-            mux_org = mux_cpy[:]
             repetitions = len(mux) // (2 * i)
             base = 0
             while repetitions:
@@ -56,7 +55,6 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarra
                 valid = _repetition_verify(base, i, mux, mux_cpy)
                 base += 2 * i
                 if not valid:
-                    mux_cpy[:] = mux_org
                     break
                 if repetitions == 0:
                     not_entangled = True
