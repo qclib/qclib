@@ -21,7 +21,7 @@ from qiskit.circuit.library import UCGate
 from qclib.state_preparation.ucg import UCGInitialize
 
 
-def _repetition_verify(
+def _first_and_second_halves_equal(
     base: int, d: int, mux: "list[np.ndarray]", mux_cpy: "list[np.ndarray]"
 ):
     """
@@ -47,21 +47,28 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarra
     dont_carry = []
     for i in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
         not_entangled = False
+
         if np.allclose(mux[i], mux[0]):
-            repetitions = len(mux) // (2 * i)
-            base = 0
-            while repetitions:
-                repetitions -= 1
-                valid = _repetition_verify(base, i, mux, mux_cpy)
-                base += 2 * i
-                if not valid:
-                    break
-                if repetitions == 0:
-                    not_entangled = True
+            not_entangled = is_dont_care(i, mux, mux_cpy)
 
         if not_entangled:
             dont_carry.append(n + int(np.log2(i)) + 1)
     return dont_carry
+
+
+def is_dont_care(i, mux, mux_cpy):
+    
+    not_entangled = True
+    repetitions = len(mux) // (2 * i)
+    base = 0
+    for _ in range(repetitions, -1, -1):
+        valid = _first_and_second_halves_equal(base, i, mux, mux_cpy)
+        base += 2 * i
+        if not valid:
+            not_entangled = False
+            break
+
+    return not_entangled
 
 
 class UCGEInitialize(UCGInitialize):
