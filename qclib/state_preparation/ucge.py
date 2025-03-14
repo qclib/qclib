@@ -29,13 +29,12 @@ def _repetition_verify(
     in a period d and marks operators to be removed
     """
 
-    i = 0
     next_base = base + d
-    while i < d:
-        if not np.allclose(mux[base], mux[next_base]):
-            return False
-        mux_cpy[next_base] = None
-        base, next_base, i = base + 1, next_base + 1, i + 1
+
+    if not np.allclose(mux[base:base+d], mux[next_base:next_base+d]):
+        return False
+    
+    mux_cpy[next_base:next_base+d] = d * [None]
     return True
 
 
@@ -47,7 +46,7 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarra
 
     dont_carry = []
     for i in range(1, len(mux) // 2 + 1):
-        entanglement = False
+        not_entangled = False
         if np.log2(i).is_integer() and np.allclose(mux[i], mux[0]):
             mux_org = mux_cpy[:]
             repetitions = len(mux) // (2 * i)
@@ -60,9 +59,9 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarra
                     mux_cpy[:] = mux_org
                     break
                 if repetitions == 0:
-                    entanglement = True
+                    not_entangled = True
 
-        if entanglement:
+        if not_entangled:
             dont_carry.append(n + int(np.log2(i)) + 1)
     return dont_carry
 
