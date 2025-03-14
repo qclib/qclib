@@ -57,7 +57,7 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarra
 
 
 def is_dont_care(i, mux, mux_cpy):
-    
+
     not_entangled = True
     repetitions = len(mux) // (2 * i)
     base = 0
