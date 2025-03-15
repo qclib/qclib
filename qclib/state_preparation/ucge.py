@@ -38,12 +38,12 @@ def _first_and_second_halves_equal(
     return True
 
 
-def _repetition_search(mux: "list[np.ndarray]", n: int, deleted_operators: "set"):
+def _repetition_search(mux: "list[np.ndarray]", n: int):
     """
     Search for possible repetitions by searching for equal operators in indices that are
     powers of two When found, it calculates the position of the controls to be eliminated
     """
-
+    deleted_operators = set()
     dont_carry = []
     for i in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
         not_entangled = False
@@ -54,7 +54,7 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, deleted_operators: "set"
         if not_entangled:
             dont_carry.append(n + int(np.log2(i)) + 1)
             deleted_operators.update(delete_set)
-    return dont_carry
+    return dont_carry, deleted_operators
 
 
 def is_dont_care(d, mux):
@@ -206,7 +206,7 @@ class UCGEInitialize(UCGInitialize):
         new_mux = mux
         if len(mux) > 1:
             n = self.num_qubits - level
-            dont_carry = _repetition_search(mux, n, deleted_operators)
+            dont_carry, deleted_operators = _repetition_search(mux, n)
         if deleted_operators:
             new_mux = mux.copy()
             for k in deleted_operators:
