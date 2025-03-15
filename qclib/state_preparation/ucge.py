@@ -30,7 +30,7 @@ def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
     return np.allclose(mux[base : base + d], mux[next_base : next_base + d])
 
 
-def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
+def _repetition_search(mux: "list[np.ndarray]", target_qubit: int):
     """
     Search for possible partitions by searching for equal operators in mux[0] and mux[d],
     where d is power of two. When a possible partition is found, it calculates the position
@@ -39,7 +39,7 @@ def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
     Parameters
     ----------
     mux: List of 2 x 2 unitary gates representing a multiplexer
-    reversed_level
+    target_qubit
 
     Returns
     -------
@@ -56,7 +56,7 @@ def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
             delete_set = _find_operators_to_remove(d, mux)
 
         if delete_set:
-            removed_control = reversed_level + int(np.log2(d)) + 1
+            removed_control = target_qubit + int(np.log2(d)) + 1
             deleted_controls.append(removed_control)
             deleted_operators.update(delete_set)
 
@@ -83,12 +83,12 @@ def _find_operators_to_remove(d, mux):
 
     deleted_operators = set()
     num_partitions = len(mux) // (2 * d)
-    base = 0
+    partition_first_idx = 0
 
     for _ in range(num_partitions, 0, -1):
-        if _first_and_second_halves_equal(base, d, mux):
-            deleted_operators.update(range(base + d, base + 2 * d))
-            base += 2 * d
+        if _first_and_second_halves_equal(partition_first_idx, d, mux):
+            deleted_operators.update(range(partition_first_idx + d, partition_first_idx + 2 * d))
+            partition_first_idx += 2 * d
         else:
             deleted_operators = set()
             break
@@ -217,9 +217,9 @@ class UCGEInitialize(UCGInitialize):
 
         if len(mux) > 1:
             level = np.log2(len(mux)) + 1
-            reversed_level = self.num_qubits - level
+            target_qubit = self.num_qubits - level
 
-            removed_controls, deleted_operators = _repetition_search(mux, reversed_level)
+            removed_controls, deleted_operators = _repetition_search(mux, target_qubit)
 
         if deleted_operators:
             simplified_mux = [mux[k] for k in range(len(mux)) if k not in deleted_operators]
