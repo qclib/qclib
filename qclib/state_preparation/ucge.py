@@ -32,9 +32,9 @@ def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
 
 def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
     """
-    Search for possible partitions by searching for equal operators in indices that are
-    powers of two. When a partition is found, it calculates the position of the controls
-    and operators to be eliminated
+    Search for possible partitions by searching for equal operators in mux[0] and mux[d],
+    where d is power of two. When a possible partition is found, it calculates the position
+    of the controls and operators to be eliminated
 
     Parameters
     ----------
@@ -186,6 +186,7 @@ class UCGEInitialize(UCGInitialize):
                 phase = np.sum(angle) / 2
                 value = parent[k] * np.exp(1j * phase)
 
+                # avoid a global phase difference in the operators
                 temp = children[2 * k] / value
                 if temp.real < 0:
                     new_parent.append(-value)
@@ -198,6 +199,8 @@ class UCGEInitialize(UCGInitialize):
 
     def _simplify(self, mux: "list[np.ndarray]"):
         """
+        Remove redundant gates and operators from the multiplexer
+
         Parameters
         ----------
         mux: List of 2 x 2 unitary gates representing a multiplexer
@@ -206,7 +209,7 @@ class UCGEInitialize(UCGInitialize):
         Returns
         -------
         removed_controls: controls that must be removed of the multiplexer
-        new_mux: multiplexer without the redundant gates
+        simplified_mux: multiplexer without the redundant gates
         """
 
         deleted_operators = set()
@@ -214,16 +217,16 @@ class UCGEInitialize(UCGInitialize):
 
         if len(mux) > 1:
             level = np.log2(len(mux)) + 1
-
             reversed_level = self.num_qubits - level
+
             removed_controls, deleted_operators = _repetition_search(mux, reversed_level)
 
         if deleted_operators:
-            new_mux = [mux[k] for k in range(len(mux)) if k not in deleted_operators]
-            return removed_controls, new_mux
+            simplified_mux = [mux[k] for k in range(len(mux)) if k not in deleted_operators]
+            return removed_controls, simplified_mux
 
-        new_mux = mux
-        return removed_controls, new_mux
+        simplified_mux = mux
+        return removed_controls, simplified_mux
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):
