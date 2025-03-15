@@ -30,30 +30,41 @@ def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
     return np.allclose(mux[base : base + d], mux[next_base : next_base + d])
 
 
-def _repetition_search(mux: "list[np.ndarray]", n: int):
+def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
     """
     Search for possible repetitions by searching for equal operators in indices that are
     powers of two When found, it calculates the position of the controls to be eliminated
+
+    Parameters
+    ----------
+    mux: List of 2 x 2 unitary gates representing a multiplexer
+    reversed_level
+
+    Returns
+    -------
+    deleted_controls: controls that must be removed from the multiplexer
+    deleted_operators: index of operators that must be removed from the multiplexer
     """
+
     deleted_operators = set()
-    dont_carry = []
+    deleted_controls = []
 
     for d in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
-        not_entangled = False
         delete_set = set()
         if np.allclose(mux[d], mux[0]):
-            not_entangled, delete_set = _is_dont_care(d, mux)
+            delete_set = _is_dont_care(d, mux)
 
-        if not_entangled:
-            dont_carry.append(n + int(np.log2(d)) + 1)
+        if delete_set:
+            removed_control = reversed_level + int(np.log2(d)) + 1
+            deleted_controls.append(removed_control)
             deleted_operators.update(delete_set)
-    return dont_carry, deleted_operators
+
+    return deleted_controls, deleted_operators
 
 
 def _is_dont_care(d, mux):
 
     deleted_operators = set()
-    not_entangled = True
     repetitions = len(mux) // (2 * d)
     base = 0
     for _ in range(repetitions, 0, -1):
@@ -61,10 +72,9 @@ def _is_dont_care(d, mux):
             deleted_operators.update(range(base + d, base + 2 * d))
             base += 2 * d
         else:
-            not_entangled = False
             break
 
-    return not_entangled, deleted_operators
+    return deleted_operators
 
 
 class UCGEInitialize(UCGInitialize):
@@ -126,7 +136,7 @@ class UCGEInitialize(UCGInitialize):
         bit_target = self.str_target[self.num_qubits - tree_level]
 
         old_mult, old_controls, target = self._define_mult(children, parent, tree_level)
-        nc, mult = self._simplify(old_mult, tree_level)
+        nc, mult = self._simplify(old_mult)
         mult_controls = [x for x in old_controls if x not in nc]
 
         if self.preserve:
@@ -167,7 +177,7 @@ class UCGEInitialize(UCGInitialize):
 
         return parent
 
-    def _simplify(self, mux: "list[np.ndarray]", level: int):
+    def _simplify(self, mux: "list[np.ndarray]"):
         """
         Parameters
         ----------
@@ -184,8 +194,10 @@ class UCGEInitialize(UCGInitialize):
         removed_controls = []
 
         if len(mux) > 1:
-            n = self.num_qubits - level
-            removed_controls, deleted_operators = _repetition_search(mux, n)
+            level = np.log2(len(mux)) + 1
+
+            reversed_level = self.num_qubits - level
+            removed_controls, deleted_operators = _repetition_search(mux, reversed_level)
 
         if deleted_operators:
             new_mux = [mux[k] for k in range(len(mux)) if k not in deleted_operators]
