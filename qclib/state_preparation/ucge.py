@@ -169,7 +169,15 @@ class UCGEInitialize(UCGInitialize):
 
     def _simplify(self, mux: "list[np.ndarray]", level: int):
         """
-        Returns the position of controls that can be eliminated and the simplified multiplexer
+        Parameters
+        ----------
+        mux: List of 2 x 2 unitary gates representing a multiplexer
+        level: level of the multiplexer in the state preparation tree
+
+        Returns
+        -------
+        removed_controls: controls that must be removed of the multiplexer
+        new_mux: multiplexer without the redundant gates
         """
 
         deleted_operators = set()
@@ -177,15 +185,14 @@ class UCGEInitialize(UCGInitialize):
 
         if len(mux) > 1:
             n = self.num_qubits - level
-            k = int(np.log2(len(mux)))
-
             removed_controls, deleted_operators = _repetition_search(mux, n)
 
         if deleted_operators:
             new_mux = [mux[k] for k in range(len(mux)) if k not in deleted_operators]
             return removed_controls, new_mux
 
-        return removed_controls, mux
+        new_mux = mux
+        return removed_controls, new_mux
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):
