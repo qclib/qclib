@@ -86,27 +86,6 @@ class UCGEInitialize(UCGInitialize):
     def __init__(self, params, label=None, opt_params=None):
         super().__init__(params, label=label, opt_params=opt_params)
 
-    def _define_initialize(self):
-
-        children = self.params
-        parent = self._update_parent(children)
-        tree_level = self.num_qubits
-        r_gate = self.target_state // 2
-
-        while tree_level > 0:
-
-            bit_target, ucg = self._disentangle_qubit(
-                children, parent, r_gate, tree_level
-            )
-            children = self._apply_diagonal(bit_target, parent, ucg)
-            parent = self._update_parent(children)
-
-            # prepare next iteration
-            r_gate = r_gate // 2
-            tree_level -= 1
-
-        return self.circuit.inverse()
-
     # pylint: disable=arguments-differ
     def _apply_diagonal(self, bit_target: str, parent: "list[float]", ucg: UCGate):
         children = parent
@@ -135,7 +114,7 @@ class UCGEInitialize(UCGInitialize):
                     for j in range(n):
                         new_diagonal.append(diagonal[j])
                         if (j + 1) % d == 0:
-                            new_diagonal.extend(diagonal[j + 1 - d : j + 1])
+                            new_diagonal.extend(diagonal[j + 1 - d: j + 1])
 
                     diagonal = np.array(new_diagonal)
 
@@ -192,7 +171,6 @@ class UCGEInitialize(UCGInitialize):
                 else:
                     new_parent.append(value)
 
-
             parent = new_parent
 
         return parent
@@ -205,16 +183,16 @@ class UCGEInitialize(UCGInitialize):
         deleted_operators = set()
         dont_carry = []
         new_mux = mux
+
         if len(mux) > 1:
             n = self.num_qubits - level
             dont_carry, deleted_operators = _repetition_search(mux, n)
+
         if deleted_operators:
             new_mux = mux.copy()
             for k in deleted_operators:
-                try:
-                    new_mux[k] = None
-                except IndexError:
-                    pass
+                new_mux[k] = None
+
             new_mux = [matrix for matrix in new_mux if matrix is not None]
 
         return dont_carry, new_mux
