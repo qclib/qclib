@@ -32,8 +32,9 @@ def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
 
 def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
     """
-    Search for possible repetitions by searching for equal operators in indices that are
-    powers of two When found, it calculates the position of the controls to be eliminated
+    Search for possible partitions by searching for equal operators in indices that are
+    powers of two. When a partition is found, it calculates the position of the controls
+    and operators to be eliminated
 
     Parameters
     ----------
@@ -52,7 +53,7 @@ def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
     for d in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
         delete_set = set()
         if np.allclose(mux[d], mux[0]):
-            delete_set = find_operators_to_remove(d, mux)
+            delete_set = _find_operators_to_remove(d, mux)
 
         if delete_set:
             removed_control = reversed_level + int(np.log2(d)) + 1
@@ -62,7 +63,7 @@ def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
     return deleted_controls, deleted_operators
 
 
-def find_operators_to_remove(d, mux):
+def _find_operators_to_remove(d, mux):
     """
     Verifies if mux can be split into len(mux) // (2 * d) sequential partitions, where
     the operators in the first half of each partition is equal to the second half. If
