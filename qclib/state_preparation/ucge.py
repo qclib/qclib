@@ -46,14 +46,14 @@ def _repetition_search(mux: "list[np.ndarray]", n: int):
     deleted_operators = set()
     dont_carry = []
 
-    for i in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
+    for d in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
         not_entangled = False
         delete_set = set()
-        if np.allclose(mux[i], mux[0]):
-            not_entangled, delete_set = is_dont_care(i, mux)
+        if np.allclose(mux[d], mux[0]):
+            not_entangled, delete_set = is_dont_care(d, mux)
 
         if not_entangled:
-            dont_carry.append(n + int(np.log2(i)) + 1)
+            dont_carry.append(n + int(np.log2(d)) + 1)
             deleted_operators.update(delete_set)
     return dont_carry, deleted_operators
 
