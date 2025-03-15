@@ -21,9 +21,7 @@ from qiskit.circuit.library import UCGate
 from qclib.state_preparation.ucg import UCGInitialize
 
 
-def _first_and_second_halves_equal(
-    base: int, d: int, mux: "list[np.ndarray]"
-):
+def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
     """
     Checks whether a possible repeating pattern is valid by checking whether all elements repeat
     in a period d and marks operators to be removed
@@ -31,7 +29,7 @@ def _first_and_second_halves_equal(
 
     next_base = base + d
 
-    if not np.allclose(mux[base:base+d], mux[next_base:next_base+d]):
+    if not np.allclose(mux[base : base + d], mux[next_base : next_base + d]):
         return False
 
     return True
@@ -113,7 +111,7 @@ class UCGEInitialize(UCGInitialize):
                     for j in range(n):
                         new_diagonal.append(diagonal[j])
                         if (j + 1) % d == 0:
-                            new_diagonal.extend(diagonal[j + 1 - d: j + 1])
+                            new_diagonal.extend(diagonal[j + 1 - d : j + 1])
 
                     diagonal = np.array(new_diagonal)
 
