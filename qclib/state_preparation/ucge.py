@@ -22,7 +22,7 @@ from qclib.state_preparation.ucg import UCGInitialize
 
 
 def _first_and_second_halves_equal(
-    base: int, d: int, mux: "list[np.ndarray]", mux_cpy: "list[np.ndarray]"
+    base: int, d: int, mux: "list[np.ndarray]"
 ):
     """
     Checks whether a possible repeating pattern is valid by checking whether all elements repeat
@@ -34,7 +34,6 @@ def _first_and_second_halves_equal(
     if not np.allclose(mux[base:base+d], mux[next_base:next_base+d]):
         return False
 
-    mux_cpy[next_base:next_base+d] = d * [None]
     return True
 
 
@@ -56,15 +55,16 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarra
     return dont_carry
 
 
-def is_dont_care(i, mux, mux_cpy):
+def is_dont_care(d, mux, mux_cpy):
 
     not_entangled = True
-    repetitions = len(mux) // (2 * i)
+    repetitions = len(mux) // (2 * d)
     base = 0
     for _ in range(repetitions, -1, -1):
-        valid = _first_and_second_halves_equal(base, i, mux, mux_cpy)
-        base += 2 * i
-        if not valid:
+        if _first_and_second_halves_equal(base, d, mux):
+            mux_cpy[base + d:base + 2 * d] = d * [None]
+            base += 2 * d
+        else:
             not_entangled = False
             break
 
