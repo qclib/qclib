@@ -19,7 +19,6 @@ https://arxiv.org/abs/2409.05618
 import numpy as np
 from qiskit.circuit.library import UCGate
 from qclib.state_preparation.ucg import UCGInitialize
-from typing import Set
 
 
 def _first_and_second_halves_equal(
@@ -89,11 +88,11 @@ class UCGEInitialize(UCGInitialize):
     # pylint: disable=arguments-differ
     def _apply_diagonal(self, bit_target: str, parent: "list[float]", ucg: UCGate):
         children = parent
-
+        # pylint: disable=protected-access
         if bit_target == "1":
-            diagonal = np.conj(ucg._get_diagonal())[1::2]  # pylint: disable=protected-access
+            diagonal = np.conj(ucg._get_diagonal())[1::2]
         else:
-            diagonal = np.conj(ucg._get_diagonal())[::2]  # pylint: disable=protected-access
+            diagonal = np.conj(ucg._get_diagonal())[::2]
         if ucg.dont_carry and diagonal.shape[0] > 1:
             # If `diagonal.shape[0] == 1` then diagonal == [1.].
             # Therefore, `diagonal` has no effect on `children`.
