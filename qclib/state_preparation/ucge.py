@@ -52,7 +52,7 @@ def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
     for d in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
         delete_set = set()
         if np.allclose(mux[d], mux[0]):
-            delete_set = _is_dont_care(d, mux)
+            delete_set = find_operators_to_remove(d, mux)
 
         if delete_set:
             removed_control = reversed_level + int(np.log2(d)) + 1
@@ -62,16 +62,34 @@ def _repetition_search(mux: "list[np.ndarray]", reversed_level: int):
     return deleted_controls, deleted_operators
 
 
-def _is_dont_care(d, mux):
+def find_operators_to_remove(d, mux):
+    """
+    Verifies if mux can be split into len(mux) // (2 * d) sequential partitions, where
+    the operators in the first half of each partition is equal to the second half. If
+    the two halves of all partitions are equal, the indexes of the second halves of
+    the partitions are returned to be later removed from the multiplexer.
+
+    Parameters
+    ----------
+    d: a power of two integer in range(0, len(mux)
+    mux: List of 2 x 2 unitary gates representing a multiplexer
+
+    Returns
+    -------
+    deleted_operators: index of operators that must be removed from the multiplexer
+
+    """
 
     deleted_operators = set()
-    repetitions = len(mux) // (2 * d)
+    num_partitions = len(mux) // (2 * d)
     base = 0
-    for _ in range(repetitions, 0, -1):
+
+    for _ in range(num_partitions, 0, -1):
         if _first_and_second_halves_equal(base, d, mux):
             deleted_operators.update(range(base + d, base + 2 * d))
             base += 2 * d
         else:
+            deleted_operators = set()
             break
 
     return deleted_operators
