@@ -23,16 +23,11 @@ from qclib.state_preparation.ucg import UCGInitialize
 
 def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
     """
-    Checks whether a possible repeating pattern is valid by checking whether all elements repeat
-    in a period d and marks operators to be removed
+    Returns True if mux[base : base + d] = mux[next_base : next_base + d]
     """
 
     next_base = base + d
-
-    if not np.allclose(mux[base : base + d], mux[next_base : next_base + d]):
-        return False
-
-    return True
+    return np.allclose(mux[base : base + d], mux[next_base : next_base + d])
 
 
 def _repetition_search(mux: "list[np.ndarray]", n: int):
@@ -178,21 +173,19 @@ class UCGEInitialize(UCGInitialize):
         """
 
         deleted_operators = set()
-        dont_carry = []
-        new_mux = mux
+        removed_controls = []
 
         if len(mux) > 1:
             n = self.num_qubits - level
-            dont_carry, deleted_operators = _repetition_search(mux, n)
+            k = int(np.log2(len(mux)))
+
+            removed_controls, deleted_operators = _repetition_search(mux, n)
 
         if deleted_operators:
-            new_mux = mux.copy()
-            for k in deleted_operators:
-                new_mux[k] = None
+            new_mux = [mux[k] for k in range(len(mux)) if k not in deleted_operators]
+            return removed_controls, new_mux
 
-            new_mux = [matrix for matrix in new_mux if matrix is not None]
-
-        return dont_carry, new_mux
+        return removed_controls, mux
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):
