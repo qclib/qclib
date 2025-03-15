@@ -19,6 +19,7 @@ https://arxiv.org/abs/2409.05618
 import numpy as np
 from qiskit.circuit.library import UCGate
 from qclib.state_preparation.ucg import UCGInitialize
+from typing import Set
 
 
 def _first_and_second_halves_equal(
@@ -37,7 +38,7 @@ def _first_and_second_halves_equal(
     return True
 
 
-def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarray]"):
+def _repetition_search(mux: "list[np.ndarray]", n: int, deleted_operators: "set"):
     """
     Search for possible repetitions by searching for equal operators in indices that are
     powers of two When found, it calculates the position of the controls to be eliminated
@@ -46,29 +47,31 @@ def _repetition_search(mux: "list[np.ndarray]", n: int, mux_cpy: "list[np.ndarra
     dont_carry = []
     for i in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
         not_entangled = False
-
+        delete_set = set()
         if np.allclose(mux[i], mux[0]):
-            not_entangled = is_dont_care(i, mux, mux_cpy)
+            not_entangled, delete_set = is_dont_care(i, mux)
 
         if not_entangled:
             dont_carry.append(n + int(np.log2(i)) + 1)
+            deleted_operators.update(delete_set)
     return dont_carry
 
 
-def is_dont_care(d, mux, mux_cpy):
+def is_dont_care(d, mux):
 
+    deleted_operators = set()
     not_entangled = True
     repetitions = len(mux) // (2 * d)
     base = 0
-    for _ in range(repetitions, -1, -1):
+    for _ in range(repetitions, 0, -1):
         if _first_and_second_halves_equal(base, d, mux):
-            mux_cpy[base + d:base + 2 * d] = d * [None]
+            deleted_operators.update(range(base + d, base + 2 * d))
             base += 2 * d
         else:
             not_entangled = False
             break
 
-    return not_entangled
+    return not_entangled, deleted_operators
 
 
 class UCGEInitialize(UCGInitialize):
@@ -198,14 +201,20 @@ class UCGEInitialize(UCGInitialize):
         Returns the position of controls that can be eliminated and the simplified multiplexer
         """
 
-        mux_cpy = mux.copy()
+        deleted_operators = set()
         dont_carry = []
-
+        new_mux = mux
         if len(mux) > 1:
             n = self.num_qubits - level
-            dont_carry = _repetition_search(mux, n, mux_cpy)
-
-        new_mux = [matrix for matrix in mux_cpy if matrix is not None]
+            dont_carry = _repetition_search(mux, n, deleted_operators)
+        if deleted_operators:
+            new_mux = mux.copy()
+            for k in deleted_operators:
+                try:
+                    new_mux[k] = None
+                except IndexError:
+                    pass
+            new_mux = [matrix for matrix in new_mux if matrix is not None]
 
         return dont_carry, new_mux
 
