@@ -24,7 +24,7 @@ from typing import Sequence, Mapping
 
 import numpy
 from qiskit.circuit.quantumcircuit import QuantumCircuit
-from qiskit.circuit.quantumregister import QuantumRegister
+from qiskit._accelerate.circuit import QuantumRegister
 from qiskit.circuit import Parameter, ParameterVector, ParameterExpression
 
 from qiskit.circuit.library import BlueprintCircuit
