@@ -13,77 +13,135 @@
 # limitations under the License.
 
 """
-todo
+Efficient version of the UCG approach for separable states
+https://arxiv.org/abs/2409.05618
 """
 import numpy as np
-import qiskit
 from qiskit.circuit.library import UCGate
-from qiskit.quantum_info import Operator
 from qclib.state_preparation.ucg import UCGInitialize
 
 
-def _repetition_verify(base, d, mux, mux_cpy):
-    i = 0
+def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
+    """
+    Returns True if mux[base : base + d] = mux[next_base : next_base + d]
+    """
+
     next_base = base + d
-    while i < d:
-        if not np.allclose(mux[base], mux[next_base]):
-            return False
-        mux_cpy[next_base] = None
-        base, next_base, i = base + 1, next_base + 1, i + 1
-    return True
+    return np.allclose(mux[base : base + d], mux[next_base : next_base + d])
 
 
-def _repetition_search(mux, n, mux_cpy):
+def _repetition_search(mux: "list[np.ndarray]", target_qubit: int):
+    """
+    Search for possible partitions by searching for equal operators in mux[0] and mux[d],
+    where d is power of two. When a possible partition is found, it calculates the position
+    of the controls and operators to be eliminated
 
-    dont_carry = []
-    for i in range(1, len(mux) // 2 + 1):
-        d = i
-        entanglement = False
-        if np.log2(d).is_integer() and np.allclose(mux[i], mux[0]):
-            mux_org = mux_cpy[:]
-            repetitions = len(mux) // (2 * d)
-            base = 0
-            while repetitions:
-                repetitions -= 1
-                valid = _repetition_verify(base, d, mux, mux_cpy)
-                base += 2 * d
-                if not valid:
-                    mux_cpy[:] = mux_org
-                    break
-                if repetitions == 0:
-                    entanglement = True
+    Parameters
+    ----------
+    mux: List of 2 x 2 unitary gates representing a multiplexer
+    target_qubit
 
-        if entanglement:
-            dont_carry.append(n + int(np.log2(d)) + 1)
-    return dont_carry
+    Returns
+    -------
+    deleted_controls: controls that must be removed from the multiplexer
+    deleted_operators: index of operators that must be removed from the multiplexer
+    """
+
+    deleted_operators = set()
+    deleted_controls = []
+
+    for d in [2 ** int(j) for j in range(0, int(np.log2(len(mux))))]:
+        delete_set = set()
+        if np.allclose(mux[d], mux[0]):
+            delete_set = _find_operators_to_remove(d, mux)
+
+        if delete_set:
+            removed_control = target_qubit + int(np.log2(d)) + 1
+            deleted_controls.append(removed_control)
+            deleted_operators.update(delete_set)
+
+    return deleted_controls, deleted_operators
+
+
+def _find_operators_to_remove(d, mux):
+    """
+    Verifies if mux can be split into len(mux) // (2 * d) sequential partitions, where
+    the operators in the first half of each partition is equal to the second half. If
+    the two halves of all partitions are equal, the indexes of the second halves of
+    the partitions are returned to be later removed from the multiplexer.
+
+    Parameters
+    ----------
+    d: a power of two integer in range(0, len(mux)
+    mux: List of 2 x 2 unitary gates representing a multiplexer
+
+    Returns
+    -------
+    deleted_operators: index of operators that must be removed from the multiplexer
+
+    """
+
+    deleted_operators = set()
+    num_partitions = len(mux) // (2 * d)
+    partition_first_idx = 0
+
+    for _ in range(num_partitions, 0, -1):
+        if _first_and_second_halves_equal(partition_first_idx, d, mux):
+            deleted_operators.update(range(partition_first_idx + d, partition_first_idx + 2 * d))
+            partition_first_idx += 2 * d
+        else:
+            deleted_operators = set()
+            break
+
+    return deleted_operators
 
 
 class UCGEInitialize(UCGInitialize):
-    """ todo """
+    """
+    This class implements an efficient state preparation for separable states
+    Based on the UCG approach
+
+    https://arxiv.org/abs/2409.05618
+    """
 
     def __init__(self, params, label=None, opt_params=None):
         super().__init__(params, label=label, opt_params=opt_params)
 
-    def _define_initialize(self):
+    # pylint: disable=arguments-differ
+    def _apply_diagonal(self, bit_target: str, parent: "list[float]", ucg: UCGate):
+        children = parent
+        # pylint: disable=protected-access
+        if bit_target == "1":
+            diagonal = np.conj(ucg._get_diagonal())[1::2]
+        else:
+            diagonal = np.conj(ucg._get_diagonal())[::2]
+        if ucg.dont_carry and diagonal.shape[0] > 1:
+            # If `diagonal.shape[0] == 1` then diagonal == [1.].
+            # Therefore, `diagonal` has no effect on `children`.
+            size_required = len(ucg.dont_carry) + len(ucg.controls)
+            min_qubit = min([*ucg.dont_carry, *ucg.controls])
+            ctrl_qc = [x - min_qubit for x in ucg.controls]
 
-        children = self.params
-        parent = self._update_parent(children)
-        tree_level = self.num_qubits
-        r_gate = self.target_state // 2
+            # Adjusts the diagonal to the right size
+            # Necessary when a simplification occurs
+            for i in range(size_required):
+                if i not in ctrl_qc:
+                    d = 2**i
+                    new_diagonal = []
+                    n = len(diagonal)
 
-        while tree_level > 0:
+                    # Extends the operator to the total number of qubits in the circuit
+                    # This acts as identity on non-target qubits
+                    for j in range(n):
+                        new_diagonal.append(diagonal[j])
+                        if (j + 1) % d == 0:
+                            new_diagonal.extend(diagonal[j + 1 - d : j + 1])
 
-            bit_target, ucg = self._disentangle_qubit(
-                children, parent, r_gate, tree_level
-            )
-            children = self._apply_diagonal(bit_target, parent, ucg)
-            parent = self._update_parent(children)
+                    diagonal = np.array(new_diagonal)
 
-            # prepare next iteration
-            r_gate = r_gate // 2
-            tree_level -= 1
+        children = children * diagonal
 
-        return self.circuit.inverse()
+        return children
 
     def _disentangle_qubit(
         self,
@@ -97,7 +155,7 @@ class UCGEInitialize(UCGInitialize):
         bit_target = self.str_target[self.num_qubits - tree_level]
 
         old_mult, old_controls, target = self._define_mult(children, parent, tree_level)
-        nc, mult = self._simplify(old_mult, tree_level)
+        nc, mult = self._simplify(old_mult)
         mult_controls = [x for x in old_controls if x not in nc]
 
         if self.preserve:
@@ -109,47 +167,66 @@ class UCGEInitialize(UCGInitialize):
 
         return bit_target, ucg
 
-    def _simplify(self, mux, level):
+    @staticmethod
+    def _update_parent(children):
 
-        mux_cpy = mux.copy()
-        dont_carry = []
+        size = len(children) // 2
+        # Calculates norms.
+        parent = [
+            np.linalg.norm([children[2 * k], children[2 * k + 1]]) for k in range(size)
+        ]
+
+        # Calculates phases.
+        new_parent = []
+
+        if size > 1:
+            for k in range(size):
+                angle = np.angle([children[2 * k], children[2 * k + 1]])
+                angle = angle % (2 * np.pi)
+                phase = np.sum(angle) / 2
+                value = parent[k] * np.exp(1j * phase)
+
+                # avoid a global phase difference in the operators
+                temp = children[2 * k] / value
+                if temp.real < 0:
+                    new_parent.append(-value)
+                else:
+                    new_parent.append(value)
+
+            parent = new_parent
+
+        return parent
+
+    def _simplify(self, mux: "list[np.ndarray]"):
+        """
+        Remove redundant gates and operators from the multiplexer
+
+        Parameters
+        ----------
+        mux: List of 2 x 2 unitary gates representing a multiplexer
+        level: level of the multiplexer in the state preparation tree
+
+        Returns
+        -------
+        removed_controls: controls that must be removed of the multiplexer
+        simplified_mux: multiplexer without the redundant gates
+        """
+
+        deleted_operators = set()
+        removed_controls = []
 
         if len(mux) > 1:
-            n = self.num_qubits - level
-            dont_carry = _repetition_search(mux, n, mux_cpy)
+            level = np.log2(len(mux)) + 1
+            target_qubit = self.num_qubits - level
 
-        new_mux = [matrix for matrix in mux_cpy if matrix is not None]
+            removed_controls, deleted_operators = _repetition_search(mux, target_qubit)
 
-        return dont_carry, new_mux
+        if deleted_operators:
+            simplified_mux = [mux[k] for k in range(len(mux)) if k not in deleted_operators]
+            return removed_controls, simplified_mux
 
-    def _apply_diagonal(
-        self,
-        bit_target: str,
-        parent: "list[float]",
-        ucg: UCGate
-    ):
-        children = parent
-
-        if bit_target == "1":
-            diagonal = np.conj(ucg._get_diagonal())[
-                1::2
-            ]  # pylint: disable=protected-access
-        else:
-            diagonal = np.conj(ucg._get_diagonal())[
-                ::2
-            ]  # pylint: disable=protected-access
-        if ucg.dont_carry:
-            ucg.controls.reverse()
-            size_required = len(ucg.dont_carry) + len(ucg.controls)
-            ctrl_qc = [self.num_qubits - 1 - x for x in ucg.controls]
-            unitary_diagonal = np.diag(diagonal)
-            qc = qiskit.QuantumCircuit(size_required)
-            qc.unitary(unitary_diagonal, ctrl_qc)
-            matrix = Operator(qc).to_matrix()
-            diagonal = np.diag(matrix)
-        children = children * diagonal
-
-        return children
+        simplified_mux = mux
+        return removed_controls, simplified_mux
 
     @staticmethod
     def initialize(q_circuit, state, qubits=None, opt_params=None):

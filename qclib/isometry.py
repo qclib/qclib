@@ -166,7 +166,7 @@ def _ccd(iso, log_lines, log_cols):
         g_k = _g_k(iso, log_lines, k)
         g_k.name = "G" + str(k)
 
-        circuit.append(g_k.to_instruction(), reg)
+        circuit.compose(g_k, reg, inplace=True)
 
     if log_cols > 0:
         # It clears the phases, as explained in the last sentence of the
@@ -174,7 +174,7 @@ def _ccd(iso, log_lines, log_cols):
         phases = np.angle(np.diagonal(iso[: 2**log_cols, : 2**log_cols]))
         diag = np.exp(-1j * phases)
         diag_gate = DiagonalGate(diag.tolist())
-        circuit.append(diag_gate, list(range(log_cols)))
+        circuit.compose(diag_gate, list(range(log_cols)), inplace=True)
 
     return circuit.inverse()
 
@@ -224,7 +224,7 @@ def _mc_gate(unitary, n_qubits, control, target, k_bin):
     unitaries = [np.identity(2) for _ in range(2 ** len(controls))]
     unitaries[-1] = unitary
     ucg = UCGate(unitaries, up_to_diagonal=True)
-    gate.append(ucg, [target] + controls[::-1])
+    gate.compose(ucg, [target] + controls[::-1], inplace=True)
 
     return gate
 
@@ -235,11 +235,11 @@ def _uc_gate(unitaries, n_qubits, control, target):
     if len(control) > 0:
         # "control" is reversed due to UCGate implementation.
         uc_gate = UCGate(unitaries, up_to_diagonal=True)
-        gate.append(uc_gate, [target] + control[::-1])
+        gate.compose(uc_gate, [target] + control[::-1], inplace=True)
     else:
         # UCGate does not work with target only.
         unitary_gate = UnitaryGate(unitaries[0])
-        gate.append(unitary_gate, [target])
+        gate.compose(unitary_gate, [target], inplace=True)
 
     return gate
 

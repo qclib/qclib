@@ -21,6 +21,34 @@ from qiskit_aer import AerSimulator
 import numpy as np
 from scipy import sparse
 
+def logical_swap(input_vector, new_order):
+    """
+    Reorders the qubits in a quantum state vector according to the specified permutation.
+
+    Parameters
+    ----------
+    input_vector (numpy.ndarray): A 1D array representing a quantum state vector, 
+                                  assumed to have a length of 2^n for n qubits.
+    new_order (list or tuple): A permutation of [0, 1, ..., n-1] specifying 
+                               the new qubit ordering.
+
+    Returns
+    -------
+    numpy.ndarray: The state vector after reordering the qubits.
+    """
+
+    # Determine the number of qubits from the length of the input vector
+    num_qubits = int(np.log2(len(input_vector)))
+    # Define the shape of the tensor representation of the quantum state
+    qubit_shape = [2] * num_qubits
+    # Reshape the 1D state vector into an n-qubit tensor representation
+    reshaped_state = input_vector.reshape(qubit_shape)
+    # Permute the qubits according to new_order and flatten back into a vector
+    swapped_vector = np.moveaxis(
+        reshaped_state, new_order, range(len(new_order)) # Apply the permutation
+    ).reshape(-1) # Flatten back into a 1D state vector
+
+    return swapped_vector
 
 def get_counts(circ):
     """
