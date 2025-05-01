@@ -403,16 +403,22 @@ class TestMCXGidneyLinearDepth(TestCase):
         """ Gate count based on the fact that qiskit decomposes each toffoli gate into 6 cx gates."""
         for num_ctrl_qubits in range(3, 15):
             mcx_circ = MCXGidneyLinearDepth(num_ctrl_qubits, clean=True).definition
-            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx"], optimization_level=3)
-            cx_count = tr_mcx.count_ops()["cx"]
-            self.assertLessEqual(cx_count, 12 * num_ctrl_qubits - 18)
+            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx", "t", "tdg"], optimization_level=3)
+            ops_count = tr_mcx.count_ops()
+            cx_count = ops_count.get("cx", 0)
+            t_count = ops_count.get("t", 0) + ops_count.get("tdg", 0)
+            self.assertEqual(cx_count, 6 * num_ctrl_qubits - 6)
+            self.assertLessEqual(t_count, 8 * num_ctrl_qubits - 12)
 
     def test_gate_count_dirty(self):
         for num_ctrl_qubits in range(3, 15):
             mcx_circ = MCXGidneyLinearDepth(num_ctrl_qubits, clean=False).definition
-            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx"], optimization_level=3)
-            cx_count = tr_mcx.count_ops()["cx"]
-            self.assertLessEqual(cx_count, 24 * num_ctrl_qubits - 48)
+            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx", "t", "tdg"], optimization_level=3)
+            ops_count = tr_mcx.count_ops()
+            cx_count = ops_count.get("cx", 0)
+            t_count = ops_count.get("t", 0) + ops_count.get("tdg", 0)
+            self.assertEqual(cx_count, 12 * num_ctrl_qubits - 18)
+            self.assertLessEqual(t_count, 16 * num_ctrl_qubits - 32)
 
 
 class TestMCXGidneyLogDepth(TestCase):
@@ -442,14 +448,20 @@ class TestMCXGidneyLogDepth(TestCase):
     def test_gate_count_clean(self):
         for num_ctrl_qubits in range(3, 15):
             mcx_circ = MCXGidneyLogDepth(num_ctrl_qubits, clean=True).definition
-            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx"], optimization_level=3)
-            cx_count = tr_mcx.count_ops()["cx"]
-            self.assertLessEqual(cx_count, 12 * num_ctrl_qubits - 18)
+            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx", "t", "tdg"], optimization_level=3)
+            ops_count = tr_mcx.count_ops()
+            cx_count = ops_count.get("cx", 0)
+            t_count = ops_count.get("t", 0) + ops_count.get("tdg", 0)
+            self.assertEqual(cx_count, 6 * num_ctrl_qubits - 6)
+            self.assertLessEqual(t_count, 8 * num_ctrl_qubits - 12)
 
     def test_gate_count_dirty(self):
         for num_ctrl_qubits in range(3, 15):
             mcx_circ = MCXGidneyLogDepth(num_ctrl_qubits, clean=False).definition
-            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx"], optimization_level=3)
-            cx_count = tr_mcx.count_ops()["cx"]
-            self.assertLessEqual(cx_count, 24 * num_ctrl_qubits - 48)
+            tr_mcx = transpile(mcx_circ, basis_gates=["u", "cx", "t", "tdg"], optimization_level=3)
+            ops_count = tr_mcx.count_ops()
+            cx_count = ops_count.get("cx", 0)
+            t_count = ops_count.get("t", 0) + ops_count.get("tdg", 0)
+            self.assertEqual(cx_count, 12 * num_ctrl_qubits - 18)
+            self.assertLessEqual(t_count, 16 * num_ctrl_qubits - 32)
 
