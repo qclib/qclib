@@ -287,7 +287,7 @@ def _unitary(iso, basis=0):  # Lemma2 of https://arxiv.org/abs/1501.06911
     iden = np.identity(2)
     iso_norm = np.linalg.norm(iso, axis=0)[0]
 
-    if iso_norm > 1e-10:
+    if iso_norm > 1e-14:
         psi = iso / iso_norm
 
         psi_dagger = np.conj(psi.T)
