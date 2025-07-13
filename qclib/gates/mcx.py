@@ -469,15 +469,7 @@ class CCXN(Gate):
         if self.apply_x:
             qc.x(target)
 
-        qc.h(target)
-        qc.t(target)
-        qc.cx(x, target)
-        qc.tdg(target)
-        qc.cx(y, target)
-        qc.t(target)
-        qc.cx(x, target)
-        qc.tdg(target)
-        qc.h(target)
+        qc.rccx(x,y, target)
 
         self.definition = qc
 
