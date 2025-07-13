@@ -398,7 +398,7 @@ def get_linear_depth_ladder_ops(qreg: list[int]) -> tuple[QuantumCircuit, list[i
     return qc, final_ctrl
 
 
-class MCXGidneyLinearDepth(Gate):
+class MCXLinearDepth(Gate):
     """
     Synthesise a multi-controlled X gate with k controls using 1 ancillary qubit producing a circuit
     with 2k-3 Toffoli gates and O(k) depth if ancilla is clean and 4k-8 Toffoli gates and O(k) depth
@@ -519,7 +519,6 @@ def build_logn_depth_ccx_ladder(
                 if not skip_cond_clean:
                     relative_phase = CCXN(1, apply_x=False).definition
                     qc.compose(relative_phase, ccx_x + ccx_y + ccx_t, inplace=True) # create conditionally clean ancilla
-                    # qc.ccx(ccx_x[0], ccx_y[0], ccx_t[0])  #   # create conditionally clean ancilla
             new_anc += nxt_batch[st:]  #                      # newly created conditionally clean ancilla
             nxt_batch = ccx_t + nxt_batch[:st]
             anc = anc[:-ccx_n]
@@ -532,7 +531,7 @@ def build_logn_depth_ccx_ladder(
     return qc, final_ctrls[:-1]  #                            # exclude ancilla
 
 
-class MCXGidneyLogDepth(Gate):
+class MCXLogDepth(Gate):
     """
     Synthesise a multi-controlled X gate with k controls using 2 ancillary qubits producing a circuit
     with 2k-3 Toffoli gates and O(log(k)) depth if ancillae are clean and 4k-8 Toffoli gates and O(log(k))
@@ -564,7 +563,7 @@ class MCXGidneyLogDepth(Gate):
             if len(final_ctrls) == 1:  #                                     # Already a toffoli
                 qc.ccx(anc[0], ctrl[final_ctrls[0]], targ)
             else:
-                mid_mcx = MCXGidneyLinearDepth(len(final_ctrls) + 1, clean=True)
+                mid_mcx = MCXLinearDepth(len(final_ctrls) + 1, clean=True)
                 qc.compose(
                     mid_mcx.definition,
                     [anc[0]] + ctrl[final_ctrls] + targ[:] + [anc[1]], #     # ctrls, targ, anc
