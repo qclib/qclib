@@ -9,7 +9,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="qclib",
-    version="0.1.12",
+    version="0.1.14",
     author="qclib team",
     author_email="ajsilva@cin.ufpe.br",
     description="A quantum computing library using qiskit",
@@ -28,6 +28,7 @@ setuptools.setup(
         'deprecation',
         'tensorly>=0.8.0',
         'keras',
-        'graphviz'
+        'graphviz',
+        'scikit-image'
     ]
 )
