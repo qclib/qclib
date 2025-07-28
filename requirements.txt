@@ -5,3 +5,4 @@ numpy
 tensorly
 graphviz
 scikit-image
+sympy
