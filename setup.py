@@ -29,6 +29,7 @@ setuptools.setup(
         'tensorly>=0.8.0',
         'keras',
         'graphviz',
-        'scikit-image'
+        'scikit-image',
+        'sympy'
     ]
 )
