@@ -129,7 +129,7 @@ def replace_all_values_with(new_value, dataset):
         and b is the binary pattern associated to it.
         this procedure performs the task of replacing
         v with the new_value
-    :param new_value: Value to replate the v in all the tuples
+    :param new_value: Value to replace the v in all the tuples
                       (v, b)
     :param dataset: List of tuples where the values are to be
                     replaced
@@ -143,9 +143,9 @@ def replace_all_values_with(new_value, dataset):
     return new_dataset
 
 
-def build_list_of_quibit_objects(quantum_register):
+def build_list_of_qubit_objects(quantum_register):
     """
-        Buid a list of Qubit objects to be used as
+        Build a list of Qubit objects to be used as
         input to some procedure of the qiskit framework
     :param quantum_register: Quantum register with the qubits
     :return: Qubits list
@@ -181,7 +181,7 @@ def verify_interval_in_state_vector(statevector, start, finish):
 def verify_trigonometric_interval(value):
     """
         Verify if a certain value is inside the interval
-        of the domain of the tirgonometric functions
+        of the domain of the trigonometric functions
         cosine and sine, [-1, 1]
     :param value: Real value to be evaluated
     :return: Value, if the value is inside the domain

@@ -32,7 +32,7 @@ class MergeInitialize(InitializeSparse):
     def __init__(self, params, label=None):
         """
         Classical algorithm that creates a quantum circuit C that loads
-        a sparse quantum state, applying a sequence of operations maping
+        a sparse quantum state, applying a sequence of operations mapping
         the desired state |sigma> to |0>. And then inverting C to obtain
         the mapping of |0> to the desired state |sigma>.
         Args:
@@ -190,7 +190,7 @@ class MergeInitialize(InitializeSparse):
         bitstr2: Second binary string
         dif_qubit: Qubit index to be used as target for the merging operation
         dif_qubits: List of qubit indexes where bitstr1 and bitstr2 must be equal, because the
-                    correspondig qubits of those indexes are to be used as control for the
+                    corresponding qubits of those indexes are to be used as control for the
                     merging operation
         """
         # Initialization
@@ -250,7 +250,7 @@ class MergeInitialize(InitializeSparse):
         operation: Operation to be applied to the states, it must be ['x', 'cx', 'merge']
         qubit_indexes: Indexes of the qubits on the binary strings where the operations are to
                         be applied
-        merge_strings: Binary strings associated ot the states on the quantum processor
+        merge_strings: Binary strings associated to the states on the quantum processor
                         to be merge e.g.:['01001', '10110']
         Returns:
         A state_dict with the updated states

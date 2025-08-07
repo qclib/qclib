@@ -35,7 +35,7 @@ def apply_control_state_on_quantum_circuit(
     ----------
         quantum_circuit : QuantumCircuit object on which the X gates are to be applied
         control_bits    : QuantumRegister containing with the qubits to be used as control
-        ctrl_state  : String of binary digits describing wich state is used as control
+        ctrl_state  : String of binary digits describing which state is used as control
                     in the multicontrolled operation
     """
     if ctrl_state is not None:

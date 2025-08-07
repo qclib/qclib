@@ -176,7 +176,7 @@ def subtree_level_index(root, tree):
     """
     :param root: subtree root node
     :param tree: a tree node
-    :return: the index of tree node repective to the subtree defined by root
+    :return: the index of tree node respective to the subtree defined by root
     """
     return tree.index - root.index * 2 ** (tree.level - root.level)
 
@@ -185,7 +185,7 @@ def subtree_level_leftmost(root, level):
     """
     :param root: subtree root node
     :param level: level to search for the leftmost node
-    :return: the leftmost tree node repective to the subtree defined by root
+    :return: the leftmost tree node respective to the subtree defined by root
     """
     left = root
     while left and left.level < level:
@@ -199,7 +199,7 @@ def subtree_level_nodes(tree, level, level_nodes):
     the first value of tree (subtree root).
     :param tree: current tree node, starts with subtree root node
     :param level: level to search for the nodes
-    :out param level_nodes: a list with the level tree nodes repective to the
+    :out param level_nodes: a list with the level tree nodes respective to the
                             subtree defined by root, ordered from left to right
     """
     if tree.level < level:
