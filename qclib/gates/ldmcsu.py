@@ -205,7 +205,7 @@ class LdMcSpecialUnitary(Gate):
     Linear-depth Multicontrolled Special Unitary
     --------------------------------------------
 
-    Implements the gate decompostion of any gate in SU(2) with linear depth (Ld)
+    Implements the gate decomposition of any gate in SU(2) with linear depth (Ld)
     presented in Lemma 7.9 in Barenco et al., 1995 (arXiv:quant-ph/9503016)
     with optimizations from Theorem 5 of Iten et al., 2016 (arXiv:1501.06911)
     """
@@ -280,7 +280,7 @@ class LdMcSpecialUnitary(Gate):
         of Iten et al. 2016 (arXiv:1501.06911).
         Parameters
         ----------
-            a_gate, b_gate and c_gate expceted to be special unitary gates
+            a_gate, b_gate and c_gate expected to be special unitary gates
         """
 
         if len(self.control_qubits) < 3:
@@ -351,7 +351,7 @@ class LdMcSpecialUnitary(Gate):
         Linear-depth Multicontrolled Special Unitary
         --------------------------------------------
 
-        Implements the gate decompostion of any gate in SU(2) with linear depth (Ld)
+        Implements the gate decomposition of any gate in SU(2) with linear depth (Ld)
         presented in Lemma 7.9 in Barenco et al., 1995 (arXiv:quant-ph/9503016)
         with optimizations from Theorem 5 of Iten et al., 2016 (arXiv:1501.06911)
         """

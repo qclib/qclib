@@ -32,10 +32,10 @@ from .util import check_u2
 
 class Qdmcu(Gate):
     """
-    Quandratic Depth Multi-Controlled Unitary
+    Quadratic Depth Multi-Controlled Unitary
     -----------------------------------------
 
-    Implements gate decomposition of a munticontrolled operator in U(2) according to
+    Implements gate decomposition of a multicontrolled operator in U(2) according to
     Theorem 4 of Iten et al. (2016) arXiv:1501.06911.
     """
 
@@ -51,7 +51,7 @@ class Qdmcu(Gate):
         unitary    : numpy.ndarray 2 x 2 unitary matrix
         controls   : Either qiskit.QuantumRegister or list of qiskit.Qubit containing the
                     qubits to be used as control gates.
-        target     : qiskit.Qubit on wich the unitary operation is to be applied
+        target     : qiskit.Qubit on which the unitary operation is to be applied
         ctrl_state : String of binary digits describing the basis state used as control
         """
         check_u2(unitary)

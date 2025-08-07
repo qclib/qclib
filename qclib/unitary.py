@@ -69,7 +69,7 @@ def build_unitary(gate, decomposition="qsd", iso=0):
             circuit.compose(gate_left, qubits, inplace=True)
 
         # Middle circuit
-        # Last CZGate is ommited and absorved into the neighboring multiplexor.
+        # Last CZGate is omitted and absorbed into the neighboring multiplexor.
         ucry = multiplexor(RYGate, list(2 * theta), CZGate, False)
 
         circuit.compose(
@@ -330,7 +330,7 @@ def _build_qr_gate_sequence(gate, n_qubits):
             matrix_rotation[row_idx, col_idx] = b
             matrix_rotation[row_idx, row_idx] = -a
 
-            # applyting matrix_rotation to the unitary
+            # applying matrix_rotation to the unitary
             gate = matrix_rotation @ gate
             gate_sequence.append(matrix_rotation.conj().T)
 

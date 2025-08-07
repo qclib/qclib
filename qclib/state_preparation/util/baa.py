@@ -467,7 +467,7 @@ def _search_best(nodes):
     max_saved_cnots_nodes = [
         node for node in nodes if node.total_saved_cnots == max_total_saved_cnots
     ]
-    # Nodes with the minimum depth (wich depends on the size of the node's largest subsystem).
+    # Nodes with the minimum depth (which depends on the size of the node's largest subsystem).
     # Shallower circuits with the same number of CNOTs means more parallelism.
     min_depth = _max_subsystem_size(min(max_saved_cnots_nodes, key=_max_subsystem_size))
     min_depth_nodes = [
