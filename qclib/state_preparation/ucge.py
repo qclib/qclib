@@ -27,6 +27,10 @@ def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
     """
 
     next_base = base + d
+    for k in range(0, d):
+        if not np.allclose(mux[base + k], mux[next_base + k]):
+            return False
+    return True
     return np.allclose(mux[base : base + d], mux[next_base : next_base + d])
 
 
@@ -183,12 +187,14 @@ class UCGEInitialize(UCGInitialize):
             for k in range(size):
                 angle = np.angle([children[2 * k], children[2 * k + 1]])
                 angle = angle % (2 * np.pi)
-                phase = np.sum(angle) / 2
+                phase = np.sum(angle) / 2.0
                 value = parent[k] * np.exp(1j * phase)
 
                 # avoid a global phase difference in the operators
                 temp = children[2 * k] / value
-                if temp.real < 0:
+                if np.isclose(temp.real, 0.0):
+                    new_parent.append(1j * value.imag)
+                elif temp.real < 0:
                     new_parent.append(-value)
                 else:
                     new_parent.append(value)

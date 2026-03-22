@@ -22,6 +22,7 @@ import numpy.linalg as la
 from qiskit import QuantumCircuit, QuantumRegister
 from qiskit.circuit.library import UCGate
 from qclib.gates.initialize import Initialize
+from qclib.gates.any_gate import AnyGate
 
 
 class UCGInitialize(Initialize):
@@ -78,7 +79,7 @@ class UCGInitialize(Initialize):
 
         if self.preserve:
             self._preserve_previous(mult, mult_controls, r_gate, target)
-
+        mult = [mult[k] if isinstance(mult[k], np.ndarray) else np.eye(2) for k in range(0, len(mult))]
         ucg = self._apply_ucg(mult, mult_controls, target)
 
         return bit_target, ucg
@@ -181,7 +182,7 @@ class UCGInitialize(Initialize):
                 else:
                     gates += [self._get_diagonal_operator(amp_ket1, bit_target)]
             else:
-                gates += [np.eye(2)]
+                gates += [AnyGate()]
         return gates
 
     @staticmethod
