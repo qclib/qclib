@@ -20,7 +20,7 @@ from unittest import TestCase
 import random
 import numpy as np
 from qiskit import QuantumCircuit, transpile
-from qiskit.quantum_info import Statevector
+from qiskit.quantum_info import Statevector, Operator
 from qclib.state_preparation import UCGInitialize
 from qclib.state_preparation import UCGEInitialize
 
@@ -166,6 +166,35 @@ class TestUCGEInitialize(TestCase):
         one_depth = t_one_depth.depth()
         self.assertEqual(ucge_depth, one_depth)
 
+    def test_basis_states_2qubits(self):
+        '''
+        Test preparation of basis states (2 qubits)
+        '''
+        for i in range(1,4):
+            params = np.zeros(4)
+            params[i]=1
+            ucge_circ = UCGEInitialize(params).definition
+            transpiled_ucge_circ = transpile(ucge_circ, basis_gates=["u", "cx"])
+            ucge_depth = transpiled_ucge_circ.depth()
+            self.assertEqual(ucge_depth, 1)
+            calc_state = Statevector(ucge_circ)
+            self.assertTrue(np.allclose(calc_state, params))
+
+
+    def test_basis_states_3qubits(self):
+        '''
+        Test preparation of basis states (3 qubits)
+        '''
+        for i in range(1, 8):
+            params = np.zeros(8)
+            params[i] = 1
+            ucge_circ = UCGEInitialize(params).definition
+            transpiled_ucge_circ = transpile(ucge_circ, basis_gates=["u", "cx"])
+            ucge_depth = transpiled_ucge_circ.depth()
+            self.assertEqual(ucge_depth, 1)
+            calc_state = Statevector(ucge_circ)
+            self.assertTrue(np.allclose(calc_state, params))
+
     def test_separable(self):
         state = [0.5 + 0.0j,
                  0.5 + 0.0j,
@@ -182,3 +211,30 @@ class TestUCGEInitialize(TestCase):
         tqc = transpile(qc, basis_gates=["u", "cx"])
         print(tqc.depth())
         print(qc.decompose().decompose())
+
+    def test_bug3(self):
+        state = [0.5 + 0.0j,
+                 0.5 + 0.0j,
+                 0.0 + 0.0j,
+                 0.0 + 0.0j,
+                 -0.5 + 0.0j,
+                 0.5 + 0.0j,
+                 0.0 + 0.0j,
+                 0.0 + 0.0j]
+        circ = UCGEInitialize(state).definition
+        print(circ.decompose())
+
+    def test_bug4(self):
+        circ = QuantumCircuit(3)
+        theta = np.pi / 3
+        circ.h(0)
+        circ.ry(theta, 1)
+        circ.cx(0, 1)
+        circ.cx(1, 2)
+        circ.cx(0, 1)
+        circ.ry(-theta, 1)
+        circ.h(0)
+        matrix = Operator(circ).to_matrix()
+        state = matrix[:, 0]
+        circ = UCGEInitialize(state).definition
+        print(circ.decompose().decompose())
