@@ -221,7 +221,10 @@ class UCGEInitialize(UCGInitialize):
 
                 temp = children[2 * k] / value
                 if np.isclose(temp.real, 0.0):
-                    new_parent.append(1j * value.imag)
+                    if temp.imag < 0:
+                        new_parent.append(-value)
+                    else:
+                        new_parent.append(value)
                 elif temp.real < 0:
                     new_parent.append(-value)
                 else:
