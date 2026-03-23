@@ -166,7 +166,6 @@ class TestUCGEInitialize(TestCase):
         one_depth = t_one_depth.depth()
         self.assertEqual(ucge_depth, one_depth)
 
-    def test_basis_states_2qubits(self):
     def _verify_basis_state(self, dim):
         for i in range(1, dim):
             params = np.zeros(dim)
