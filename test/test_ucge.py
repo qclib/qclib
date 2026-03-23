@@ -36,7 +36,7 @@ class TestUCGEInitialize(TestCase):
 
         qc = UCGEInitialize(state).definition
         state1 = Statevector(qc)
-        print(np.allclose(state1, state))
+        self.assertTrue(np.allclose(state1, state))
 
     def _test_compare_ucg_bipartition(self, num_qubits, input_vector1, input_vector2):
         qubit_order = list(range(num_qubits))
@@ -220,10 +220,9 @@ class TestUCGEInitialize(TestCase):
         self.assertTrue(np.allclose(state2, state))
 
         tqc = transpile(qc, basis_gates=["u", "cx"])
-        print(tqc.depth())
-        print(qc.decompose().decompose())
+        self.assertEqual(tqc.depth(), 3)
 
-    def test_bug3(self):
+    def test_separable2(self):
         state = [0.5 + 0.0j,
                  0.5 + 0.0j,
                  0.0 + 0.0j,
@@ -232,20 +231,9 @@ class TestUCGEInitialize(TestCase):
                  0.5 + 0.0j,
                  0.0 + 0.0j,
                  0.0 + 0.0j]
-        circ = UCGEInitialize(state).definition
-        print(circ.decompose())
+        qc = UCGEInitialize(state).definition
+        state2 = Statevector(qc)
+        self.assertTrue(np.allclose(state2, state))
 
-    def test_bug4(self):
-        circ = QuantumCircuit(3)
-        theta = np.pi / 3
-        circ.h(0)
-        circ.ry(theta, 1)
-        circ.cx(0, 1)
-        circ.cx(1, 2)
-        circ.cx(0, 1)
-        circ.ry(-theta, 1)
-        circ.h(0)
-        matrix = Operator(circ).to_matrix()
-        state = matrix[:, 0]
-        circ = UCGEInitialize(state).definition
-        print(circ.decompose().decompose())
+        tqc = transpile(qc, basis_gates=["u", "cx"])
+        self.assertEqual(tqc.depth(), 3)
