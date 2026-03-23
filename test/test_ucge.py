@@ -20,7 +20,7 @@ from unittest import TestCase
 import random
 import numpy as np
 from qiskit import QuantumCircuit, transpile
-from qiskit.quantum_info import Statevector
+from qiskit.quantum_info import Statevector, Operator
 from qclib.state_preparation import UCGInitialize
 from qclib.state_preparation import UCGEInitialize
 
@@ -36,7 +36,7 @@ class TestUCGEInitialize(TestCase):
 
         qc = UCGEInitialize(state).definition
         state1 = Statevector(qc)
-        print(np.allclose(state1, state))
+        self.assertTrue(np.allclose(state1, state))
 
     def _test_compare_ucg_bipartition(self, num_qubits, input_vector1, input_vector2):
         qubit_order = list(range(num_qubits))
@@ -166,6 +166,46 @@ class TestUCGEInitialize(TestCase):
         one_depth = t_one_depth.depth()
         self.assertEqual(ucge_depth, one_depth)
 
+    def _verify_basis_state(self, dim):
+        for i in range(1, dim):
+            params = np.zeros(dim)
+            params[i] = 1
+            ucge_circ = UCGEInitialize(params).definition
+            transpiled_ucge_circ = transpile(ucge_circ, basis_gates=["u", "cx"])
+            ucge_depth = transpiled_ucge_circ.depth()
+            self.assertEqual(ucge_depth, 1)
+            calc_state = Statevector(ucge_circ)
+            self.assertTrue(np.allclose(calc_state, params))
+
+    def test_basis_states_2qubits(self):
+        '''
+        Test preparation of basis states (2 qubits)
+        '''
+        dim = 4
+        self._verify_basis_state(dim)
+
+
+    def test_basis_states_3qubits(self):
+        '''
+        Test preparation of basis states (3 qubits)
+        '''
+        dim = 8
+        self._verify_basis_state(dim)
+
+    def test_basis_states_4qubits(self):
+        '''
+        Test preparation of basis states (4 qubits)
+        '''
+        dim = 16
+        self._verify_basis_state(dim)
+
+    def test_basis_states_5qubits(self):
+        '''
+        Test preparation of basis states (5 qubits)
+        '''
+        dim = 32
+        self._verify_basis_state(dim)
+
     def test_separable(self):
         state = [0.5 + 0.0j,
                  0.5 + 0.0j,
@@ -180,5 +220,4 @@ class TestUCGEInitialize(TestCase):
         self.assertTrue(np.allclose(state2, state))
 
         tqc = transpile(qc, basis_gates=["u", "cx"])
-        print(tqc.depth())
-        print(qc.decompose().decompose())
+        self.assertEqual(tqc.depth(), 3)

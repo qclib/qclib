@@ -7,6 +7,13 @@ class AnyGate:
     # High priority to ensure this object's methods are called first
     __array_priority__ = 1000000.0
 
+    def __init__(self, dimension: int = 2):
+        """
+        Initializes the AnyGate.
+        The dimension defaults to 2 if no argument is passed.
+        """
+        self.dim = dimension
+
     def __array_function__(self, func, types, args, kwargs):
         # Intercept np.allclose and np.isclose directly
         if func in (np.allclose, np.isclose):
