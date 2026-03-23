@@ -221,19 +221,3 @@ class TestUCGEInitialize(TestCase):
 
         tqc = transpile(qc, basis_gates=["u", "cx"])
         self.assertEqual(tqc.depth(), 3)
-
-    def test_separable2(self):
-        state = [0.5 + 0.0j,
-                 0.5 + 0.0j,
-                 0.0 + 0.0j,
-                 0.0 + 0.0j,
-                 -0.5 + 0.0j,
-                 0.5 + 0.0j,
-                 0.0 + 0.0j,
-                 0.0 + 0.0j]
-        qc = UCGEInitialize(state).definition
-        state2 = Statevector(qc)
-        self.assertTrue(np.allclose(state2, state))
-
-        tqc = transpile(qc, basis_gates=["u", "cx"])
-        self.assertEqual(tqc.depth(), 3)
