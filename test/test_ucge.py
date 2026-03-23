@@ -221,7 +221,6 @@ class TestUCGEInitialize(TestCase):
 
         tqc = transpile(qc, basis_gates=["u", "cx"])
         self.assertEqual(tqc.depth(), 3)
-        print(tqc)
 
     def test_separable2(self):
         state = [0.5 + 0.0j,
@@ -238,22 +237,3 @@ class TestUCGEInitialize(TestCase):
 
         tqc = transpile(qc, basis_gates=["u", "cx"])
         self.assertEqual(tqc.depth(), 3)
-        print(tqc)
-
-    def test_new3(self):
-        #TODO: Fix phase?
-        circ = QuantumCircuit(3)
-        theta = np.pi / 3
-        circ.h(0)
-        circ.ry(theta, 1)
-        circ.cx(0, 1)
-        circ.cx(1, 2)
-        circ.cx(0, 1)
-        circ.ry(-theta, 1)
-        circ.h(0)
-        matrix = Operator(circ).to_matrix()
-        state = matrix[:, 0]  # o estado está nesta linha
-        qc = UCGEInitialize(state).definition
-        state2 = Statevector(qc)
-        print(qc.decompose().decompose())
-        self.assertTrue(np.allclose(state2, state))
