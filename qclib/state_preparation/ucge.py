@@ -61,13 +61,17 @@ def _repetition_search(mux: "list[np.ndarray]", target_qubit: int):
             delete_set = _find_operators_to_remove(d, mux)
 
         if delete_set:
-            # We might have missed the mux[0]. We delete it in case it is AnyGate.
-            if isinstance(mux[0], AnyGate):
-                deleted_operators.update([0])
             removed_control = target_qubit + int(np.log2(d)) + 1
             deleted_controls.append(removed_control)
             deleted_operators.update(delete_set)
 
+    # We might have missed the mux[0]. We delete it in case it is AnyGate.
+    # This happens because we prefer to remove the right operator, and mux[0] is always the left operator.
+    # So, sometimes mux[0] might not get added to delete_set.
+    num_remaining_controls = target_qubit - len(deleted_controls)
+    num_remaining_operators = len(mux) - len(deleted_operators)
+    if num_remaining_operators != 2**num_remaining_controls and isinstance(mux[0], AnyGate):
+        deleted_operators.update([0])
     return deleted_controls, deleted_operators
 
 
@@ -107,15 +111,25 @@ def _find_operators_to_remove(d, mux):
 
     return deleted_operators
 
+def _assign_anygate(mux, d):
+    num_partitions = len(mux) // (2 * d)
+    partition_first_idx = 0
 
-def _convert_anygate(mult):
+    for _ in range(num_partitions, 0, -1):
+        for k in range(0, d):
+            if isinstance(mux[k], AnyGate):
+                mux[partition_first_idx+k] = mux[partition_first_idx+k+d]
+    return mux
+
+
+def _convert_anygate(mux):
     """
     Convert remaining AnyGate to identity.
     """
-    for i, item in enumerate(mult):
+    for i, item in enumerate(mux):
         if isinstance(item, AnyGate):
-            mult[i] = np.eye(item.dim)
-    return mult
+            mux[i] = np.eye(item.dim)
+    return mux
 
 
 class UCGEInitialize(UCGInitialize):
