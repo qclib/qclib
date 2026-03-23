@@ -33,7 +33,7 @@ def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
         if not np.allclose(mux[base + k], mux[next_base + k]):
             return False
     return True
-    return np.allclose(mux[base : base + d], mux[next_base : next_base + d])
+    #return np.allclose(mux[base : base + d], mux[next_base : next_base + d])
 
 
 def _repetition_search(mux: "list[np.ndarray]", target_qubit: int):
@@ -62,6 +62,8 @@ def _repetition_search(mux: "list[np.ndarray]", target_qubit: int):
             delete_set = _find_operators_to_remove(d, mux)
 
         if delete_set:
+            if isinstance(mux[0], AnyGate):
+                deleted_operators.update([0])
             removed_control = target_qubit + int(np.log2(d)) + 1
             deleted_controls.append(removed_control)
             deleted_operators.update(delete_set)
@@ -95,10 +97,15 @@ def _find_operators_to_remove(d, mux):
         if _first_and_second_halves_equal(partition_first_idx, d, mux):
             #deleted_operators.update(range(partition_first_idx + d, partition_first_idx + 2 * d))
             for i in range(partition_first_idx, partition_first_idx + d):
-                if isinstance(mux[i], AnyGate):
+                if not isinstance(mux[i+d], AnyGate) and isinstance(mux[i], AnyGate):
                     deleted_operators.update([i])
                 else:
                     deleted_operators.update([i+d])
+            # If mux[i] is AnyGate and mux[i+d] is not, then we delete mux[i]
+            # deleted_operators.update(
+            #     i if not isinstance(mux[i+d], AnyGate) and isinstance(mux[i], AnyGate) else i + d
+            #     for i in range(partition_first_idx, partition_first_idx + d)
+            # )
             partition_first_idx += 2 * d
         else:
             deleted_operators = set()

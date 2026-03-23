@@ -167,26 +167,9 @@ class TestUCGEInitialize(TestCase):
         self.assertEqual(ucge_depth, one_depth)
 
     def test_basis_states_2qubits(self):
-        '''
-        Test preparation of basis states (2 qubits)
-        '''
-        for i in range(1,4):
-            params = np.zeros(4)
-            params[i]=1
-            ucge_circ = UCGEInitialize(params).definition
-            transpiled_ucge_circ = transpile(ucge_circ, basis_gates=["u", "cx"])
-            ucge_depth = transpiled_ucge_circ.depth()
-            self.assertEqual(ucge_depth, 1)
-            calc_state = Statevector(ucge_circ)
-            self.assertTrue(np.allclose(calc_state, params))
-
-
-    def test_basis_states_3qubits(self):
-        '''
-        Test preparation of basis states (3 qubits)
-        '''
-        for i in range(1, 8):
-            params = np.zeros(8)
+    def _verify_basis_state(self, dim):
+        for i in range(1, dim):
+            params = np.zeros(dim)
             params[i] = 1
             ucge_circ = UCGEInitialize(params).definition
             transpiled_ucge_circ = transpile(ucge_circ, basis_gates=["u", "cx"])
@@ -194,6 +177,35 @@ class TestUCGEInitialize(TestCase):
             self.assertEqual(ucge_depth, 1)
             calc_state = Statevector(ucge_circ)
             self.assertTrue(np.allclose(calc_state, params))
+
+    def test_basis_states_2qubits(self):
+        '''
+        Test preparation of basis states (2 qubits)
+        '''
+        dim = 4
+        self._verify_basis_state(dim)
+
+
+    def test_basis_states_3qubits(self):
+        '''
+        Test preparation of basis states (3 qubits)
+        '''
+        dim = 8
+        self._verify_basis_state(dim)
+
+    def test_basis_states_4qubits(self):
+        '''
+        Test preparation of basis states (4 qubits)
+        '''
+        dim = 16
+        self._verify_basis_state(dim)
+
+    def test_basis_states_5qubits(self):
+        '''
+        Test preparation of basis states (5 qubits)
+        '''
+        dim = 32
+        self._verify_basis_state(dim)
 
     def test_separable(self):
         state = [0.5 + 0.0j,
