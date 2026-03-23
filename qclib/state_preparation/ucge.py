@@ -204,15 +204,26 @@ class UCGEInitialize(UCGInitialize):
 
         if size > 1:
             for k in range(size):
-                angle = np.angle([children[2 * k], children[2 * k + 1]])
-                angle = angle % (2 * np.pi)
-                phase = np.sum(angle) / 2.0
-                value = parent[k] * np.exp(1j * phase)
+                if np.isclose(children[2 * k], 0.0):
+                    phase = np.angle(children[2 * k + 1])
+                elif np.isclose(children[2 * k + 1], 0.0):
+                    phase = np.angle(children[2 * k])
+                else:
+                    angle = np.angle([children[2 * k], children[2 * k + 1]])
+                    angle = angle % (2 * np.pi)
+                    phase = np.sum(angle) / 2.0
 
-                # avoid a global phase difference in the operators
+                value = parent[k] * np.exp(1j * phase)
+                if np.isclose(value, 0):
+                    new_parent.append(0.j)
+                    continue
+
                 temp = children[2 * k] / value
                 if np.isclose(temp.real, 0.0):
-                    new_parent.append(1j * value.imag)
+                    if temp.imag < 0:
+                        new_parent.append(-value)
+                    else:
+                        new_parent.append(value)
                 elif temp.real < 0:
                     new_parent.append(-value)
                 else:
