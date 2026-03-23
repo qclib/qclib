@@ -23,10 +23,20 @@ from qiskit import QuantumCircuit, transpile
 from qiskit.quantum_info import Statevector
 from qclib.state_preparation import UCGInitialize
 from qclib.state_preparation import UCGEInitialize
+
 from qclib.util import logical_swap
 
 class TestUCGEInitialize(TestCase):
     """Test UCGEInitialize"""
+
+    def test_ucge_random_state(self):
+        n_qubits = 4
+        state = np.random.rand(2 ** n_qubits) + np.random.rand(2 ** n_qubits) * 1j
+        state = state / np.linalg.norm(state)
+
+        qc = UCGEInitialize(state).definition
+        state1 = Statevector(qc)
+        print(np.allclose(state1, state))
 
     def _test_compare_ucg_bipartition(self, num_qubits, input_vector1, input_vector2):
         qubit_order = list(range(num_qubits))
@@ -155,3 +165,20 @@ class TestUCGEInitialize(TestCase):
         t_one_depth = transpile(ucge_circ_one, basis_gates=["u", "cx"])
         one_depth = t_one_depth.depth()
         self.assertEqual(ucge_depth, one_depth)
+
+    def test_separable(self):
+        state = [0.5 + 0.0j,
+                 0.5 + 0.0j,
+                 0.0 + 0.0j,
+                 0.0 + 0.0j,
+                 -0.5 + 0.0j,
+                 0.5 + 0.0j,
+                 0.0 + 0.0j,
+                 0.0 + 0.0j]
+        qc = UCGEInitialize(state).definition
+        state2 = Statevector(qc)
+        self.assertTrue(np.allclose(state2, state))
+
+        tqc = transpile(qc, basis_gates=["u", "cx"])
+        print(tqc.depth())
+        print(qc.decompose().decompose())
