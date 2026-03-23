@@ -18,6 +18,8 @@ https://arxiv.org/abs/2409.05618
 """
 import numpy as np
 from qiskit.circuit.library import UCGate
+
+from qclib.gates.any_gate import AnyGate
 from qclib.state_preparation.ucg import UCGInitialize
 
 
@@ -91,13 +93,28 @@ def _find_operators_to_remove(d, mux):
 
     for _ in range(num_partitions, 0, -1):
         if _first_and_second_halves_equal(partition_first_idx, d, mux):
-            deleted_operators.update(range(partition_first_idx + d, partition_first_idx + 2 * d))
+            #deleted_operators.update(range(partition_first_idx + d, partition_first_idx + 2 * d))
+            for i in range(partition_first_idx, partition_first_idx + d):
+                if isinstance(mux[i], AnyGate):
+                    deleted_operators.update([i])
+                else:
+                    deleted_operators.update([i+d])
             partition_first_idx += 2 * d
         else:
             deleted_operators = set()
             break
 
     return deleted_operators
+
+
+def _convert_anygate(mult):
+    '''
+    Convert remaining AnyGate to identity
+    '''
+    for i in range(len(mult)):
+        if isinstance(mult[i], AnyGate):
+            mult[i] = np.eye(mult[i].dim)
+    return mult
 
 
 class UCGEInitialize(UCGInitialize):
@@ -160,6 +177,8 @@ class UCGEInitialize(UCGInitialize):
 
         old_mult, old_controls, target = self._define_mult(children, parent, tree_level)
         nc, mult = self._simplify(old_mult)
+        mult = _convert_anygate(mult)
+
         mult_controls = [x for x in old_controls if x not in nc]
 
         if self.preserve:
