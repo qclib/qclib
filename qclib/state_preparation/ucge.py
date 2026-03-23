@@ -61,6 +61,7 @@ def _repetition_search(mux: "list[np.ndarray]", target_qubit: int):
             delete_set = _find_operators_to_remove(d, mux)
 
         if delete_set:
+            mux = _assign_anygate(mux, d)
             removed_control = target_qubit + int(np.log2(d)) + 1
             deleted_controls.append(removed_control)
             deleted_operators.update(delete_set)
@@ -68,10 +69,10 @@ def _repetition_search(mux: "list[np.ndarray]", target_qubit: int):
     # We might have missed the mux[0]. We delete it in case it is AnyGate.
     # This happens because we prefer to remove the right operator, and mux[0] is always the left operator.
     # So, sometimes mux[0] might not get added to delete_set.
-    num_remaining_controls = target_qubit - len(deleted_controls)
-    num_remaining_operators = len(mux) - len(deleted_operators)
-    if num_remaining_operators != 2**num_remaining_controls and isinstance(mux[0], AnyGate):
-        deleted_operators.update([0])
+    # num_remaining_controls = target_qubit - len(deleted_controls)
+    # num_remaining_operators = len(mux) - len(deleted_operators)
+    # if num_remaining_operators != 2**num_remaining_controls and isinstance(mux[0], AnyGate):
+    #     deleted_operators.update([0])
     return deleted_controls, deleted_operators
 
 
@@ -100,10 +101,11 @@ def _find_operators_to_remove(d, mux):
     for _ in range(num_partitions, 0, -1):
         if _first_and_second_halves_equal(partition_first_idx, d, mux):
             # If mux[i] is AnyGate and mux[i+d] is not, then we delete mux[i]
-            deleted_operators.update(
-                i if not isinstance(mux[i+d], AnyGate) and isinstance(mux[i], AnyGate) else i + d
-                for i in range(partition_first_idx, partition_first_idx + d)
-            )
+            # deleted_operators.update(
+            #     i if not isinstance(mux[i+d], AnyGate) and isinstance(mux[i], AnyGate) else i + d
+            #     for i in range(partition_first_idx, partition_first_idx + d)
+            # )
+            deleted_operators.update(range(partition_first_idx + d, partition_first_idx + 2 * d))
             partition_first_idx += 2 * d
         else:
             deleted_operators = set()
@@ -117,8 +119,9 @@ def _assign_anygate(mux, d):
 
     for _ in range(num_partitions, 0, -1):
         for k in range(0, d):
-            if isinstance(mux[k], AnyGate):
+            if isinstance(mux[partition_first_idx+k], AnyGate):
                 mux[partition_first_idx+k] = mux[partition_first_idx+k+d]
+        partition_first_idx += 2 * d
     return mux
 
 
