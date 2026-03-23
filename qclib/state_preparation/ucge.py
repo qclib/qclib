@@ -18,20 +18,9 @@ https://arxiv.org/abs/2409.05618
 """
 import numpy as np
 from qiskit.circuit.library import UCGate
+
+from qclib.gates.any_gate import AnyGate
 from qclib.state_preparation.ucg import UCGInitialize
-
-
-def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
-    """
-    Returns True if mux[base : base + d] = mux[next_base : next_base + d]
-    """
-
-    next_base = base + d
-    for k in range(0, d):
-        if not np.allclose(mux[base + k], mux[next_base + k]):
-            return False
-    return True
-    return np.allclose(mux[base : base + d], mux[next_base : next_base + d])
 
 
 def _repetition_search(mux: "list[np.ndarray]", target_qubit: int):
@@ -60,6 +49,7 @@ def _repetition_search(mux: "list[np.ndarray]", target_qubit: int):
             delete_set = _find_operators_to_remove(d, mux)
 
         if delete_set:
+            mux = _assign_anygate(mux, d)
             removed_control = target_qubit + int(np.log2(d)) + 1
             deleted_controls.append(removed_control)
             deleted_operators.update(delete_set)
@@ -98,6 +88,38 @@ def _find_operators_to_remove(d, mux):
             break
 
     return deleted_operators
+
+def _assign_anygate(mux, d):
+    num_partitions = len(mux) // (2 * d)
+    partition_first_idx = 0
+
+    for _ in range(num_partitions, 0, -1):
+        for k in range(0, d):
+            if isinstance(mux[partition_first_idx+k], AnyGate):
+                mux[partition_first_idx+k] = mux[partition_first_idx+k+d]
+        partition_first_idx += 2 * d
+    return mux
+
+def _first_and_second_halves_equal(base: int, d: int, mux: "list[np.ndarray]"):
+    """
+    Returns True if mux[base : base + d] = mux[next_base : next_base + d]
+    """
+
+    next_base = base + d
+    for k in range(0, d):
+        if not np.allclose(mux[base + k], mux[next_base + k]):
+            return False
+    return True
+
+
+def _convert_anygate(mux):
+    """
+    Convert remaining AnyGate to identity.
+    """
+    for i, item in enumerate(mux):
+        if isinstance(item, AnyGate):
+            mux[i] = np.eye(item.dim)
+    return mux
 
 
 class UCGEInitialize(UCGInitialize):
@@ -160,6 +182,8 @@ class UCGEInitialize(UCGInitialize):
 
         old_mult, old_controls, target = self._define_mult(children, parent, tree_level)
         nc, mult = self._simplify(old_mult)
+        mult = _convert_anygate(mult)
+
         mult_controls = [x for x in old_controls if x not in nc]
 
         if self.preserve:
@@ -185,15 +209,26 @@ class UCGEInitialize(UCGInitialize):
 
         if size > 1:
             for k in range(size):
-                angle = np.angle([children[2 * k], children[2 * k + 1]])
-                angle = angle % (2 * np.pi)
-                phase = np.sum(angle) / 2.0
-                value = parent[k] * np.exp(1j * phase)
+                if np.isclose(children[2 * k], 0.0):
+                    phase = np.angle(children[2 * k + 1])
+                elif np.isclose(children[2 * k + 1], 0.0):
+                    phase = np.angle(children[2 * k])
+                else:
+                    angle = np.angle([children[2 * k], children[2 * k + 1]])
+                    angle = angle % (2 * np.pi)
+                    phase = np.sum(angle) / 2.0
 
-                # avoid a global phase difference in the operators
+                value = parent[k] * np.exp(1j * phase)
+                if np.isclose(value, 0):
+                    new_parent.append(0.j)
+                    continue
+
                 temp = children[2 * k] / value
                 if np.isclose(temp.real, 0.0):
-                    new_parent.append(1j * value.imag)
+                    if temp.imag < 0:
+                        new_parent.append(-value)
+                    else:
+                        new_parent.append(value)
                 elif temp.real < 0:
                     new_parent.append(-value)
                 else:
