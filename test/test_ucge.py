@@ -24,10 +24,38 @@ from qiskit.quantum_info import Statevector, Operator
 from qclib.state_preparation import UCGInitialize
 from qclib.state_preparation import UCGEInitialize
 
-from qclib.util import logical_swap
+from qclib.util import logical_swap, get_state
 
 class TestUCGEInitialize(TestCase):
     """Test UCGEInitialize"""
+
+    def _test_ucge(self, n_qubits):
+        state = np.random.rand(2 ** n_qubits) + np.random.rand(2 ** n_qubits) * 1j
+        state = state / np.linalg.norm(state)
+
+        for target_state in range(2 ** n_qubits):
+            gate = UCGEInitialize(state.tolist(),
+                                 opt_params={
+                                     "target_state": target_state
+                                 }
+                                 ).definition
+
+            circuit = QuantumCircuit(n_qubits)
+
+            for j, bit in enumerate(f'{target_state:0{n_qubits}b}'[::-1]):
+                if bit == '1':
+                    circuit.x(j)
+
+            circuit.append(gate, circuit.qubits)
+            output_state = get_state(circuit)
+
+            self.assertTrue(np.allclose(state, output_state))
+
+
+    def test_ucge(self):
+        """Test UCGInitialize with different target states"""
+        for n_qubits in range(3, 5):
+            self._test_ucge(n_qubits)
 
     def test_ucge_random_state(self):
         n_qubits = 4
