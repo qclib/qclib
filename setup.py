@@ -24,7 +24,7 @@ setuptools.setup(
     python_requires='>=3.8',
     install_requires=[
         'scipy>=1.7.1',
-        'qiskit>=1.0.0',
+        'qiskit>=1.0.0,<3',
         'deprecation',
         'tensorly>=0.8.0',
         'keras',
