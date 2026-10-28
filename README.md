@@ -58,6 +58,27 @@ The following table shows the depth, number of qubits, and CNOTs of circuits pro
 
 You can reproduce the results [here](https://github.com/qclib/qclib-papers/blob/main/examples/state_preparation_benchmark.ipynb).
 
+## Optional: SynQ backend
+qclib can use [SynQ](https://github.com/qsoftware/synq), a C++ synthesis library, as an alternative backend for state preparation, unitaries and diagonal gates. SynQ is optional. It is built from source, so it needs a C++20 compiler, CMake, Eigen and LAPACKE (MKL on Windows):
+
+```
+pip install git+https://github.com/qsoftware/synq
+```
+
+Note that `pip install synq` without the URL installs an unrelated PyPI package. On Windows, point CMake to vcpkg as described in the [SynQ README](https://github.com/qsoftware/synq#python-package).
+
+```python
+from qclib.state_preparation import SynqInitialize
+from qclib.unitary import unitary
+from qclib import synq
+
+SynqInitialize.initialize(circuit, state)          # state preparation
+circuit = unitary(matrix, decomposition="synq")    # unitary (CSD/QSD)
+circuit = synq.diagonal(diagonal_entries)          # diagonal gate
+```
+
+The circuits use only `rz`, `ry`, `p`, `cx` and `cz` and reproduce the target exactly, including the global phase. Unitaries use the quantum Shannon decomposition with optimizations A.1 and A.2 (20, 100, 444 CNOTs for 3, 4, 5 qubits). `qclib.synq.is_available()` reports whether SynQ is installed.
+
 ## Authors
 The first version of qclib was developed at [Centro de Informática](https://portal.cin.ufpe.br) - UFPE.
 Qclib is an active project, and [other people](https://github.com/qclib/qclib/graphs/contributors) have contributed.

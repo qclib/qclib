@@ -34,7 +34,16 @@ def unitary(gate, decomposition="qsd", iso=0, apply_a2=True):
     """
     Implements a generic quantum computation from a
     unitary matrix gate using the cosine sine decomposition.
+
+    decomposition: "qsd" (default), "csd", "qr" or "synq".
+        "synq" uses the SynQ C++ library (optional dependency, see qclib.synq);
+        ``iso`` and ``apply_a2`` are ignored in that case.
     """
+    if decomposition == "synq":
+        # pylint: disable=import-outside-toplevel
+        from qclib import synq
+        return synq.unitary(gate)
+
     circuit = build_unitary(gate, decomposition, iso)
     if decomposition == "qsd" and apply_a2:
         return _apply_a2(circuit)
