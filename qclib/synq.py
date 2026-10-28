@@ -53,6 +53,11 @@ _INSTALL_HINT = (
     "(not `pip install synq`, which is an unrelated PyPI package)."
 )
 
+_UPDATE_HINT = (
+    "The installed SynQ does not support method={method!r}. Update it with "
+    "`pip install --upgrade git+https://github.com/qsoftware/synq`."
+)
+
 _RE_QUBITS = re.compile(r"^qubit\[(\d+)\]\s+(\w+)\s*;$")
 _RE_ROTATION = re.compile(r"^(rz|ry|p)\(\s*([^)]+?)\s*\)\s+(\w+)\[(\d+)\]\s*;$")
 _RE_CX = re.compile(r"^(cx|cz)\s+(\w+)\[(\d+)\]\s*,\s*(\w+)\[(\d+)\]\s*;$")
@@ -258,15 +263,18 @@ def state_preparation(state):
     return gates_to_circuit(n_qubits, gates, name="synq_sp")
 
 
-def unitary(gate):
+def unitary(gate, method="qsd"):
     """
-    Circuit that implements the unitary matrix ``gate`` using SynQ
-    (cosine-sine / quantum Shannon decomposition).
+    Circuit that implements the unitary matrix ``gate`` using SynQ.
 
     Parameters
     ----------
     gate: array_like of complex
         Unitary matrix of shape ``(2^n, 2^n)``.
+    method: str
+        ``"qsd"`` (default): cosine-sine / quantum Shannon decomposition with the
+        optimizations A.1 and A.2 (20, 100, 444 CNOTs for 3, 4, 5 qubits).
+        ``"zxz"``: Block-ZXZ decomposition with A.2 (19, 95, 423 CNOTs).
 
     Returns
     -------
@@ -276,8 +284,17 @@ def unitary(gate):
     if gate.ndim != 2 or gate.shape[0] != gate.shape[1]:
         raise ValueError("The unitary must be a square matrix.")
     n_qubits = _num_qubits(gate.shape[0], "unitary matrix")
-    gates = _import_synq().unitary_gates(gate)
-    return gates_to_circuit(n_qubits, gates, name="synq_unitary")
+    if method not in ("qsd", "zxz"):
+        raise ValueError(f"method must be 'qsd' or 'zxz', got {method!r}.")
+    module = _import_synq()
+    if method == "qsd":
+        gates = module.unitary_gates(gate)  # also works with SynQ versions without `method`
+    else:
+        try:
+            gates = module.unitary_gates(gate, method=method)
+        except TypeError as error:  # SynQ older than the Block-ZXZ decomposition
+            raise ImportError(_UPDATE_HINT.format(method=method)) from error
+    return gates_to_circuit(n_qubits, gates, name=f"synq_{method}")
 
 
 def diagonal(diag):
