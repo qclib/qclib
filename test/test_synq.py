@@ -18,6 +18,7 @@ unitary(decomposition="synq")). Skipped when SynQ is not installed.
 """
 
 from unittest import TestCase, skipUnless
+from unittest import mock
 import numpy as np
 from scipy.stats import unitary_group
 from qiskit import QuantumCircuit, transpile
@@ -163,6 +164,57 @@ class TestSynq(TestCase):
     # parser
 
     def test_qasm_to_circuit_rejects_unknown_gates(self):
-        qasm = 'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[1] q;\nh q[0];\n'
+        qasm = 'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[1] q;\nx q[0];\n'
         with self.assertRaises(ValueError):
             synq.qasm_to_circuit(qasm)
+
+
+class TestSynqConversion(TestCase):
+    """Conversion of SynQ output into Qiskit circuits (does not need SynQ)."""
+
+    # every gate type: rz, ry, p, cx, cz, h on 3 qubits, plus a global phase
+    _GATES = (
+        np.array([0, 1, 2, 3, 4, 5, 5, 3], dtype=np.uint8),
+        np.array([[0, -1], [1, -1], [2, -1], [0, 1], [2, 0], [1, -1], [2, -1], [1, 2]], dtype=np.int32),
+        np.array([0.3, -1.2, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        0.7,
+    )
+    _QASM = (
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n\nqubit[3] q; \n'
+        "rz(0.3) q[0];\nry(-1.2) q[1];\np(2.5) q[2];\ncx q[0], q[1];\ncz q[2], q[0];\n"
+        "h q[1];\nh q[2];\ncx q[1], q[2];\ngphase(0.7);\n"
+    )
+
+    @staticmethod
+    def _expected():
+        circuit = QuantumCircuit(3, global_phase=0.7)
+        circuit.rz(0.3, 0)
+        circuit.ry(-1.2, 1)
+        circuit.p(2.5, 2)
+        circuit.cx(0, 1)
+        circuit.cz(2, 0)
+        circuit.h(1)
+        circuit.h(2)
+        circuit.cx(1, 2)
+        return circuit
+
+    def _assert_expected(self, circuit):
+        expected = self._expected()
+        self.assertEqual(circuit.count_ops(), expected.count_ops())
+        self.assertTrue(np.allclose(Operator(circuit).data, Operator(expected).data))
+
+    def test_gates_to_circuit(self):
+        self._assert_expected(synq.gates_to_circuit(3, self._GATES))
+
+    def test_gates_to_circuit_fallbacks(self):
+        # the slower conversions used when Qiskit's StandardGate API is missing
+        with mock.patch.object(synq, "_FROM_STANDARD", None):
+            self._assert_expected(synq.gates_to_circuit(3, self._GATES))
+        types, qubits, angles, phase = self._GATES
+        for append in (synq._append_fast, synq._append_public):  # pylint: disable=protected-access
+            circuit = QuantumCircuit(3, global_phase=phase)
+            append(circuit, types.tolist(), qubits.tolist(), angles.tolist())
+            self._assert_expected(circuit)
+
+    def test_qasm_to_circuit(self):
+        self._assert_expected(synq.qasm_to_circuit(self._QASM))

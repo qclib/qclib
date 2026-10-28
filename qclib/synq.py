@@ -21,7 +21,7 @@ SynQ is an optional dependency. Install it with
 from a local copy). ``pip install synq`` installs an unrelated PyPI package.
 
 SynQ returns the synthesized circuit as a gate list (numpy arrays) with the
-gates ``rz``, ``ry``, ``p``, ``cx`` and ``cz``. This module converts it into a
+gates ``rz``, ``ry``, ``p``, ``cx``, ``cz`` and ``h``. This module converts it into a
 Qiskit circuit that follows the Qiskit (little-endian) qubit order and
 reproduces the target exactly, including the global phase. ``qasm_to_circuit``
 converts SynQ's OpenQASM 3 output, if that is preferred.
@@ -33,13 +33,14 @@ from math import isfinite, log2
 import numpy as np
 from qiskit import QuantumCircuit
 from qiskit.circuit import CircuitInstruction
-from qiskit.circuit.library import CXGate, CZGate, PhaseGate, RYGate, RZGate
+from qiskit.circuit.library import CXGate, CZGate, HGate, PhaseGate, RYGate, RZGate
 
 try:  # Rust-native standard gates (Qiskit >= 1.3); private, so optional
     from qiskit._accelerate.circuit import StandardGate as _StandardGate
 
     _STANDARD = (
-        _StandardGate.RZ, _StandardGate.RY, _StandardGate.Phase, _StandardGate.CX, _StandardGate.CZ
+        _StandardGate.RZ, _StandardGate.RY, _StandardGate.Phase, _StandardGate.CX, _StandardGate.CZ,
+        _StandardGate.H,
     )
     _FROM_STANDARD = CircuitInstruction.from_standard
 except (ImportError, AttributeError):  # pragma: no cover - older/newer Qiskit
@@ -56,6 +57,7 @@ _RE_QUBITS = re.compile(r"^qubit\[(\d+)\]\s+(\w+)\s*;$")
 _RE_ROTATION = re.compile(r"^(rz|ry|p)\(\s*([^)]+?)\s*\)\s+(\w+)\[(\d+)\]\s*;$")
 _RE_CX = re.compile(r"^(cx|cz)\s+(\w+)\[(\d+)\]\s*,\s*(\w+)\[(\d+)\]\s*;$")
 _RE_GPHASE = re.compile(r"^gphase\(\s*([^)]+?)\s*\)\s*;$")
+_RE_H = re.compile(r"^h\s+(\w+)\[(\d+)\]\s*;$")
 
 
 def _import_synq():
@@ -87,7 +89,7 @@ def qasm_to_circuit(qasm, name=None):
     Converts an OpenQASM 3 program produced by SynQ into a ``QuantumCircuit``.
 
     Only the subset emitted by SynQ is accepted (one qubit register and the
-    gates ``rz``, ``ry``, ``p``, ``cx``, ``cz`` and ``gphase``); any other
+    gates ``rz``, ``ry``, ``p``, ``cx``, ``cz``, ``h`` and ``gphase``); any other
     statement raises ``ValueError``.
     """
     circuit = None
@@ -125,6 +127,13 @@ def qasm_to_circuit(qasm, name=None):
             getattr(circuit, gate)(int(control), int(target))
             continue
 
+        match = _RE_H.match(line)
+        if match:
+            reg, qubit = match.groups()
+            _check_register(reg, register, raw)
+            circuit.h(int(qubit))
+            continue
+
         match = _RE_GPHASE.match(line)
         if match:
             global_phase += _parse_angle(match.group(1), raw)
@@ -140,7 +149,7 @@ def qasm_to_circuit(qasm, name=None):
 
 
 # Gate codes used by SynQ's gate lists.
-_RZ, _RY, _P, _CX, _CZ = 0, 1, 2, 3, 4
+_RZ, _RY, _P, _CX, _CZ, _H = 0, 1, 2, 3, 4, 5
 _ROTATIONS = {_RZ: RZGate, _RY: RYGate, _P: PhaseGate}
 
 
@@ -149,8 +158,9 @@ def gates_to_circuit(num_qubits, gates, name=None):
     Builds a ``QuantumCircuit`` from a SynQ gate list
     ``(types, qubits, angles, global_phase)``.
 
-    Gate types: 0 ``rz``, 1 ``ry``, 2 ``p`` (``qubits[k, 0]`` is the target) and
-    3 ``cx``, 4 ``cz`` (``qubits[k]`` is ``(control, target)``).
+    Gate types: 0 ``rz``, 1 ``ry``, 2 ``p`` (``qubits[k, 0]`` is the target),
+    3 ``cx``, 4 ``cz`` (``qubits[k]`` is ``(control, target)``) and 5 ``h``
+    (``qubits[k, 0]`` is the target).
     """
     types, qubits, angles, global_phase = gates
     circuit = QuantumCircuit(num_qubits, name=name, global_phase=global_phase)
@@ -178,10 +188,12 @@ def _append_standard(circuit, types, qubits, angles):
     standard, from_standard = _STANDARD, _FROM_STANDARD
     no_params = ()
     for gate, (q0, q1), angle in zip(types, qubits, angles):
-        if gate >= _CX:
-            append(from_standard(standard[gate], (bits[q0], bits[q1]), no_params))
-        else:
+        if gate < _CX:
             append(from_standard(standard[gate], (bits[q0],), (angle,)))
+        elif gate == _H:
+            append(from_standard(standard[gate], (bits[q0],), no_params))
+        else:
+            append(from_standard(standard[gate], (bits[q0], bits[q1]), no_params))
 
 
 def _append_fast(circuit, types, qubits, angles):
@@ -190,12 +202,14 @@ def _append_fast(circuit, types, qubits, angles):
     # this trusted input (about 2x faster for large circuits).
     bits = circuit.qubits
     append = circuit._data.append  # pylint: disable=protected-access
-    cx_gate, cz_gate = CXGate(), CZGate()
+    cx_gate, cz_gate, h_gate = CXGate(), CZGate(), HGate()
     for gate, (q0, q1), angle in zip(types, qubits, angles):
         if gate == _CX:
             append(CircuitInstruction(cx_gate, (bits[q0], bits[q1])))
         elif gate == _CZ:
             append(CircuitInstruction(cz_gate, (bits[q0], bits[q1])))
+        elif gate == _H:
+            append(CircuitInstruction(h_gate, (bits[q0],)))
         else:
             append(CircuitInstruction(_ROTATIONS[gate](angle), (bits[q0],)))
 
@@ -206,6 +220,8 @@ def _append_public(circuit, types, qubits, angles):
             circuit.cx(q0, q1)
         elif gate == _CZ:
             circuit.cz(q0, q1)
+        elif gate == _H:
+            circuit.h(q0)
         else:
             circuit.append(_ROTATIONS[gate](angle), [q0])
 
