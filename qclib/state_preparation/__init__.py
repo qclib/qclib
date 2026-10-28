@@ -16,3 +16,4 @@ from .ucg import UCGInitialize
 from .ucge import UCGEInitialize
 from .mixed import MixedInitialize
 from .frqi import FrqiInitialize
+from .synqsp import SynqInitialize
