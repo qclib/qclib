@@ -74,10 +74,11 @@ from qclib import synq
 
 SynqInitialize.initialize(circuit, state)          # state preparation
 circuit = unitary(matrix, decomposition="synq")    # unitary (CSD/QSD)
+circuit = unitary(matrix, decomposition="synq_zxz")  # unitary (Block-ZXZ)
 circuit = synq.diagonal(diagonal_entries)          # diagonal gate
 ```
 
-The circuits use only `rz`, `ry`, `p`, `cx` and `cz` and reproduce the target exactly, including the global phase. Unitaries use the quantum Shannon decomposition with optimizations A.1 and A.2 (20, 100, 444 CNOTs for 3, 4, 5 qubits). `qclib.synq.is_available()` reports whether SynQ is installed.
+The circuits use only `rz`, `ry`, `p`, `cx`, `cz` and `h` and reproduce the target exactly, including the global phase. Unitaries use the quantum Shannon decomposition with optimizations A.1 and A.2 (20, 100, 444 CNOTs for 3, 4, 5 qubits) or, with `decomposition="synq_zxz"`, the Block-ZXZ decomposition of Krol and Al-Ars (19, 95, 423 CNOTs); `synq_zxz` also uses `h` gates. `qclib.synq.is_available()` reports whether SynQ is installed.
 
 ## Authors
 The first version of qclib was developed at [Centro de Informática](https://portal.cin.ufpe.br) - UFPE.

@@ -18,6 +18,7 @@ unitary(decomposition="synq")). Skipped when SynQ is not installed.
 """
 
 from unittest import TestCase, skipUnless
+from unittest import mock
 import numpy as np
 from scipy.stats import unitary_group
 from qiskit import QuantumCircuit, transpile
@@ -25,7 +26,7 @@ from qiskit.circuit.library import QFTGate
 from qiskit.quantum_info import Operator, Statevector
 from qclib import synq
 from qclib.state_preparation import SynqInitialize
-from qclib.unitary import unitary
+from qclib.unitary import cnot_count, unitary
 from qclib.util import get_state
 
 # pylint: disable=missing-function-docstring
@@ -139,6 +140,49 @@ class TestSynq(TestCase):
             ops = circuit.count_ops()
             self.assertEqual(ops.get("cx", 0) + ops.get("cz", 0), expected)
 
+    def test_unitary_zxz(self):
+        for n_qubits in range(1, 6):
+            gate = unitary_group.rvs(2**n_qubits, random_state=n_qubits)
+            circuit = unitary(gate, decomposition="synq_zxz")
+            self.assertTrue(np.allclose(Operator(circuit).data, gate))
+            self.assertEqual(circuit.name, "synq_zxz")
+            if n_qubits >= 3:  # two H gates per Block-ZXZ step
+                self.assertIn("h", circuit.count_ops())
+        for n_qubits in range(2, 5):
+            dim = 2**n_qubits
+            for gate in (np.eye(dim), np.eye(dim)[self.rng.permutation(dim)], Operator(QFTGate(n_qubits)).data):
+                circuit = unitary(gate, decomposition="synq_zxz")
+                self.assertTrue(np.allclose(Operator(circuit).data, gate))
+
+    def test_unitary_zxz_cnot_count(self):
+        # Block-ZXZ (Krol and Al-Ars) with A.2: one CNOT less per step than the QSD
+        for n_qubits, expected in [(3, 19), (4, 95), (5, 423)]:
+            gate = unitary_group.rvs(2**n_qubits, random_state=7)
+            circuit = unitary(gate, decomposition="synq_zxz")
+            self.assertTrue(set(circuit.count_ops()) <= {"rz", "ry", "cx", "h"})
+            self.assertEqual(circuit.count_ops().get("cx", 0), expected)
+            transpiled = transpile(circuit, basis_gates=["u", "cx"], optimization_level=0)
+            self.assertEqual(transpiled.count_ops()["cx"], expected)
+
+    def test_cnot_count_estimate(self):
+        for n_qubits in range(2, 6):
+            gate = unitary_group.rvs(2**n_qubits, random_state=11)
+            for decomposition in ("synq", "synq_zxz"):
+                self.assertEqual(
+                    cnot_count(gate, decomposition),
+                    cnot_count(gate, decomposition, method="exact"),
+                    f"{decomposition}, {n_qubits} qubits",
+                )
+            self.assertEqual(cnot_count(gate, "synq", apply_a2=False), cnot_count(gate, "synq"))
+
+    def test_unitary_method(self):
+        gate = unitary_group.rvs(8, random_state=4)
+        self.assertEqual(synq.unitary(gate), synq.unitary(gate, method="qsd"))
+        self.assertEqual(unitary(gate, decomposition="synq"), synq.unitary(gate))
+        self.assertEqual(unitary(gate, decomposition="synq_zxz"), synq.unitary(gate, method="zxz"))
+        with self.assertRaises(ValueError):
+            synq.unitary(gate, method="csd")
+
     def test_qasm_matches_gates(self):
         # the OpenQASM output and the gate list describe the same circuit
         import synq as synq_module  # pylint: disable=import-outside-toplevel
@@ -163,6 +207,81 @@ class TestSynq(TestCase):
     # parser
 
     def test_qasm_to_circuit_rejects_unknown_gates(self):
-        qasm = 'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[1] q;\nh q[0];\n'
+        qasm = 'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[1] q;\nx q[0];\n'
         with self.assertRaises(ValueError):
             synq.qasm_to_circuit(qasm)
+
+
+class _OldSynq:  # pylint: disable=too-few-public-methods
+    """A SynQ module from before the ``method`` parameter."""
+
+    @staticmethod
+    def unitary_gates(matrix):  # pylint: disable=unused-argument
+        # one-qubit identity: rz(0)
+        return np.zeros(1, np.uint8), np.array([[0, -1]], np.int32), np.zeros(1), 0.0
+
+
+class TestSynqVersions(TestCase):
+    """``method`` with SynQ versions that do not have it (does not need SynQ)."""
+
+    def test_old_synq(self):
+        gate = np.eye(2)
+        with mock.patch.object(synq, "_import_synq", return_value=_OldSynq()):
+            self.assertEqual(synq.unitary(gate).num_qubits, 1)  # qsd: works as before
+            with self.assertRaisesRegex(ImportError, "upgrade"):
+                synq.unitary(gate, method="zxz")
+            with self.assertRaisesRegex(ImportError, "upgrade"):
+                unitary(gate, decomposition="synq_zxz")
+            with self.assertRaises(ValueError):
+                synq.unitary(gate, method="csd")
+
+
+class TestSynqConversion(TestCase):
+    """Conversion of SynQ output into Qiskit circuits (does not need SynQ)."""
+
+    # every gate type: rz, ry, p, cx, cz, h on 3 qubits, plus a global phase
+    _GATES = (
+        np.array([0, 1, 2, 3, 4, 5, 5, 3], dtype=np.uint8),
+        np.array([[0, -1], [1, -1], [2, -1], [0, 1], [2, 0], [1, -1], [2, -1], [1, 2]], dtype=np.int32),
+        np.array([0.3, -1.2, 2.5, 0.0, 0.0, 0.0, 0.0, 0.0]),
+        0.7,
+    )
+    _QASM = (
+        'OPENQASM 3.0;\ninclude "stdgates.inc";\n\nqubit[3] q; \n'
+        "rz(0.3) q[0];\nry(-1.2) q[1];\np(2.5) q[2];\ncx q[0], q[1];\ncz q[2], q[0];\n"
+        "h q[1];\nh q[2];\ncx q[1], q[2];\ngphase(0.7);\n"
+    )
+
+    @staticmethod
+    def _expected():
+        circuit = QuantumCircuit(3, global_phase=0.7)
+        circuit.rz(0.3, 0)
+        circuit.ry(-1.2, 1)
+        circuit.p(2.5, 2)
+        circuit.cx(0, 1)
+        circuit.cz(2, 0)
+        circuit.h(1)
+        circuit.h(2)
+        circuit.cx(1, 2)
+        return circuit
+
+    def _assert_expected(self, circuit):
+        expected = self._expected()
+        self.assertEqual(circuit.count_ops(), expected.count_ops())
+        self.assertTrue(np.allclose(Operator(circuit).data, Operator(expected).data))
+
+    def test_gates_to_circuit(self):
+        self._assert_expected(synq.gates_to_circuit(3, self._GATES))
+
+    def test_gates_to_circuit_fallbacks(self):
+        # the slower conversions used when Qiskit's StandardGate API is missing
+        with mock.patch.object(synq, "_FROM_STANDARD", None):
+            self._assert_expected(synq.gates_to_circuit(3, self._GATES))
+        types, qubits, angles, phase = self._GATES
+        for append in (synq._append_fast, synq._append_public):  # pylint: disable=protected-access
+            circuit = QuantumCircuit(3, global_phase=phase)
+            append(circuit, types.tolist(), qubits.tolist(), angles.tolist())
+            self._assert_expected(circuit)
+
+    def test_qasm_to_circuit(self):
+        self._assert_expected(synq.qasm_to_circuit(self._QASM))

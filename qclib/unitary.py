@@ -30,19 +30,24 @@ from qiskit.circuit.library import UCGate
 from qclib.gates.ucr import multiplexor
 
 
+# decomposition -> method of qclib.synq.unitary
+_SYNQ_METHODS = {"synq": "qsd", "synq_zxz": "zxz"}
+
+
 def unitary(gate, decomposition="qsd", iso=0, apply_a2=True):
     """
     Implements a generic quantum computation from a
     unitary matrix gate using the cosine sine decomposition.
 
-    decomposition: "qsd" (default), "csd", "qr" or "synq".
-        "synq" uses the SynQ C++ library (optional dependency, see qclib.synq);
-        ``iso`` and ``apply_a2`` are ignored in that case.
+    decomposition: "qsd" (default), "csd", "qr", "synq" or "synq_zxz".
+        "synq" and "synq_zxz" use the SynQ C++ library (optional dependency, see
+        qclib.synq) with the quantum Shannon and the Block-ZXZ decomposition,
+        both with optimization A.2; ``iso`` and ``apply_a2`` are ignored.
     """
-    if decomposition == "synq":
+    if decomposition in _SYNQ_METHODS:
         # pylint: disable=import-outside-toplevel
         from qclib import synq
-        return synq.unitary(gate)
+        return synq.unitary(gate, method=_SYNQ_METHODS[decomposition])
 
     circuit = build_unitary(gate, decomposition, iso)
     if decomposition == "qsd" and apply_a2:
@@ -244,6 +249,14 @@ def _cnot_count_estimate(gate, decomposition="qsd", iso=0, apply_a2=True):
     if decomposition == "csd":
         # Table 1 from "Synthesis of Quantum Logic Circuits", Shende et al.
         return int(ceil(4**n_qubits - 2 * 2**n_qubits)) - 1
+
+    if decomposition == "synq_zxz":
+        # Block-ZXZ with A.2 (Krol and Al-Ars): (22/48) 4^n - (3/2) 2^n + 5/3, exact
+        return round((22 / 48) * 4**n_qubits - 3 / 2 * 2**n_qubits + 5 / 3)
+
+    if decomposition == "synq":
+        # SynQ always applies A.1 and A.2 and ignores iso (exact count)
+        iso, apply_a2 = 0, True
 
     if iso:
         # Replace this recursion with a mathematical expression.
