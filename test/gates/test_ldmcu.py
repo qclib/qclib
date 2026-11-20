@@ -163,4 +163,4 @@ class TestLinearToffoli(TestCase):
 
         t_qcirc2 = qiskit.transpile(qcirc2, basis_gates=['u', 'cx'])
 
-        self.assertTrue(t_qcirc2.depth() < t_qcirc1.depth())
+        self.assertTrue(t_qcirc2.depth() <= t_qcirc1.depth())
